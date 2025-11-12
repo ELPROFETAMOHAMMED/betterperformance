@@ -24,7 +24,7 @@ export default function VisualTree({
   onTweakToggle,
 }: VisualTreeProps) {
   return (
-    <ScrollArea className="flex flex-col w-[400px] h-[650px]  backdrop-blur-4xl border border-secondary/10 rounded-lg overflow-hidden p-2 text-muted-foreground">
+    <ScrollArea className="flex flex-col w-[400px] h-[650px]  backdrop-blur-4xl rounded-lg overflow-hidden p-2 text-muted-foreground">
       <div className="flex-1 overflow-y-auto">
         <Accordion
           type="multiple"

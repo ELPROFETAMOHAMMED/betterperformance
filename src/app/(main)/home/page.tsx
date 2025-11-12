@@ -1,5 +1,6 @@
 import HomeContent from "@/components/main/home";
 import { createClient } from "../../../utils/supabase/server";
+import { redirect } from "next/navigation";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -10,7 +11,7 @@ export default async function Home() {
   } = await supabase.auth.getUser();
 
   if (!authUser) {
-    return <div>No autenticado</div>;
+    return redirect("/login");
   }
 
   return (

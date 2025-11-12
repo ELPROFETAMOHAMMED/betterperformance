@@ -1,3 +1,6 @@
+import { redirect } from "next/navigation";
+
 export default function Home() {
-  return <div>bla bla bla </div>;
+  // TODO: Change this in future to a landingPage
+  return redirect("/home");
 }

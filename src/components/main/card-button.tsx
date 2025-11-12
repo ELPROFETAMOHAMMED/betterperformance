@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 interface CardButtonProps {
   mTitle: string;
@@ -19,6 +20,7 @@ export default function CardButton({
   mSize = 24,
   mColor = "text-primary",
 }: CardButtonProps) {
+  const router = useRouter();
   return (
     <Button
       className={cn(
@@ -31,6 +33,7 @@ export default function CardButton({
         "overflow-hidden"
       )}
       variant={"outline"}
+      onClick={() => router.push("/tweaks")}
     >
       {/* Subtle gradient overlay on hover */}
       <div className="absolute inset-0 bg-gradient-to-r from-primary/0 via-primary/0 to-primary/0 group-hover:from-primary/5 group-hover:via-primary/3 group-hover:to-primary/0 transition-all duration-500" />
