@@ -2,9 +2,18 @@
 
 import React, { useMemo } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  getTweakCommentBlock,
+  getCombinedTweaksCode,
+} from "@/utils/helpers/tweak-comments";
 import { highlightCode, tokenClass } from "@/utils/helpers/code-editor";
 import type { Tweak } from "@/types/tweak.types";
 import { redactSensitive } from "@/lib/utils";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface CodeEditorProps {
   selectedTweaks?: Tweak[];
@@ -14,33 +23,70 @@ interface CodeEditorProps {
   hideSensitive?: boolean;
 }
 
-export default function CodeEditor({ selectedTweaks, code }: CodeEditorProps) {
+export default function CodeEditor({
+  selectedTweaks,
+  code,
+  showLineNumbers: showLineNumbersProp,
+  enableTextColors: enableTextColorsProp,
+  hideSensitive: hideSensitiveProp,
+}: CodeEditorProps) {
   // defaults: show line numbers and colors
   const showLineNumbers =
-    typeof (arguments[0] as any)?.showLineNumbers === "boolean"
-      ? (arguments[0] as any).showLineNumbers
-      : true;
+    typeof showLineNumbersProp === "boolean" ? showLineNumbersProp : true;
   const enableTextColors =
-    typeof (arguments[0] as any)?.enableTextColors === "boolean"
-      ? (arguments[0] as any).enableTextColors
-      : true;
+    typeof enableTextColorsProp === "boolean" ? enableTextColorsProp : true;
   const hideSensitive =
-    typeof (arguments[0] as any)?.hideSensitive === "boolean"
-      ? (arguments[0] as any).hideSensitive
-      : false;
+    typeof hideSensitiveProp === "boolean" ? hideSensitiveProp : false;
 
-  const normalizedCode = hideSensitive
-    ? redactSensitive(code || "")
-    : code || "";
+  // Compose code with comments for each tweak
+  let codeToShow = "";
+  if (selectedTweaks && selectedTweaks.length > 0) {
+    codeToShow = getCombinedTweaksCode(selectedTweaks, hideSensitive);
+  } else {
+    codeToShow = hideSensitive ? redactSensitive(code || "") : code || "";
+  }
 
   const { lines, highlighted } = useMemo(
-    () => highlightCode(normalizedCode),
-    [normalizedCode]
+    () => highlightCode(codeToShow),
+    [codeToShow]
   );
 
   return (
     <ScrollArea className="backdrop-blur-xl rounded-lg  max-w-full min-w-full max-h-full min-h-full h-full">
       <div className="p-3">
+        {selectedTweaks && selectedTweaks.length > 0 && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="mb-2 cursor-pointer text-xs text-muted-foreground font-mono">
+                {/* Show tweak title and icon if needed */}
+                <span className="font-semibold text-foreground mr-2">
+                  {selectedTweaks[0].title}
+                </span>
+                <span>(see details)</span>
+              </div>
+            </TooltipTrigger>
+            <TooltipContent>
+              <div className="flex flex-col gap-1 text-xs">
+                {selectedTweaks.map((tweak) => (
+                  <div key={tweak.id}>
+                    <strong>{tweak.title}</strong>
+                    <div>
+                      <strong>Reports:</strong> {tweak.tweak_metadata.report}
+                    </div>
+                    <div>
+                      <strong>Downloads:</strong>{" "}
+                      {tweak.tweak_metadata.downloadCount}
+                    </div>
+                    <div>
+                      <strong>Comment:</strong>{" "}
+                      {tweak.tweak_metadata.tweakComment}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TooltipContent>
+          </Tooltip>
+        )}
         <div className="rounded-lg overflow-hidden bg-transparent">
           {/* Editor container: two columns inside the same scroll area so they scroll together */}
           <div className="flex font-mono text-sm text-foreground">

@@ -80,8 +80,6 @@ export default function UserCard() {
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-[180px]">
-          <DropdownMenuLabel>My Account</DropdownMenuLabel>
-          <DropdownMenuSeparator />
           <DropdownMenuItem>
             <Bell className="mr-2 h-4 w-4" />
             Notifications

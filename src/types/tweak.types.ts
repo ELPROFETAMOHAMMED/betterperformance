@@ -1,3 +1,11 @@
+// Represents a saved tweak history/configuration for a user
+export interface TweakHistoryEntry {
+  id: string;
+  userId: string;
+  createdAt: string;
+  name?: string;
+  tweaks: Tweak[];
+}
 export interface TweakMetadata {
   report: number;
   downloadCount: number;
@@ -11,6 +19,7 @@ export interface Tweak {
   description: string;
   tweak_metadata: TweakMetadata;
   code?: string;
+  category_id: string;
 }
 
 export interface TweakCategory {

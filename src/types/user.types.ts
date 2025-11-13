@@ -1,4 +1,5 @@
 import type { User, UserIdentity, UserMetadata } from "@supabase/supabase-js";
+import { TweakHistoryEntry } from "@/types/tweak.types";
 
 export type supabaseUser = User;
 
@@ -20,6 +21,7 @@ export interface googleUserMetadata extends UserMetadata {
 export interface profile extends supabaseUser {
   user_metadata: googleUserMetadata;
   identities?: UserIdentity[];
+  tweakHistory?: TweakHistoryEntry[];
 }
 
 export interface UserCardProps {
