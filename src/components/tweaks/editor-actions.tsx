@@ -117,11 +117,13 @@ export default function EditorActions({
                           variant={"outline"}
                           className="flex items-center justify-between gap-2 px-2 py-1 rounded hover:bg-background/5"
                         >
-                          <div className="text-sm truncate flex gap-x-2">
-                            <CategoryIcon className="h-4 w-4 text-foreground inline-block mr-2 flex-shrink-0" />
-                            <p>{t.title}</p>
-                          </div>
-                          <X className="h-4 w-4" />
+                          <>
+                            <div className="text-sm truncate flex gap-x-2">
+                              <CategoryIcon className="h-4 w-4 text-foreground inline-block mr-2 flex-shrink-0" />
+                              <p>{t.title}</p>
+                            </div>
+                            <X className="h-4 w-4" />
+                          </>
                         </Button>
                       );
                     })}

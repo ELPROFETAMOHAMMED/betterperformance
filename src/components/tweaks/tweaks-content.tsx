@@ -6,13 +6,21 @@ import VisualTree from "./visual-tree";
 import CodeEditor from "./code-editor";
 import EditorActions from "./editor-actions";
 import { redactSensitive } from "@/lib/utils";
+import { downloadTweaks } from "@/services/download-tweaks";
+import {
+  saveTweakHistory,
+  incrementTweakDownloads,
+} from "@/services/tweak-history";
 import type { TweakCategory, Tweak } from "@/types/tweak.types";
+import { useUser } from "@/hooks/use-user";
+import { format } from "date-fns";
 
 interface TweaksContentProps {
   categories: TweakCategory[];
 }
 
 export default function TweaksContent({ categories }: TweaksContentProps) {
+  const { user } = useUser();
   const [selectedTweaks, setSelectedTweaks] = useState<Map<string, Tweak>>(
     new Map()
   );
@@ -67,18 +75,6 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     navigator.clipboard.writeText(code);
   }, [code]);
 
-  const handleDownload = useCallback(() => {
-    const blob = new Blob([code], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "tweaks.ps1";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [code]);
-
   // Settings now come from TanStack Query/localStorage
   const {
     showLineNumbers,
@@ -90,37 +86,33 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   } = settings;
 
   // enhanced download handler that respects settings (encoding, per-tweak, redaction)
-  const handleDownloadWithSettings = useCallback(() => {
-    const makeBlobAndDownload = (content: string, filename: string) => {
-      const data = hideSensitive ? redactSensitive(content) : content;
-      const mime = encodingUtf8
-        ? "text/plain;charset=utf-8"
-        : "text/plain;charset=utf-16";
-      const blob = new Blob([data], { type: mime });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    };
+  const handleDownloadWithSettings = useCallback(async () => {
+    const tweaksToDownload = Array.from(selectedTweaks.values());
+    if (tweaksToDownload.length === 0 || !user) return;
 
-    if (downloadEachTweak && selectedTweaksArray.length > 0) {
-      selectedTweaksArray.forEach((t, i) => {
-        const content = t.code || `# ${t.title}\n# ${t.description}\n`;
-        const fileName = `${
-          t.title.replace(/[^a-z0-9-_]/gi, "_") || `tweak-${i + 1}`
-        }.ps1`;
-        makeBlobAndDownload(content, fileName);
-      });
-      return;
-    }
+    // 1. Increment downloads for each tweak
+    await incrementTweakDownloads(tweaksToDownload.map((t) => t.id));
 
-    // fallback: download combined code
-    makeBlobAndDownload(code, "tweaks.ps1");
-  }, [code, downloadEachTweak, encodingUtf8, hideSensitive, selectedTweaks]);
+    // 2. Save tweak history with formatted date as name
+    const now = new Date();
+    const formattedDate = format(now, "dd/MM/yyyy");
+    const historyName = `Last Tweak Applied - ${formattedDate}`;
+    await saveTweakHistory({
+      userId: user.id,
+      tweaks: tweaksToDownload,
+      name: historyName,
+    });
+
+    // 3. Download tweaks
+    downloadTweaks({
+      tweaks: tweaksToDownload,
+      options: {
+        encodingUtf8,
+        hideSensitive,
+        downloadEachTweak,
+      },
+    });
+  }, [selectedTweaks, encodingUtf8, hideSensitive, downloadEachTweak, user]);
 
   const selectedTweaksSet = new Set(selectedTweaks.keys());
   const selectedTweaksArray = Array.from(selectedTweaks.values());
