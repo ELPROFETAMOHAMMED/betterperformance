@@ -119,6 +119,9 @@ importers:
       input-otp:
         specifier: ^1.4.2
         version: 1.4.2(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      lottie-react:
+        specifier: ^2.4.1
+        version: 2.4.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       lucide-react:
         specifier: ^0.546.0
         version: 0.546.0(react@19.1.0)
@@ -128,6 +131,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      pnpm:
+        specifier: ^10.23.0
+        version: 10.23.0
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -2326,6 +2332,15 @@ packages:
     resolution: {integrity: sha512-lyuxPGr/Wfhrlem2CL/UcnUc1zcqKAImBDzukY7Y5F/yQiNdko6+fRLevlw1HgMySw7f611UIY408EtxRSoK3Q==}
     hasBin: true
 
+  lottie-react@2.4.1:
+    resolution: {integrity: sha512-LQrH7jlkigIIv++wIyrOYFLHSKQpEY4zehPicL9bQsrt1rnoKRYCYgpCUe5maqylNtacy58/sQDZTkwMcTRxZw==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  lottie-web@5.13.0:
+    resolution: {integrity: sha512-+gfBXl6sxXMPe8tKQm7qzLnUy5DUPJPKIyRHwtpCpyUEYjHYRJC/5gjUvdkuO2c3JllrPtHXH5UJJK8LRYl5yQ==}
+
   lucide-react@0.546.0:
     resolution: {integrity: sha512-Z94u6fKT43lKeYHiVyvyR8fT7pwCzDu7RyMPpTvh054+xahSgj4HFQ+NmflvzdXsoAjYGdCguGaFKYuvq0ThCQ==}
     peerDependencies:
@@ -2486,6 +2501,11 @@ packages:
   picomatch@4.0.3:
     resolution: {integrity: sha512-5gTmgEY/sqK6gFXLIsQNH19lWb4ebPDLA4SdLP7dsWkIXHWlG66oPuVvXSGFPppYZz8ZDZq0dYYrbHfBCVUb1Q==}
     engines: {node: '>=12'}
+
+  pnpm@10.23.0:
+    resolution: {integrity: sha512-IcTlaYACrel+Tv6Li0qJqN48haN5GflX56DzDzj7xbvdBZgP/ikXmy+25uaRJC4JjZRdFgF3LK0P71+2QR4qSw==}
+    engines: {node: '>=18.12'}
+    hasBin: true
 
   possible-typed-array-names@1.1.0:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
@@ -5206,6 +5226,14 @@ snapshots:
     dependencies:
       js-tokens: 4.0.0
 
+  lottie-react@2.4.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
+    dependencies:
+      lottie-web: 5.13.0
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
+
+  lottie-web@5.13.0: {}
+
   lucide-react@0.546.0(react@19.1.0):
     dependencies:
       react: 19.1.0
@@ -5361,6 +5389,8 @@ snapshots:
   picomatch@2.3.1: {}
 
   picomatch@4.0.3: {}
+
+  pnpm@10.23.0: {}
 
   possible-typed-array-names@1.1.0: {}
 

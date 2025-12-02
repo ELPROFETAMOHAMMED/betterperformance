@@ -1,57 +1,78 @@
 "use client";
 
 import * as React from "react";
-import { Moon, Sun, SunMoonIcon } from "lucide-react";
+import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
 
-import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
 
-export function ThemeToggle({ className }: { className?: string }) {
-  const { setTheme, theme } = useTheme();
+type ThemeOption = "system" | "light" | "dark";
+
+interface ThemeToggleProps {
+  className?: string;
+}
+
+const options: {
+  value: ThemeOption;
+  label: string;
+  icon: React.ReactNode;
+}[] = [
+  { value: "system", label: "System", icon: <Monitor className="h-3.5 w-3.5" /> },
+  { value: "light", label: "Light", icon: <Sun className="h-3.5 w-3.5" /> },
+  { value: "dark", label: "Dark", icon: <Moon className="h-3.5 w-3.5" /> },
+];
+
+export function ThemeToggle({ className }: ThemeToggleProps) {
+  const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
   }, []);
 
+  const current: ThemeOption =
+    mounted && theme && ["system", "light", "dark"].includes(theme)
+      ? (theme as ThemeOption)
+      : "system";
+
   if (!mounted) {
     return (
-      <Button variant="outline" className={cn(className)} disabled>
-        <SunMoonIcon className="h-5 w-5" />
-        <Separator orientation={"vertical"} />
-        <span className="w-20 inline-block" aria-hidden="true" />
-      </Button>
+      <div
+        className={cn(
+          "inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-border/60 bg-background/80 px-1.5 py-1 text-[11px] text-muted-foreground",
+          className
+        )}
+      >
+        <div className="h-6 w-16 animate-pulse rounded bg-muted" />
+      </div>
     );
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" className={cn(className)}>
-          <SunMoonIcon className="h-5 w-5" />
-          <Separator orientation={"vertical"} />
-          {theme === "light" ? <span>Light Mode</span> : <span>Dark Mode</span>}
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>
-          Light
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>
-          Dark
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>
-          System
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div
+      className={cn(
+        "inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-border/60 bg-background/80 p-1 text-[11px] shadow-sm backdrop-blur",
+        className
+      )}
+    >
+      {options.map((opt) => {
+        const active = current === opt.value;
+        return (
+          <button
+            key={opt.value}
+            type="button"
+            onClick={() => setTheme(opt.value)}
+            className={cn(
+              "inline-flex items-center gap-1 rounded-[calc(var(--radius-md)-2px)] px-2 py-1 transition-colors",
+              "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+              active && "bg-primary/10 text-foreground ring-1 ring-primary/40"
+            )}
+          >
+            {opt.icon}
+            <span className="hidden sm:inline">{opt.label}</span>
+          </button>
+        );
+      })}
+    </div>
   );
 }
