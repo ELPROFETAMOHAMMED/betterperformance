@@ -41,6 +41,10 @@ export function downloadTweaks({
   } else {
     // Combine all tweaks
     const combinedCode = tweaks.map((t) => t.code || "").join("\n\n");
-    makeBlobAndDownload(combinedCode, "tweaks.ps1", options.encodingUtf8);
+    makeBlobAndDownload(
+      combinedCode,
+      "Betterperformance-Tweaks-Selection.ps1",
+      options.encodingUtf8
+    );
   }
 }

@@ -51,7 +51,7 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
   return (
     <div
       className={cn(
-        "inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-border/60 bg-background/80 p-1 text-[11px] shadow-sm backdrop-blur",
+        "inline-flex items-center gap-1 rounded-[var(--radius-md)] border border-border/60 bg-background/80 p-1 text-[11px] backdrop-blur",
         className
       )}
     >

@@ -1,6 +1,7 @@
 import HomeContent from "@/components/main/home";
 import { createClient } from "../../../utils/supabase/server";
 import { redirect } from "next/navigation";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default async function Home() {
   const supabase = await createClient();
@@ -15,8 +16,10 @@ export default async function Home() {
   }
 
   return (
-    <main className="flex-1 flex items-center justify-center w-full">
-      <HomeContent />
-    </main>
+    <ScrollArea className="h-full w-full">
+      <main className="flex min-h-screen w-full items-center justify-center">
+        <HomeContent />
+      </main>
+    </ScrollArea>
   );
 }

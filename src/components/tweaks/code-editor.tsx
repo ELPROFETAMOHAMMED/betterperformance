@@ -14,6 +14,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { Button } from "../ui/button";
 
 interface CodeEditorProps {
   selectedTweaks?: Tweak[];
@@ -55,38 +56,21 @@ export default function CodeEditor({
     <ScrollArea className="backdrop-blur-xl rounded-lg  max-w-full min-w-full max-h-full min-h-full h-full">
       <div className="p-3">
         {selectedTweaks && selectedTweaks.length > 0 && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="mb-2 cursor-pointer text-xs text-muted-foreground font-mono">
-                {/* Show tweak title and icon if needed */}
-                <span className="font-semibold text-foreground mr-2">
-                  {selectedTweaks[0].title}
-                </span>
-                <span>(see details)</span>
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              <div className="flex flex-col gap-1 text-xs">
-                {selectedTweaks.map((tweak) => (
-                  <div key={tweak.id}>
-                    <strong>{tweak.title}</strong>
-                    <div>
-                      <strong>Reports:</strong> {tweak.tweak_metadata.report}
-                    </div>
-                    <div>
-                      <strong>Downloads:</strong>{" "}
-                      {tweak.tweak_metadata.downloadCount}
-                    </div>
-                    <div>
-                      <strong>Comment:</strong>{" "}
-                      {tweak.tweak_metadata.tweakComment}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </TooltipContent>
-          </Tooltip>
+          <div className="mb-2 cursor-pointer text-xs flex items-center text-muted-foreground font-mono bg-background sticky top-0">
+            {/* Show tweak title and icon if needed */}
+            <span className="font-semibold text-foreground ">
+              {selectedTweaks[0].title}
+            </span>
+            <Button
+              variant={"link"}
+              className="text-[11px] underline cursor-pointer"
+              size={"sm"}
+            >
+              (show details)
+            </Button>
+          </div>
         )}
+
         <div className="rounded-lg overflow-hidden bg-transparent">
           {/* Editor container: two columns inside the same scroll area so they scroll together */}
           <div className="flex font-mono text-sm text-foreground">

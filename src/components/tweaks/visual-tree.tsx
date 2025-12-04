@@ -24,7 +24,7 @@ export default function VisualTree({
   onTweakToggle,
 }: VisualTreeProps) {
   return (
-    <ScrollArea className="flex h-[650px] w-full flex-col rounded-[var(--radius-md)] bg-background/40 p-3 text-muted-foreground backdrop-blur">
+    <ScrollArea className="flex h-[650px] w-full flex-col rounded-[var(--radius-md)] p-3 text-muted-foreground ">
       <div className="mb-2 flex items-center justify-between px-1">
         <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
           Tweak categories
@@ -33,10 +33,10 @@ export default function VisualTree({
           {categories.length} groups
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto rounded-md bg-background/40 p-1">
+      <div className="flex-1 overflow-y-auto  rounded-sm backdrop-blur-2xl mx-2">
         <Accordion
           type="multiple"
-          className="h-full w-full space-y-1"
+          className="h-full w-full space-y-1 "
           defaultValue={[]}
         >
           {categories.map((category) => {
@@ -44,9 +44,9 @@ export default function VisualTree({
               <AccordionItem
                 key={category.id}
                 value={category.id}
-                className="overflow-hidden rounded-md border border-border/30 bg-background/70 px-1"
+                className="overflow-hidden rounded-sm border border-border/30 hover:bg-accent/5 bg-background/70 px-1"
               >
-                <AccordionTrigger className="px-2 py-2 hover:bg-accent/40 hover:no-underline">
+                <AccordionTrigger className="px-2 py-2  hover:no-underline">
                   <div className="flex w-full items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <DynamicIcon
@@ -57,7 +57,7 @@ export default function VisualTree({
                         {category.name}
                       </span>
                     </div>
-                    <span className="rounded-full bg-secondary/70 px-2 py-0.5 text-[11px] text-secondary-foreground">
+                    <span className="px-2  text-[11px]  border-b   ">
                       {category.tweaks.length} tweaks
                     </span>
                   </div>
@@ -70,7 +70,7 @@ export default function VisualTree({
                         <div
                           key={tweak.id}
                           className={cn(
-                            "group relative flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-xs transition-colors",
+                            "group relative px-2 mx-4 flex cursor-pointer items-center gap-2 rounded-xs  py-1.5 text-xs transition-colors",
                             "hover:bg-accent/50",
                             isSelected &&
                               "bg-primary/10 text-foreground ring-1 ring-primary/40"

@@ -25,7 +25,7 @@ export default function MainHeader() {
             alt="BetterPerformance logo"
             width={28}
             height={28}
-            className="rounded-md shadow-sm"
+            className="rounded-[var(--radius-sm)]"
           />
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold tracking-tight">
@@ -38,7 +38,7 @@ export default function MainHeader() {
         </div>
 
         {/* Nav */}
-        <nav className="ml-6 hidden flex-1 items-center gap-1 text-sm font-medium md:flex">
+        <nav className="ml-6 hidden flex-1 items-center gap-2 text-sm font-medium md:flex">
           {NAV_ITEMS.map((item) => {
             const active =
               pathname === item.href ||
@@ -51,15 +51,14 @@ export default function MainHeader() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "relative rounded-full px-3 py-1.5 text-xs transition-all",
-                  "text-muted-foreground hover:text-foreground hover:bg-accent/60",
-                  active &&
-                    "bg-accent/80 text-foreground shadow-sm border border-border/60"
+                  "relative rounded-[var(--radius-sm)] px-2.5 py-1 text-xs transition-colors",
+                  "text-muted-foreground hover:text-foreground",
+                  active && "text-foreground"
                 )}
               >
                 {item.label}
                 {active && (
-                  <span className="absolute inset-x-3 -bottom-1 h-px rounded-full bg-primary/50" />
+                  <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary" />
                 )}
               </Link>
             );

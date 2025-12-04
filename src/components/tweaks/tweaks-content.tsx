@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useDeferredValue } from "react";
 import { useEditorSettings } from "@/hooks/useEditorSettings";
 import VisualTree from "./visual-tree";
 import CodeEditor from "./code-editor";
@@ -11,7 +11,7 @@ import {
 } from "@/services/tweak-history";
 import type { TweakCategory, Tweak } from "@/types/tweak.types";
 import { useUser } from "@/hooks/use-user";
-import { format } from "date-fns";
+import { format, setISODay } from "date-fns";
 import {
   Sheet,
   SheetContent,
@@ -21,6 +21,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -29,9 +30,18 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { SlidersHorizontal, FilterX } from "lucide-react";
+import {
+  SlidersHorizontal,
+  FilterX,
+  File,
+  Trash2,
+  FilterXIcon,
+  Loader2,
+} from "lucide-react";
 import LottieIllustration from "@/components/layout/lottie-illustration";
 import heroAnimation from "@/data/lottie/hero-loop.json";
+import { fi } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface TweaksContentProps {
   categories: TweakCategory[];
@@ -51,6 +61,8 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   const [activeTweakId, setActiveTweakId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
+  const [isLoading, setIsLoading] = useState(false);
+  const deferredSearch = useDeferredValue(searchQuery);
   const { settings } = useEditorSettings();
 
   const code = useMemo(() => {
@@ -60,10 +72,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
         (tweak) => tweak.code || `# ${tweak.title}\n# ${tweak.description}\n`
       )
       .join("\n\n");
-    return (
-      combinedCode ||
-      "# Your PowerShell script will appear here\n# Select tweaks from the left panel to add them"
-    );
+    return combinedCode || "#BetterPerformance code Editor v1.0.0 ";
   }, [selectedTweaks]);
 
   const handleTweakToggle = useCallback((tweak: Tweak) => {
@@ -120,8 +129,15 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
 
   // enhanced download handler that respects settings (encoding, per-tweak, redaction)
   const handleDownloadWithSettings = useCallback(async () => {
+    setIsLoading(true);
     const tweaksToDownload = Array.from(selectedTweaks.values());
-    if (tweaksToDownload.length === 0 || !user) return;
+    // Make sure that we have tweaksSelected
+    if (tweaksToDownload.length === 0) return;
+
+    if (!user)
+      return toast.error("Error", {
+        description: "Please try again later...",
+      });
 
     // 1. Increment downloads for each tweak
     await incrementTweakDownloads(tweaksToDownload.map((t) => t.id));
@@ -145,6 +161,8 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
         downloadEachTweak,
       },
     });
+
+    setIsLoading(false);
   }, [selectedTweaks, encodingUtf8, hideSensitive, downloadEachTweak, user]);
 
   const selectedTweaksSet = useMemo(
@@ -153,7 +171,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   );
   const selectedTweaksArray = Array.from(selectedTweaks.values());
   const filteredCategories = useMemo(() => {
-    const normalized = searchQuery.trim().toLowerCase();
+    const normalized = deferredSearch.trim().toLowerCase();
     return categories
       .map((category) => {
         if (!category.tweaks || category.tweaks.length === 0) {
@@ -176,7 +194,8 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
             return false;
           }
           if (normalized.length > 0) {
-            const haystack = `${category.name} ${tweak.title} ${tweak.description}`.toLowerCase();
+            const haystack =
+              `${category.name} ${tweak.title} ${tweak.description}`.toLowerCase();
             if (!haystack.includes(normalized)) {
               return false;
             }
@@ -229,31 +248,30 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   const activeCategory =
     activeTweak &&
     categories.find((category) => category.id === activeTweak.category_id);
-  const lineCount = useMemo(
-    () => (code ? code.split("\n").length : 0),
-    [code]
-  );
+  const lineCount = useMemo(() => (code ? code.split("\n").length : 0), [code]);
 
   return (
-    <div className="w-full px-6 py-6">
-      <div className="flex min-h-[calc(100vh-8rem)] w-full gap-6 rounded-[var(--radius-lg)] border border-border/50 bg-background/70 p-5 shadow-lg backdrop-blur-lg">
+    <div className="w-full px-4 py-6">
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 lg:min-h-[calc(100vh-8rem)] lg:flex-row">
         {/* Left: tree with filters */}
-        <div className="flex h-full w-[380px] flex-col gap-4">
-          <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-border/40 bg-background/70 p-3">
+        <div className="flex w-full flex-col gap-4 lg:w-[600px]">
+          <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-border/40 bg-transparent p-3">
             <div className="flex items-center justify-between text-[11px] text-muted-foreground">
               <span>
-                {filteredCategories.length} categor{filteredCategories.length === 1 ? "y" : "ies"} ·{" "}
+                {filteredCategories.length} categor
+                {filteredCategories.length === 1 ? "y" : "ies"} ·{" "}
                 {totalVisibleTweaks} tweak{totalVisibleTweaks === 1 ? "" : "s"}
               </span>
               {hasActiveFilters && (
-                <button
-                  type="button"
-                  className="inline-flex items-center gap-1 text-[11px] text-primary hover:underline"
+                <Button
+                  variant="link"
+                  size="sm"
+                  className="h-auto px-0 text-xs font-medium text-primary"
                   onClick={resetFilters}
                 >
-                  <FilterX className="h-3 w-3" />
+                  <FilterX className="mr-1 h-3 w-3" />
                   Reset
-                </button>
+                </Button>
               )}
             </div>
             <div className="flex items-center gap-2">
@@ -261,18 +279,23 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                 placeholder="Search tweaks..."
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                className="h-9 flex-1 rounded-[var(--radius-md)] border-border/50 bg-background/60 text-sm"
+                className="h-9 flex-1 rounded-[var(--radius-md)] border-border/40 bg-transparent text-sm"
               />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <button
+                  <Button
                     type="button"
-                    className="inline-flex h-9 w-10 items-center justify-center rounded-[var(--radius-md)] border border-border/60 bg-background/60 text-muted-foreground transition hover:text-foreground"
+                    variant="outline"
+                    size="icon"
+                    className="h-9 w-10 rounded-[var(--radius-md)] border-border/60 bg-background/60 text-muted-foreground transition hover:text-foreground"
                   >
                     <SlidersHorizontal className="h-4 w-4" />
-                  </button>
+                  </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuContent
+                  align="end"
+                  className="w-56 bg-background/90 backdrop-blur-sm"
+                >
                   <DropdownMenuCheckboxItem
                     checked={filters.selectedOnly}
                     onCheckedChange={(checked) =>
@@ -298,13 +321,18 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                     Show reported tweaks
                   </DropdownMenuCheckboxItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={resetFilters}>
+                  <DropdownMenuItem
+                    onClick={resetFilters}
+                    disabled={!hasActiveFilters}
+                  >
+                    <FilterXIcon className="w-4 h-4" />
                     Reset filters
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    className="text-destructive focus:text-destructive"
+                    disabled={!selectedTweaksArray.length}
                     onClick={handleClearSelection}
                   >
+                    <Trash2 className="h-4 w-4" />
                     Clear selection
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -312,19 +340,20 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
             </div>
           </div>
           {filteredCategories.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-md)] border border-dashed border-border/40 bg-background/60 p-4 text-center text-xs text-muted-foreground">
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-md)] border border-dashed border-border/40  p-4 text-center text-xs text-muted-foreground">
               <LottieIllustration
                 animationData={heroAnimation}
                 className="h-32 w-32 opacity-60"
               />
               <p>No tweaks match your filters right now.</p>
-              <button
-                type="button"
-                className="text-[11px] font-medium text-primary hover:underline"
+              <Button
+                variant="link"
+                size="sm"
+                className="text-xs font-medium text-primary"
                 onClick={resetFilters}
               >
                 Clear filters
-              </button>
+              </Button>
             </div>
           ) : (
             <VisualTree
@@ -336,7 +365,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
         </div>
 
         {/* Right: details + controls */}
-        <div className="flex h-full flex-1 flex-col rounded-xl border border-border/60 bg-card/80 p-4 shadow-sm">
+        <div className="flex h-full w-full flex-1 flex-col rounded-[var(--radius-md)] border border-border/40 bg-card/80 p-4">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold tracking-tight">
@@ -353,13 +382,15 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
             <div className="flex items-center gap-2">
               <Sheet>
                 <SheetTrigger asChild>
-                  <button
+                  <Button
                     type="button"
-                    className="rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs font-medium text-foreground shadow-sm transition hover:bg-accent/60 disabled:cursor-not-allowed disabled:opacity-60"
+                    variant="outline"
+                    size="sm"
                     disabled={!selectedTweaksArray.length}
                   >
+                    <File className="h-4 w-4" />
                     View final script
-                  </button>
+                  </Button>
                 </SheetTrigger>
                 <SheetContent
                   side="right"
@@ -381,13 +412,17 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                         ~{lineCount} lines
                       </span>
                       <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
-                        {new Set(
-                          selectedTweaksArray.map((tweak) => tweak.category_id)
-                        ).size}{" "}
+                        {
+                          new Set(
+                            selectedTweaksArray.map(
+                              (tweak) => tweak.category_id
+                            )
+                          ).size
+                        }{" "}
                         categories
                       </span>
                     </div>
-                    <div className="h-[420px] rounded-lg border border-border/70 bg-background/80 p-2">
+                    <div className="h-[420px] rounded-[var(--radius-md)] border border-border/70 bg-background/80 p-2">
                       <CodeEditor
                         selectedTweaks={selectedTweaksArray}
                         code={code}
@@ -397,22 +432,25 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                       />
                     </div>
                     <div className="mt-3 flex items-center justify-end gap-2">
-                      <button
-                        type="button"
+                      <Button
+                        variant="outline"
+                        size="sm"
                         onClick={handleCopy}
-                        className="rounded-full border border-border/60 bg-background/70 px-3 py-1 text-xs font-medium text-foreground shadow-sm transition hover:bg-accent/60"
                         disabled={!selectedTweaksArray.length}
                       >
                         Copy script
-                      </button>
-                      <button
-                        type="button"
+                      </Button>
+                      <Button
+                        size="sm"
                         onClick={handleDownloadWithSettings}
-                        className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90"
-                        disabled={!selectedTweaksArray.length || !user}
+                        disabled={!selectedTweaksArray.length || isLoading}
                       >
-                        Download
-                      </button>
+                        {isLoading ? (
+                          <Loader2 className="animate-spin w-4 h-4" />
+                        ) : (
+                          "Download"
+                        )}
+                      </Button>
                     </div>
                   </div>
                 </SheetContent>
@@ -421,7 +459,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
           </div>
 
           <div className="flex-1">
-            <div className="h-full rounded-lg border border-border/60 bg-background/70 p-3 text-sm">
+            <div className="h-full rounded-[var(--radius-md)] border border-border/40 bg-background/70 p-3 text-sm">
               {activeTweak && activeCategory ? (
                 <div className="flex h-full flex-col gap-2">
                   <div className="flex items-start justify-between gap-3">
@@ -433,7 +471,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                         {activeTweak.title}
                       </h3>
                     </div>
-                    <div className="rounded-full bg-secondary/80 px-2 py-1 text-[11px] text-secondary-foreground">
+                    <div className="px-2 text-[11px] border-b ">
                       {activeCategory.tweaks.length} tweaks in category
                     </div>
                   </div>

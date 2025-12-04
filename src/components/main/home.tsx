@@ -11,7 +11,7 @@ export default function HomeContent() {
       <div className="grid w-full max-w-6xl items-center gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         {/* Left: hero content */}
         <section className="space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border/40 bg-background/80 px-3 py-1 text-[11px] text-muted-foreground shadow-sm backdrop-blur">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border/40 bg-background/80 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>Safe, opinionated tweaks for Windows power users</span>
           </div>
@@ -32,7 +32,7 @@ export default function HomeContent() {
             <Button
               size="lg"
               asChild
-              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] px-4 py-2 text-sm font-medium shadow-sm"
+              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] px-4 py-2 text-sm font-medium"
             >
               <Link href="/tweaks">
                 <RocketIcon className="h-4 w-4" />
@@ -43,7 +43,7 @@ export default function HomeContent() {
               size="sm"
               variant="outline"
               asChild
-              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-border/60 bg-background/80 px-3 py-2 text-xs font-medium text-foreground shadow-sm hover:bg-accent/50"
+              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-border/60 bg-background/80 px-3 py-2 text-xs font-medium text-foreground hover:bg-accent/50"
             >
               <Link href="/history-tweaks">
                 <History className="h-3.5 w-3.5" />
@@ -84,7 +84,7 @@ export default function HomeContent() {
             />
             <Image
               src="/assets/Aplication-logo.png"
-              className="relative h-32 w-32 rounded-[var(--radius-lg)] shadow-2xl shadow-primary/25 md:h-40 md:w-40"
+              className="relative h-32 w-32 rounded-[var(--radius-lg)] md:h-40 md:w-40"
               alt="BetterPerformance logo"
               width={160}
               height={160}

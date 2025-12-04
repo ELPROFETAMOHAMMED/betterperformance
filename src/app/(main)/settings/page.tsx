@@ -5,6 +5,8 @@ import { Switch } from "@/components/ui/switch";
 import { Card } from "@/components/ui/card";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 
+import { ScrollArea } from "@/components/ui/scroll-area";
+
 export default function SettingsPage() {
   const {
     settings,
@@ -17,8 +19,9 @@ export default function SettingsPage() {
   } = useEditorSettings();
 
   return (
-    <main className="flex min-h-[calc(100vh-4rem)] w-full items-start justify-center px-4 py-8">
-      <div className="grid w-full max-w-4xl gap-6 md:grid-cols-[1.4fr_minmax(0,1fr)]">
+    <ScrollArea className="h-full w-full">
+      <main className="flex min-h-[calc(100vh-4rem)] w-full items-start justify-center px-4 py-8">
+        <div className="grid w-full max-w-4xl gap-6 md:grid-cols-[1.4fr_minmax(0,1fr)]">
         <section className="space-y-4">
           <div>
             <h1 className="text-lg font-semibold tracking-tight">
@@ -30,7 +33,7 @@ export default function SettingsPage() {
             </p>
           </div>
 
-          <Card className="space-y-3 border-border/60 bg-card/80 p-5 shadow-sm">
+          <Card className="space-y-3 border-border/60 bg-card/80 p-5">
             <div>
               <p className="text-sm font-medium">Theme</p>
               <p className="text-xs text-muted-foreground">
@@ -41,7 +44,7 @@ export default function SettingsPage() {
             <ThemeToggle />
           </Card>
 
-          <Card className="space-y-4 border-border/60 bg-card/80 p-5 shadow-sm">
+          <Card className="space-y-4 border-border/60 bg-card/80 p-5">
             <div className="flex items-center justify-between gap-4">
               <div>
                 <p className="text-sm font-medium">Show line numbers</p>
@@ -85,7 +88,7 @@ export default function SettingsPage() {
             </div>
           </Card>
 
-          <Card className="space-y-4 border-border/60 bg-card/80 p-5 shadow-sm">
+          <Card className="space-y-4 border-border/60 bg-card/80 p-5">
             <h2 className="text-sm font-semibold tracking-tight">
               Download behaviour
             </h2>
@@ -139,7 +142,7 @@ export default function SettingsPage() {
         </section>
 
         <aside className="space-y-4">
-          <Card className="space-y-3 border-border/60 bg-card/80 p-5 text-sm shadow-sm">
+          <Card className="space-y-3 border-border/60 bg-card/80 p-5 text-sm">
             <h2 className="text-sm font-semibold tracking-tight">
               How settings are applied
             </h2>
@@ -154,8 +157,9 @@ export default function SettingsPage() {
             </p>
           </Card>
         </aside>
-      </div>
-    </main>
+        </div>
+      </main>
+    </ScrollArea>
   );
 }
 

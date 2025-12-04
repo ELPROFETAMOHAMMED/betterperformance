@@ -1,21 +1,19 @@
 import { fetchUserTweakHistory } from "@/services/tweak-history-client";
 import HistoryTweaksClient from "@/components/tweaks/history-tweaks-client";
 import { getCurrentUser } from "@/services/auth-server";
+import {redirect} from "next/navigation"
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default async function HistoryTweaksPage() {
   const user = await getCurrentUser();
   if (!user) {
-    return (
-      <div className="p-8">
-        You must be logged in to view your tweak history.
-      </div>
-    );
+    return redirect("/login");
   }
   const history = await fetchUserTweakHistory(user.id);
 
   return (
-    <div className="p-8">
+    <ScrollArea className="h-full w-full">
       <HistoryTweaksClient history={history} />
-    </div>
+    </ScrollArea>
   );
 }
