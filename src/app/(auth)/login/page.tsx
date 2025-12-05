@@ -1,11 +1,6 @@
-import LoginButton from "@/components/auth/login-button";
+import { redirect } from "next/navigation";
 
 export default function LoginPage() {
-  return (
-    <div
-      className={"flex items-center justify-center w-auto h-auto min-h-screen"}
-    >
-      <LoginButton />
-    </div>
-  );
+  // Redirect to landing page which now includes login
+  return redirect("/");
 }

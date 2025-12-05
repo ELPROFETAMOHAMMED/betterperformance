@@ -8,6 +8,8 @@ export type EditorSettings = {
   hideSensitive: boolean;
   downloadEachTweak: boolean;
   alwaysShowWarning: boolean;
+  wrapCode: boolean;
+  showComments: boolean;
 };
 
 const STORAGE_KEY = "editorSettings";
@@ -18,6 +20,8 @@ const DEFAULT_SETTINGS: EditorSettings = {
   hideSensitive: false,
   downloadEachTweak: false,
   alwaysShowWarning: false,
+  wrapCode: true,
+  showComments: false,
 };
 
 function loadSettings(): EditorSettings {
@@ -79,6 +83,14 @@ export function useEditorSettings() {
     (v: boolean) => mutation.mutate({ alwaysShowWarning: v }),
     [mutation]
   );
+  const setWrapCode = useCallback(
+    (v: boolean) => mutation.mutate({ wrapCode: v }),
+    [mutation]
+  );
+  const setShowComments = useCallback(
+    (v: boolean) => mutation.mutate({ showComments: v }),
+    [mutation]
+  );
 
   return {
     settings,
@@ -88,5 +100,7 @@ export function useEditorSettings() {
     setHideSensitive,
     setDownloadEachTweak,
     setAlwaysShowWarning,
+    setWrapCode,
+    setShowComments,
   };
 }

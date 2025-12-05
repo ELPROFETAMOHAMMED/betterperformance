@@ -1,13 +1,15 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/utils/supabase/client";
 import type { profile } from "@/types/user.types";
 
 export function useUser() {
-  const supabase = createClient();
   const [user, setUser] = useState<profile | null>(null);
   const [loading, setLoading] = useState(true);
+  
+  // Create a stable supabase client instance
+  const supabase = useMemo(() => createClient(), []);
 
   useEffect(() => {
     let mounted = true;

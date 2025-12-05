@@ -48,7 +48,7 @@ export default function UserCard() {
       await fetch(`${window.location.origin}/logout`, {
         method: "POST",
       });
-      router.push("/login");
+      router.push("/");
       router.refresh();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Unknown error");
@@ -80,7 +80,7 @@ export default function UserCard() {
             Error trying to load user data
           </span>
           <Link
-            href="/login"
+            href="/"
             className="text-[11px] font-medium text-primary hover:underline"
           >
             Try again

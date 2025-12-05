@@ -5,10 +5,12 @@ export async function saveTweakHistory({
   userId,
   tweaks,
   name,
+  isFavorite,
 }: {
   userId: string;
   tweaks: Tweak[];
   name?: string;
+  isFavorite?: boolean;
 }) {
   const supabase = createClient();
   const { error } = await supabase.from("tweak_history").insert([
@@ -17,6 +19,7 @@ export async function saveTweakHistory({
       tweaks: JSON.stringify(tweaks),
       name,
       created_at: new Date().toISOString(),
+      is_favorite: Boolean(isFavorite),
     },
   ]);
   if (error) throw error;

@@ -1,6 +1,12 @@
 "use client";
 
-import { useState, useCallback, useMemo, useDeferredValue } from "react";
+import {
+  useState,
+  useCallback,
+  useMemo,
+  useDeferredValue,
+  useEffect,
+} from "react";
 import { useEditorSettings } from "@/hooks/useEditorSettings";
 import VisualTree from "./visual-tree";
 import CodeEditor from "./code-editor";
@@ -37,7 +43,28 @@ import {
   Trash2,
   FilterXIcon,
   Loader2,
+  Clipboard,
+  ArrowDownToLine,
+  BookmarkPlus,
+  CheckSquare2,
 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import LottieIllustration from "@/components/layout/lottie-illustration";
 import heroAnimation from "@/data/lottie/hero-loop.json";
 import { fi } from "date-fns/locale";
@@ -65,14 +92,60 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   const deferredSearch = useDeferredValue(searchQuery);
   const { settings } = useEditorSettings();
 
+  // Pre-select tweaks coming from history/favorites
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const raw = window.localStorage.getItem(
+      "bp:preselectedTweaksFromHistory"
+    );
+    if (!raw) return;
+
+    try {
+      const ids = JSON.parse(raw) as string[];
+      if (!Array.isArray(ids) || ids.length === 0) return;
+
+      const idSet = new Set(ids);
+      const map = new Map<string, Tweak>();
+
+      for (const category of categories) {
+        for (const tweak of category.tweaks || []) {
+          if (idSet.has(tweak.id)) {
+            map.set(tweak.id, tweak);
+          }
+        }
+      }
+
+      if (map.size > 0) {
+        setSelectedTweaks(map);
+        const lastId = Array.from(map.keys())[map.size - 1] ?? null;
+        setActiveTweakId(lastId);
+      }
+    } catch (error) {
+      console.error("Failed to restore tweaks from history", error);
+    } finally {
+      window.localStorage.removeItem("bp:preselectedTweaksFromHistory");
+    }
+  }, [categories]);
+
   const code = useMemo(() => {
     const selectedTweaksArray = Array.from(selectedTweaks.values());
-    const combinedCode = selectedTweaksArray
-      .map(
-        (tweak) => tweak.code || `# ${tweak.title}\n# ${tweak.description}\n`
-      )
-      .join("\n\n");
-    return combinedCode || "#BetterPerformance code Editor v1.0.0 ";
+    const cleanedBlocks = selectedTweaksArray.map((tweak) => {
+      const raw =
+        tweak.code || `# ${tweak.title}\n# ${tweak.description || ""}`;
+      return raw
+        .replace(/\r\n/g, "\n")
+        .replace(/\n{3,}/g, "\n\n")
+        .replace(/[ \t]+$/gm, "")
+        .trim();
+    });
+
+    const combinedCode = cleanedBlocks.filter(Boolean).join("\n\n").trimEnd();
+
+    return (
+      combinedCode ||
+      "# BetterPerformance code editor\n# Select tweaks on the left to build your script."
+    );
   }, [selectedTweaks]);
 
   const handleTweakToggle = useCallback((tweak: Tweak) => {
@@ -125,51 +198,95 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     hideSensitive,
     downloadEachTweak,
     alwaysShowWarning,
+    showComments,
   } = settings;
 
   // enhanced download handler that respects settings (encoding, per-tweak, redaction)
   const handleDownloadWithSettings = useCallback(async () => {
     setIsLoading(true);
-    const tweaksToDownload = Array.from(selectedTweaks.values());
-    // Make sure that we have tweaksSelected
-    if (tweaksToDownload.length === 0) return;
+    try {
+      const tweaksToDownload = Array.from(selectedTweaks.values());
+      // Make sure that we have tweaksSelected
+      if (tweaksToDownload.length === 0) {
+        return;
+      }
 
-    if (!user)
-      return toast.error("Error", {
-        description: "Please try again later...",
+      if (!user) {
+        toast.error("Error", {
+          description: "Please try again later...",
+        });
+        return;
+      }
+
+      // 1. Increment downloads for each tweak
+      await incrementTweakDownloads(tweaksToDownload.map((t) => t.id));
+
+      // 2. Save tweak history with formatted date as name
+      const now = new Date();
+      const formattedDate = format(now, "dd/MM/yyyy");
+      const historyName = `Last Tweak Applied - ${formattedDate}`;
+      await saveTweakHistory({
+        userId: user.id,
+        tweaks: tweaksToDownload,
+        name: historyName,
+        isFavorite: false,
       });
 
-    // 1. Increment downloads for each tweak
-    await incrementTweakDownloads(tweaksToDownload.map((t) => t.id));
-
-    // 2. Save tweak history with formatted date as name
-    const now = new Date();
-    const formattedDate = format(now, "dd/MM/yyyy");
-    const historyName = `Last Tweak Applied - ${formattedDate}`;
-    await saveTweakHistory({
-      userId: user.id,
-      tweaks: tweaksToDownload,
-      name: historyName,
-    });
-
-    // 3. Download tweaks
-    downloadTweaks({
-      tweaks: tweaksToDownload,
-      options: {
-        encodingUtf8,
-        hideSensitive,
-        downloadEachTweak,
-      },
-    });
-
-    setIsLoading(false);
+      // 3. Download tweaks
+      downloadTweaks({
+        tweaks: tweaksToDownload,
+        options: {
+          encodingUtf8,
+          hideSensitive,
+          downloadEachTweak,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      toast.error("Error while preparing download", {
+        description: "Please try again later...",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }, [selectedTweaks, encodingUtf8, hideSensitive, downloadEachTweak, user]);
+
+  const handleQuickSaveToHistory = useCallback(async () => {
+    const tweaksToSave = Array.from(selectedTweaks.values());
+    if (tweaksToSave.length === 0) return;
+
+    if (!user) {
+      toast.error("Unable to save selection", {
+        description: "You need to be signed in to keep a history of tweaks.",
+      });
+      return;
+    }
+
+    const now = new Date();
+    const defaultName = `Favorite selection - ${format(
+      now,
+      "dd/MM/yyyy HH:mm"
+    )}`;
+
+    setFavoriteName(defaultName);
+    setFavoriteDialogOpen(true);
+  }, [selectedTweaks, user]);
 
   const selectedTweaksSet = useMemo(
     () => new Set(selectedTweaks.keys()),
     [selectedTweaks]
   );
   const selectedTweaksArray = Array.from(selectedTweaks.values());
+  const currentSelectionKey = useMemo(
+    () =>
+      selectedTweaksArray.length
+        ? selectedTweaksArray
+            .map((tweak) => tweak.id)
+            .sort()
+            .join("|")
+        : "",
+    [selectedTweaksArray]
+  );
   const filteredCategories = useMemo(() => {
     const normalized = deferredSearch.trim().toLowerCase();
     return categories
@@ -248,7 +365,41 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   const activeCategory =
     activeTweak &&
     categories.find((category) => category.id === activeTweak.category_id);
-  const lineCount = useMemo(() => (code ? code.split("\n").length : 0), [code]);
+  const [lineCount, setLineCount] = useState(0);
+  const [favoriteDialogOpen, setFavoriteDialogOpen] = useState(false);
+  const [favoriteName, setFavoriteName] = useState("");
+  const [isSavingFavorite, setIsSavingFavorite] = useState(false);
+
+  const handleSelectAllTweaks = useCallback(() => {
+    const allTweaks: Tweak[] = [];
+    categories.forEach((category) => {
+      (category.tweaks || []).forEach((tweak) => {
+        allTweaks.push(tweak);
+      });
+    });
+
+    if (!allTweaks.length) return;
+
+    const totalTweaksCount = allTweaks.length;
+    const currentlySelectedCount = selectedTweaks.size;
+    const selectingAll = currentlySelectedCount !== totalTweaksCount;
+
+    setSelectedTweaks(() => {
+      const newMap = new Map<string, Tweak>();
+
+      if (selectingAll) {
+        allTweaks.forEach((tweak) => {
+          newMap.set(tweak.id, tweak);
+        });
+        const last = allTweaks[allTweaks.length - 1];
+        setActiveTweakId(last ? last.id : null);
+      } else {
+        setActiveTweakId(null);
+      }
+
+      return newMap;
+    });
+  }, [categories, selectedTweaks.size]);
 
   return (
     <div className="w-full px-4 py-6">
@@ -380,6 +531,29 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
               </p>
             </div>
             <div className="flex items-center gap-2">
+              <TooltipProvider delayDuration={200}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={handleSelectAllTweaks}
+                      disabled={!categories.length}
+                    >
+                      <CheckSquare2 className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom">
+                    <p className="text-[11px]">
+                      {selectedTweaksArray.length === 0
+                        ? "Select all tweaks"
+                        : "Toggle select all tweaks"}
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <Sheet>
                 <SheetTrigger asChild>
                   <Button
@@ -394,7 +568,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                 </SheetTrigger>
                 <SheetContent
                   side="right"
-                  className="w-full border-l border-border/70 bg-background/95 p-4 sm:max-w-xl"
+                  className="flex h-full w-full flex-col overflow-y-auto border-l border-border/70 bg-background/95 p-4 sm:max-w-xl"
                 >
                   <SheetHeader>
                     <SheetTitle>Final PowerShell script</SheetTitle>
@@ -402,8 +576,9 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                       Combined .ps1 content for all currently selected tweaks.
                     </SheetDescription>
                   </SheetHeader>
-                  <div className="mt-4 flex flex-col gap-3">
-                    <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                  <div className="mt-4 flex-1 pr-2">
+                    <div className="flex flex-col gap-3 pb-4">
+                      <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
                       <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
                         {selectedTweaksArray.length} selected tweak
                         {selectedTweaksArray.length === 1 ? "" : "s"}
@@ -422,35 +597,107 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                         categories
                       </span>
                     </div>
-                    <div className="h-[420px] rounded-[var(--radius-md)] border border-border/70 bg-background/80 p-2">
-                      <CodeEditor
-                        selectedTweaks={selectedTweaksArray}
-                        code={code}
-                        showLineNumbers={showLineNumbers}
-                        enableTextColors={enableTextColors}
-                        hideSensitive={hideSensitive}
-                      />
-                    </div>
-                    <div className="mt-3 flex items-center justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleCopy}
-                        disabled={!selectedTweaksArray.length}
-                      >
-                        Copy script
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={handleDownloadWithSettings}
-                        disabled={!selectedTweaksArray.length || isLoading}
-                      >
-                        {isLoading ? (
-                          <Loader2 className="animate-spin w-4 h-4" />
-                        ) : (
-                          "Download"
-                        )}
-                      </Button>
+                      <div className="h-[420px] rounded-[var(--radius-md)] border border-border/70 bg-background/80 p-2">
+                        <CodeEditor
+                          selectedTweaks={selectedTweaksArray}
+                          code={code}
+                          showLineNumbers={showLineNumbers}
+                          enableTextColors={enableTextColors}
+                          hideSensitive={hideSensitive}
+                          wrapCode={settings.wrapCode}
+                          showComments={showComments}
+                          onLineCountChange={setLineCount}
+                        />
+                      </div>
+                      {/* Summary of selected tweaks */}
+                      <div className="mt-3 border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
+                        <p className="mb-2 text-[11px] font-medium text-foreground">
+                          Selected tweaks overview
+                        </p>
+                        <ScrollArea className="h-40 pr-1">
+                          <div className="space-y-2">
+                            {selectedTweaksArray.map((tweak, index) => (
+                              <div key={tweak.id}>
+                                <p className="text-[11px] font-semibold text-foreground">
+                                  {index + 1}. {tweak.title}
+                                </p>
+                                <p className="line-clamp-2 text-[11px] text-muted-foreground">
+                                  {tweak.description}
+                                </p>
+                                {index < selectedTweaksArray.length - 1 && (
+                                  <div className="mt-2 border-b border-border/40" />
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </div>
+                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="max-w-sm text-[11px] text-muted-foreground">
+                          Quick actions for this combined script: bookmark it in
+                          your history, copy it to the clipboard, or download it
+                          as a .ps1 file.
+                        </p>
+                        <TooltipProvider delayDuration={200}>
+                          <div className="flex flex-wrap items-center justify-end gap-1">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={handleQuickSaveToHistory}
+                                  disabled={!selectedTweaksArray.length}
+                                >
+                                  <BookmarkPlus className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p className="text-[11px]">
+                                  Save this selection as a named favorite
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={handleCopy}
+                                  disabled={!selectedTweaksArray.length}
+                                >
+                                  <Clipboard className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p className="text-[11px]">Copy script</p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  size="icon"
+                                  className="h-8 w-8"
+                                  onClick={handleDownloadWithSettings}
+                                  disabled={
+                                    !selectedTweaksArray.length || isLoading
+                                  }
+                                >
+                                  {isLoading ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <ArrowDownToLine className="h-4 w-4" />
+                                  )}
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">
+                                <p className="text-[11px]">Download script</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </div>
+                        </TooltipProvider>
+                      </div>
                     </div>
                   </div>
                 </SheetContent>
@@ -546,6 +793,89 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
           </div>
         </div>
       </div>
+
+      <AlertDialog
+        open={favoriteDialogOpen}
+        onOpenChange={(open) => {
+          setFavoriteDialogOpen(open);
+          if (!open) {
+            setIsSavingFavorite(false);
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Save selection as favorite</AlertDialogTitle>
+            <AlertDialogDescription>
+              Give this combination of tweaks a descriptive name so you can
+              quickly find it in your history later.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="mt-2 space-y-2">
+            <Input
+              autoFocus
+              value={favoriteName}
+              onChange={(e) => setFavoriteName(e.target.value)}
+              placeholder="e.g. Gaming preset, Work essentials..."
+            />
+            {selectedTweaksArray.length > 0 && (
+              <p className="text-xs text-muted-foreground">
+                This selection contains {selectedTweaksArray.length} tweak
+                {selectedTweaksArray.length === 1 ? "" : "s"}.
+              </p>
+            )}
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isSavingFavorite}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              asChild
+              disabled={isSavingFavorite || !favoriteName.trim()}
+            >
+              <Button
+                onClick={async () => {
+                  if (!user) {
+                    toast.error("Unable to save selection", {
+                      description:
+                        "You need to be signed in to keep a history of tweaks.",
+                    });
+                    return;
+                  }
+                  const tweaksToSave = Array.from(selectedTweaks.values());
+                  if (!tweaksToSave.length) {
+                    setFavoriteDialogOpen(false);
+                    return;
+                  }
+                  try {
+                    setIsSavingFavorite(true);
+                    await saveTweakHistory({
+                      userId: user.id,
+                      tweaks: tweaksToSave,
+                      name: favoriteName.trim(),
+                      isFavorite: true,
+                    });
+                    toast.success("Saved as favorite in history", {
+                      description:
+                        "You can find it later in the History tab, marked with a star.",
+                    });
+                    setFavoriteDialogOpen(false);
+                  } catch (error) {
+                    console.error(error);
+                    toast.error("Failed to save selection", {
+                      description: "Please try again later...",
+                    });
+                  } finally {
+                    setIsSavingFavorite(false);
+                  }
+                }}
+              >
+                {isSavingFavorite ? "Saving…" : "Save favorite"}
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

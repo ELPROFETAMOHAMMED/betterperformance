@@ -5,6 +5,7 @@ export interface TweakHistoryEntry {
   createdAt: string;
   name?: string;
   tweaks: Tweak[];
+  isFavorite?: boolean;
 }
 export interface TweakMetadata {
   report: number;

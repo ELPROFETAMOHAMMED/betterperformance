@@ -16,6 +16,8 @@ export default function SettingsPage() {
     setHideSensitive,
     setDownloadEachTweak,
     setAlwaysShowWarning,
+    setWrapCode,
+    setShowComments,
   } = useEditorSettings();
 
   return (
@@ -70,6 +72,34 @@ export default function SettingsPage() {
               <Switch
                 checked={settings.enableTextColors}
                 onCheckedChange={setEnableTextColors}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Show tweak comments</p>
+                <p className="text-xs text-muted-foreground">
+                  When enabled, each tweak&apos;s description and metadata will
+                  be added as commented lines above its code block.
+                </p>
+              </div>
+              <Switch
+                checked={settings.showComments}
+                onCheckedChange={setShowComments}
+              />
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <p className="text-sm font-medium">Enable word wrap</p>
+                <p className="text-xs text-muted-foreground">
+                  Wrap long lines in the code editor instead of requiring
+                  horizontal scrolling.
+                </p>
+              </div>
+              <Switch
+                checked={settings.wrapCode}
+                onCheckedChange={setWrapCode}
               />
             </div>
 

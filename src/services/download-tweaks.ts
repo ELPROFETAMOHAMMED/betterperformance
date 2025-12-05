@@ -1,5 +1,13 @@
 import type { Tweak } from "@/types/tweak.types";
 
+function cleanTweakCode(raw: string): string {
+  return raw
+    .replace(/\r\n/g, "\n") // normalise line endings
+    .replace(/\n{3,}/g, "\n\n") // collapse 3+ blank lines into 1 blank line
+    .replace(/[ \t]+$/gm, "") // strip trailing spaces on each line
+    .trim(); // remove leading/trailing blank lines
+}
+
 export function downloadTweaks({
   tweaks,
   options,
@@ -36,11 +44,13 @@ export function downloadTweaks({
       const fileName = `${
         tweak.title.replace(/[^a-z0-9-_]/gi, "_") || `tweak-${i + 1}`
       }.ps1`;
-      makeBlobAndDownload(tweak.code || "", fileName, options.encodingUtf8);
+      const cleaned = cleanTweakCode(tweak.code || "");
+      makeBlobAndDownload(cleaned, fileName, options.encodingUtf8);
     });
   } else {
-    // Combine all tweaks
-    const combinedCode = tweaks.map((t) => t.code || "").join("\n\n");
+    // Combine all tweaks with at most a single blank line between them
+    const cleanedBlocks = tweaks.map((t) => cleanTweakCode(t.code || ""));
+    const combinedCode = cleanedBlocks.filter(Boolean).join("\n\n").trimEnd();
     makeBlobAndDownload(
       combinedCode,
       "Betterperformance-Tweaks-Selection.ps1",

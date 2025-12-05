@@ -8,10 +8,10 @@ export async function GET(request: Request) {
   const errorDescription = requestUrl.searchParams.get("error_description");
   const origin = requestUrl.origin;
 
-  // Si hay un error, redirigir a login con el error
+  // Si hay un error, redirigir a landing page con el error
   if (error) {
     console.error("Auth error:", error, errorDescription);
-    const url = new URL(`${origin}/login`);
+    const url = new URL(`${origin}/`);
     url.searchParams.set("error", error);
     if (errorDescription) {
       url.searchParams.set("error_description", errorDescription);
@@ -27,7 +27,7 @@ export async function GET(request: Request) {
 
     if (exchangeError) {
       console.error("Exchange error:", exchangeError);
-      const url = new URL(`${origin}/login`);
+      const url = new URL(`${origin}/`);
       url.searchParams.set("error", "exchange_failed");
       url.searchParams.set("error_description", exchangeError.message);
       return NextResponse.redirect(url);

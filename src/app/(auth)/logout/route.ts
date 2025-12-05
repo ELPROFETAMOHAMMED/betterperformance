@@ -4,5 +4,5 @@ import { NextResponse } from "next/server";
 export async function POST() {
   const supabase = await createClient();
   await supabase.auth.signOut();
-  return NextResponse.redirect("/login");
+  return NextResponse.redirect("/");
 }

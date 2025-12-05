@@ -24,27 +24,45 @@ export function getTweakCommentBlock(tweak: Tweak) {
   return block.trim();
 }
 
-export function getCombinedTweaksCode(tweaks: Tweak[], hideSensitive: boolean) {
-  const blocks: string[] = [];
-
-  tweaks.forEach((tweak) => {
-    const commentBlock = getTweakCommentBlock(tweak).trim();
-
+export function getCombinedTweaksCode(
+  tweaks: Tweak[],
+  hideSensitive: boolean,
+  includeComments: boolean = true
+) {
+  const blocks: string[] = tweaks.map((tweak) => {
     const rawCode = hideSensitive
       ? redactSensitive(tweak.code || "")
       : tweak.code || "";
 
-    const cleanedCode = rawCode
+    // Normalise code: consistent newlines, collapse 3+ blank lines, no trailing whitespace, and no
+    // trailing completely blank lines per tweak.
+    const normalised = rawCode
       .replace(/\r\n/g, "\n")
       .replace(/\n{3,}/g, "\n\n")
-      .trim();
+      .replace(/[ \t]+$/gm, "");
 
-    const block = `${commentBlock}\n${cleanedCode}`.trim();
+    const lines = normalised.split("\n");
+    while (lines.length > 0 && lines[lines.length - 1].trim() === "") {
+      lines.pop();
+    }
+    const cleanedCode = lines.join("\n");
 
-    blocks.push(block);
+    const parts: string[] = [];
+
+    if (includeComments) {
+      const commentBlock = getTweakCommentBlock(tweak).trim();
+      if (commentBlock) {
+        parts.push(commentBlock);
+      }
+    }
+
+    if (cleanedCode) {
+      parts.push(cleanedCode);
+    }
+
+    return parts.join("\n");
   });
 
-  const combined = blocks.join("\n\n").trim();
-
-  return combined;
+  // Exactly one blank line between tweak blocks, no trailing blank lines.
+  return blocks.join("\n\n").trimEnd();
 }

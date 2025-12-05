@@ -22,6 +22,9 @@ interface CodeEditorProps {
   showLineNumbers?: boolean;
   enableTextColors?: boolean;
   hideSensitive?: boolean;
+  wrapCode?: boolean;
+  onLineCountChange?: (count: number) => void;
+  showComments?: boolean;
 }
 
 export default function CodeEditor({
@@ -30,6 +33,9 @@ export default function CodeEditor({
   showLineNumbers: showLineNumbersProp,
   enableTextColors: enableTextColorsProp,
   hideSensitive: hideSensitiveProp,
+  wrapCode: wrapCodeProp,
+  onLineCountChange,
+  showComments,
 }: CodeEditorProps) {
   // defaults: show line numbers and colors
   const showLineNumbers =
@@ -38,11 +44,16 @@ export default function CodeEditor({
     typeof enableTextColorsProp === "boolean" ? enableTextColorsProp : true;
   const hideSensitive =
     typeof hideSensitiveProp === "boolean" ? hideSensitiveProp : false;
+  const wrapCode = typeof wrapCodeProp === "boolean" ? wrapCodeProp : true;
 
   // Compose code with comments for each tweak
   let codeToShow = "";
   if (selectedTweaks && selectedTweaks.length > 0) {
-    codeToShow = getCombinedTweaksCode(selectedTweaks, hideSensitive);
+    codeToShow = getCombinedTweaksCode(
+      selectedTweaks,
+      hideSensitive,
+      Boolean(showComments)
+    );
   } else {
     codeToShow = hideSensitive ? redactSensitive(code || "") : code || "";
   }
@@ -52,25 +63,16 @@ export default function CodeEditor({
     [codeToShow]
   );
 
+  // Keep external line counter in sync with the actual rendered content
+  React.useEffect(() => {
+    if (typeof onLineCountChange === "function") {
+      onLineCountChange(lines.length);
+    }
+  }, [lines.length, onLineCountChange]);
+
   return (
     <ScrollArea className="backdrop-blur-xl rounded-lg  max-w-full min-w-full max-h-full min-h-full h-full">
       <div className="p-3">
-        {selectedTweaks && selectedTweaks.length > 0 && (
-          <div className="mb-2 cursor-pointer text-xs flex items-center text-muted-foreground font-mono bg-background sticky top-0">
-            {/* Show tweak title and icon if needed */}
-            <span className="font-semibold text-foreground ">
-              {selectedTweaks[0].title}
-            </span>
-            <Button
-              variant={"link"}
-              className="text-[11px] underline cursor-pointer"
-              size={"sm"}
-            >
-              (show details)
-            </Button>
-          </div>
-        )}
-
         <div className="rounded-lg overflow-hidden bg-transparent">
           {/* Editor container: two columns inside the same scroll area so they scroll together */}
           <div className="flex font-mono text-sm text-foreground">
@@ -95,11 +97,17 @@ export default function CodeEditor({
             <div className="flex-1">
               <div className="overflow-auto">
                 {/* Use a <pre> per line to preserve spacing but render spans for tokens */}
-                <div className="whitespace-pre leading-5">
+                <div className="leading-5">
                   {highlighted.map((tokens, idx) => (
                     <div key={idx} className="flex items-start">
                       <div className="w-0" />
-                      <pre className="m-0 p-0 whitespace-pre font-mono break-words w-full">
+                      <pre
+                        className={
+                          wrapCode
+                            ? "m-0 p-0 whitespace-pre-wrap break-words font-mono w-full"
+                            : "m-0 p-0 whitespace-pre font-mono w-full"
+                        }
+                      >
                         {tokens.map((t, ti) => (
                           <span
                             key={ti}

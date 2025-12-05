@@ -1,4 +1,4 @@
-import { fetchUserTweakHistory } from "@/services/tweak-history-client";
+import { fetchUserTweakHistory } from "@/services/server/tweak-history-server";
 import HistoryTweaksClient from "@/components/tweaks/history-tweaks-client";
 import { getCurrentUser } from "@/services/auth-server";
 import {redirect} from "next/navigation"
