@@ -10,14 +10,14 @@ import {
 import { useEditorSettings } from "@/features/settings/hooks/use-editor-settings";
 import VisualTree from "./visual-tree";
 import CodeEditor from "./code-editor";
-import { downloadTweaks } from "@/features/tweaks/utils/download-tweaks";
+import { useDownloadTweaks } from "@/features/tweaks/hooks/use-download-tweaks";
 import {
   saveTweakHistory,
   incrementTweakDownloads,
 } from "@/features/history-tweaks/utils/tweak-history-client";
 import type { TweakCategory, Tweak } from "@/features/tweaks/types/tweak.types";
 import { useUser } from "@/shared/hooks/use-user";
-import { format, setISODay } from "date-fns";
+import { format } from "date-fns";
 import {
   Sheet,
   SheetContent,
@@ -66,7 +66,6 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import LazyLottieHero from "@/features/landing/components/lazy-lottie-hero";
-import { fi } from "date-fns/locale";
 import { toast } from "sonner";
 
 interface TweaksContentProps {
@@ -88,9 +87,9 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
   const [isLoading, setIsLoading] = useState(false);
-  const [showWarningDialog, setShowWarningDialog] = useState(false);
   const deferredSearch = useDeferredValue(searchQuery);
   const { settings } = useEditorSettings();
+  const { handleDownload: handleDownloadWithWarning, WarningDialog } = useDownloadTweaks();
 
   // Pre-select tweaks coming from history/favorites
   useEffect(() => {
@@ -175,15 +174,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     });
   }, []);
 
-  const handleTweakRemove = useCallback((tweakId: string) => {
-    setSelectedTweaks((prev) => {
-      const newMap = new Map(prev);
-      newMap.delete(tweakId);
-      const newActiveId = Array.from(newMap.keys())[newMap.size - 1] ?? null;
-      setActiveTweakId(newActiveId);
-      return newMap;
-    });
-  }, []);
+
 
   const handleClearAll = useCallback(() => {
     setSelectedTweaks(new Map());
@@ -209,75 +200,21 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     showComments,
   } = settings;
 
-  // Function to create restore point script
-  const createRestorePointScript = useCallback(() => {
-    const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
-    const restorePointName = `BetterPerformance_Tweaks_${timestamp}`;
-    
-    const script = `# Create System Restore Point
-# Run this script as Administrator
+ 
 
-$ErrorActionPreference = "Stop"
-
-try {
-    Write-Host "Creating system restore point: $restorePointName" -ForegroundColor Cyan
+  // Enhanced download handler that shows warning dialog if enabled
+  const handleDownloadWithSettings = useCallback(async () => {
+    const tweaksToDownload = Array.from(selectedTweaks.values());
     
-    # Check if running as administrator
-    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-    
-    if (-not $isAdmin) {
-        Write-Host "ERROR: This script must be run as Administrator!" -ForegroundColor Red
-        Write-Host "Right-click PowerShell and select 'Run as Administrator'" -ForegroundColor Yellow
-        exit 1
+    if (tweaksToDownload.length === 0) {
+      toast.error("No tweaks selected", {
+        description: "Please select at least one tweak to download.",
+      });
+      return;
     }
-    
-    # Create restore point using Checkpoint-Computer
-    Checkpoint-Computer -Description "$restorePointName" -RestorePointType "MODIFY_SETTINGS"
-    
-    if ($LASTEXITCODE -eq 0) {
-        Write-Host ""
-        Write-Host "Restore point created successfully!" -ForegroundColor Green
-        Write-Host "Restore Point Name: $restorePointName" -ForegroundColor Cyan
-    } else {
-        Write-Host ""
-        Write-Host "Failed to create restore point. Exit code: $LASTEXITCODE" -ForegroundColor Red
-        exit 1
-    }
-} catch {
-    Write-Host ""
-    Write-Host "Error creating restore point: $_" -ForegroundColor Red
-    exit 1
-}`;
 
-    const blob = new Blob([script], { type: "text/plain;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Create-RestorePoint-${timestamp}.ps1`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-    
-    toast.success("Restore point script downloaded", {
-      description: "Run this script as Administrator to create a restore point.",
-    });
-  }, []);
-
-  // Internal download function (performs actual download)
-  const performDownload = useCallback(async () => {
     setIsLoading(true);
     try {
-      const tweaksToDownload = Array.from(selectedTweaks.values());
-      // Make sure that we have tweaksSelected
-      if (tweaksToDownload.length === 0) {
-        toast.error("No tweaks selected", {
-          description: "Please select at least one tweak to download.",
-        });
-        setIsLoading(false);
-        return;
-      }
-
       // Try to get user, but don't block download if user is not available
       // Downloads can work without user (just won't save history or increment downloads)
       let currentUser = user;
@@ -326,52 +263,43 @@ try {
         }
       }
 
-      // 3. Download tweaks (this always works, regardless of user)
-      downloadTweaks({
-        tweaks: tweaksToDownload,
-        options: {
+      // 3. Download tweaks using the hook (will show warning dialog if enabled)
+      // The callbacks ensure toast and loading state are only updated when download actually starts
+      handleDownloadWithWarning(
+        tweaksToDownload,
+        {
           encodingUtf8,
           hideSensitive,
           downloadEachTweak,
         },
-      });
+        {
+          onDownloadStart: () => {
+            // Only show toast and clear loading when download actually starts
+            toast.success("Download started", {
+              description: `Downloading ${tweaksToDownload.length} tweak${tweaksToDownload.length > 1 ? "s" : ""}`,
+            });
+            setIsLoading(false);
+          },
+          onDownloadCancel: () => {
+            // Clear loading state if user cancels
+            setIsLoading(false);
+          },
+        }
+      );
 
-      toast.success("Download started", {
-        description: `Downloading ${tweaksToDownload.length} tweak${tweaksToDownload.length > 1 ? "s" : ""}`,
-      });
+      // Only clear loading if warning is disabled (download starts immediately)
+      // If warning is enabled, loading will be cleared in onDownloadStart or onDownloadCancel
+      if (!settings.alwaysShowWarning) {
+        setIsLoading(false);
+      }
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Error while preparing download", {
         description: error instanceof Error ? error.message : "Please try again later...",
       });
-    } finally {
       setIsLoading(false);
     }
-  }, [selectedTweaks, encodingUtf8, hideSensitive, downloadEachTweak, user, userLoading]);
-
-  // Enhanced download handler that shows warning dialog if enabled
-  const handleDownloadWithSettings = useCallback(() => {
-    const tweaksToDownload = Array.from(selectedTweaks.values());
-    
-    if (tweaksToDownload.length === 0) {
-      toast.error("No tweaks selected", {
-        description: "Please select at least one tweak to download.",
-      });
-      return;
-    }
-
-    // Show warning dialog if enabled, otherwise proceed directly
-    if (alwaysShowWarning) {
-      setShowWarningDialog(true);
-    } else {
-      performDownload();
-    }
-  }, [selectedTweaks, alwaysShowWarning, performDownload]);
-
-  const handleWarningDialogContinue = useCallback(() => {
-    setShowWarningDialog(false);
-    performDownload();
-  }, [performDownload]);
+  }, [selectedTweaks, encodingUtf8, hideSensitive, downloadEachTweak, user, userLoading, handleDownloadWithWarning]);
 
   const handleQuickSaveToHistory = useCallback(async () => {
     const tweaksToSave = Array.from(selectedTweaks.values());
@@ -1000,59 +928,8 @@ try {
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Warning Dialog before Download */}
-      <AlertDialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
-        <AlertDialogContent className="max-w-2xl">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Important Warning - Read Before Downloading</AlertDialogTitle>
-            <div className="space-y-4 text-sm text-muted-foreground">
-              <div className="rounded-md border border-yellow-500/50 bg-yellow-500/10 p-3">
-                <p className="font-semibold text-yellow-600 dark:text-yellow-500 mb-2">
-                  ⚠️ Experimental Feature - Use at Your Own Risk
-                </p>
-                <p>
-                  This platform is currently in experimental phase. We take no responsibility for any damage, data loss, or system instability that may occur from using these tweaks.
-                </p>
-              </div>
-
-              <div>
-                <p className="font-medium text-foreground mb-2">
-                  Before downloading and applying tweaks, please ensure you:
-                </p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>Have reviewed and understand each tweak you're about to apply</li>
-                  <li>Have created a system restore point (strongly recommended)</li>
-                  <li>Are aware that some tweaks may require administrator privileges</li>
-                  <li>Have backed up all important data</li>
-                  <li>Understand that combining incompatible tweaks may break your system</li>
-                  <li>Know what you're doing or are willing to accept the risks</li>
-                </ul>
-              </div>
-
-              <div className="rounded-md border border-red-500/50 bg-red-500/10 p-3">
-                <p className="font-semibold text-red-600 dark:text-red-500 mb-1">
-                  ⚠️ Compatibility Warning
-                </p>
-                <p className="text-xs">
-                  Some tweaks may not be compatible with each other or with your specific system configuration. Applying incompatible tweaks together can cause system instability, crashes, or require a system restore. Always test tweaks individually when possible.
-                </p>
-              </div>
-
-              <p className="text-xs text-muted-foreground italic">
-                By clicking "Continue Download", you acknowledge that you understand these risks and that BetterPerformance is not responsible for any consequences resulting from the use of these tweaks.
-              </p>
-            </div>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setShowWarningDialog(false)}>
-              Cancel
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={handleWarningDialogContinue}>
-              I Understand - Continue Download
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Warning Dialog - handled by useDownloadTweaks hook */}
+      <WarningDialog />
     </div>
   );
 }

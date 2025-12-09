@@ -1,29 +1,12 @@
 "use client";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuLabel,
-} from "@/shared/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { Button } from "@/shared/components/ui/button";
-import {
-  Bell,
-  LogOut,
-  Settings,
-  Crown,
-  CreditCard,
-  Loader2,
-  AlertCircleIcon,
-} from "lucide-react";
-import { createClient } from "@/shared/utils/supabase/client";
+import { ArrowRight, Loader2, AlertCircleIcon, Crown } from "lucide-react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import { useUser } from "@/shared/hooks/use-user";
 import { useState } from "react";
+import Link from "next/link";
 
 export default function UserCard() {
   const { user, loading } = useUser();
@@ -91,79 +74,44 @@ export default function UserCard() {
   }
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="outline"
-          size="sm"
-          className="flex items-center gap-3 rounded-sm  border-border/70 bg-background/90 px-3 py-6 text-left backdrop-blur hover:border-primary/60 hover:bg-accent/60 focus-visible:ring-offset-background"
-        >
-          <div className="relative">
-            <Avatar className="h-9 w-9 ">
-              <AvatarImage src={avatarUrl} alt={userName} />
-              <AvatarFallback>
-                {userName
-                  .split(" ")
-                  .map((n: string) => n[0])
-                  .join("")
-                  .toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            {isAdmin && (
-              <span
-                className="absolute -right-1 -bottom-1 rounded-full bg-background/95 p-0.5"
-                title="Admin"
-              >
-                <Crown className="h-3.5 w-3.5 text-yellow-400" />
-              </span>
-            )}
-          </div>
-          <div className="flex min-w-0 flex-col text-left">
-            <span className="truncate text-xs font-semibold">{userName}</span>
-            <span className="truncate text-[11px] text-muted-foreground">
-              {user?.email || ""}
-            </span>
-          </div>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="min-w-[220px] rounded-lg border border-border/70 bg-background/95 backdrop-blur-xl"
-      >
-        <DropdownMenuLabel className="text-xs text-muted-foreground">
-          Signed in as
-          <div className="truncate text-[11px] font-medium text-foreground">
-            {user.email}
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem>
-          <Bell className="mr-2 h-4 w-4" />
-          Notifications
-        </DropdownMenuItem>
-        <DropdownMenuItem>
-          <CreditCard className="mr-2 h-4 w-4" />
-          Change plan
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/settings" className="flex w-full items-center">
-            <Settings className="mr-2 h-4 w-4" />
-            Settings
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          className="text-destructive"
-          onClick={handleUserSignOut}
-          disabled={isLoading}
-        >
-          <LogOut className="mr-2 h-4 w-4" />
-          {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Log out"}
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleUserSignOut}
+      disabled={isLoading}
+      className="flex items-center gap-3 rounded-sm border-border/70 bg-background/90 px-3 py-6 text-left backdrop-blur hover:border-primary/60 hover:bg-accent/60 focus-visible:ring-offset-background transition-colors"
+    >
+      <div className="relative">
+        <Avatar className="h-9 w-9">
+          <AvatarImage src={avatarUrl} alt={userName} />
+          <AvatarFallback>
+            {userName
+              .split(" ")
+              .map((n: string) => n[0])
+              .join("")
+              .toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        {isAdmin && (
+          <span
+            className="absolute -right-1 -bottom-1 rounded-full bg-background/95 p-0.5"
+            title="Admin"
+          >
+            <Crown className="h-3.5 w-3.5 text-yellow-400" />
+          </span>
+        )}
+      </div>
+      <div className="flex min-w-0 flex-col text-left">
+        <span className="truncate text-xs font-semibold">{userName}</span>
+        <span className="truncate text-[11px] text-muted-foreground">
+          {user?.email || ""}
+        </span>
+      </div>
+      {isLoading ? (
+        <Loader2 className="ml-auto h-4 w-4 animate-spin" />
+      ) : (
+        <ArrowRight className="ml-auto h-4 w-4" />
+      )}
+    </Button>
   );
 }
-
-
-

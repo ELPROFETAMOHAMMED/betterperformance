@@ -71,9 +71,9 @@ export default function VisualTree({
               <AccordionItem
                 key={category.id}
                 value={category.id}
-                className="overflow-hidden rounded-sm border border-border/30 bg-background/70 px-1 hover:bg-accent/5 mb-2"
+                className="overflow-hidden rounded-sm border border-border/30 bg-background/70  px-1  hover:bg-accent/5 mb-2"
               >
-                <div className="flex items-center gap-3 px-2 py-2">
+                <div className="flex items-center justify-between  gap-3 px-2 py-2 ">
                   <div
                     onClick={(e) => e.stopPropagation()}
                     onKeyDown={(e) => {
@@ -82,6 +82,7 @@ export default function VisualTree({
                       }
                     }}
                     role="none"
+                    className="flex items-center gap-2"
                   >
                     <Checkbox
                       checked={
@@ -90,12 +91,14 @@ export default function VisualTree({
                       onCheckedChange={handleCategoryToggle}
                       className="h-3.5 w-3.5 flex-shrink-0"
                     />
+                     <span className="text-xs font-medium uppercase tracking-[0.12em] text-foreground">
+                      {category.name}
+                    </span>
+                    
                   </div>
                   <AccordionTrigger className="flex-1 hover:no-underline py-0 justify-between">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium uppercase tracking-[0.12em] text-foreground">
-                        {category.name}
-                      </span>
+                   
+                    <div className="flex items-center gap-2 justify-between">
                       <span className="text-[11px] text-muted-foreground">
                         {tweaksInCategory.length} tweaks
                       </span>

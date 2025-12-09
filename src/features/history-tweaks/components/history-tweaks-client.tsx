@@ -7,7 +7,7 @@ import HistoryTweaksTable from "@/features/history-tweaks/components/history-twe
 import { Button } from "@/shared/components/ui/button";
 import { ArrowLeft, Star, Loader2 } from "lucide-react";
 import { useEditorSettings } from "@/features/settings/hooks/use-editor-settings";
-import { downloadTweaks } from "@/features/tweaks/utils/download-tweaks";
+import { useDownloadTweaks } from "@/features/tweaks/hooks/use-download-tweaks";
 import { incrementTweakDownloads } from "@/features/history-tweaks/utils/tweak-history-client";
 import {
   deleteTweakHistoryEntry,
@@ -34,6 +34,7 @@ export default function HistoryTweaksClient({
   const [entries, setEntries] = useState<TweakHistoryEntry[]>(history);
   const { settings } = useEditorSettings();
   const { encodingUtf8, hideSensitive, downloadEachTweak } = settings;
+  const { handleDownload: handleDownloadWithWarning, WarningDialog } = useDownloadTweaks();
 
   const [renameOpen, setRenameOpen] = useState(false);
   const [renameTarget, setRenameTarget] = useState<TweakHistoryEntry | null>(
@@ -75,24 +76,52 @@ export default function HistoryTweaksClient({
 
       await incrementTweakDownloads(entry.tweaks.map((t) => t.id));
 
-      downloadTweaks({
-        tweaks: entry.tweaks,
-        options: {
+      // Use the hook's handleDownload which will show warning dialog if needed
+      // The callbacks ensure toast and loading state are only updated when download actually starts
+      handleDownloadWithWarning(
+        entry.tweaks,
+        {
           encodingUtf8,
           hideSensitive,
           downloadEachTweak,
         },
-      });
+        {
+          onDownloadStart: () => {
+            // Only show toast and clear loading when download actually starts
+            toast.success("Download started", {
+              description: `Re-downloading "${entry.name ?? "Last tweak"}"`,
+            });
+            setDownloadingIds((prev) => {
+              const next = new Set(prev);
+              next.delete(entry.id);
+              return next;
+            });
+          },
+          onDownloadCancel: () => {
+            // Clear loading state if user cancels
+            setDownloadingIds((prev) => {
+              const next = new Set(prev);
+              next.delete(entry.id);
+              return next;
+            });
+          },
+        }
+      );
 
-      toast.success("Download started", {
-        description: `Re-downloading "${entry.name ?? "Last tweak"}"`,
-      });
+      // Only clear loading if warning is disabled (download starts immediately)
+      // If warning is enabled, loading will be cleared in onDownloadStart or onDownloadCancel
+      if (!settings.alwaysShowWarning) {
+        setDownloadingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(entry.id);
+          return next;
+        });
+      }
     } catch (error) {
       console.error(error);
       toast.error("Failed to download tweaks history", {
         description: error instanceof Error ? error.message : "Please try again later.",
       });
-    } finally {
       setDownloadingIds((prev) => {
         const next = new Set(prev);
         next.delete(entry.id);
@@ -440,6 +469,9 @@ export default function HistoryTweaksClient({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Warning Dialog - handled by useDownloadTweaks hook */}
+      <WarningDialog />
     </>
   );
 }
