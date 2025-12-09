@@ -10,6 +10,8 @@ export type EditorSettings = {
   alwaysShowWarning: boolean;
   wrapCode: boolean;
   showComments: boolean;
+  enableCodeEditing: boolean;
+  enableLineCount: boolean;
 };
 
 const STORAGE_KEY = "editorSettings";
@@ -19,9 +21,11 @@ const DEFAULT_SETTINGS: EditorSettings = {
   encodingUtf8: true,
   hideSensitive: false,
   downloadEachTweak: false,
-  alwaysShowWarning: false,
+  alwaysShowWarning: true,
   wrapCode: true,
   showComments: false,
+  enableCodeEditing: true,
+  enableLineCount: true,
 };
 
 function loadSettings(): EditorSettings {
@@ -91,6 +95,14 @@ export function useEditorSettings() {
     (v: boolean) => mutation.mutate({ showComments: v }),
     [mutation]
   );
+  const setEnableCodeEditing = useCallback(
+    (v: boolean) => mutation.mutate({ enableCodeEditing: v }),
+    [mutation]
+  );
+  const setEnableLineCount = useCallback(
+    (v: boolean) => mutation.mutate({ enableLineCount: v }),
+    [mutation]
+  );
 
   return {
     settings,
@@ -102,6 +114,8 @@ export function useEditorSettings() {
     setAlwaysShowWarning,
     setWrapCode,
     setShowComments,
+    setEnableCodeEditing,
+    setEnableLineCount,
   };
 }
 

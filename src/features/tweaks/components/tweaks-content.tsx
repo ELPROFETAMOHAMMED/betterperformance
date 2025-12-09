@@ -88,6 +88,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
   const [isLoading, setIsLoading] = useState(false);
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
   const deferredSearch = useDeferredValue(searchQuery);
   const { settings } = useEditorSettings();
 
@@ -208,8 +209,63 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     showComments,
   } = settings;
 
-  // enhanced download handler that respects settings (encoding, per-tweak, redaction)
-  const handleDownloadWithSettings = useCallback(async () => {
+  // Function to create restore point script
+  const createRestorePointScript = useCallback(() => {
+    const timestamp = format(new Date(), "yyyy-MM-dd_HH-mm-ss");
+    const restorePointName = `BetterPerformance_Tweaks_${timestamp}`;
+    
+    const script = `# Create System Restore Point
+# Run this script as Administrator
+
+$ErrorActionPreference = "Stop"
+
+try {
+    Write-Host "Creating system restore point: $restorePointName" -ForegroundColor Cyan
+    
+    # Check if running as administrator
+    $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+    
+    if (-not $isAdmin) {
+        Write-Host "ERROR: This script must be run as Administrator!" -ForegroundColor Red
+        Write-Host "Right-click PowerShell and select 'Run as Administrator'" -ForegroundColor Yellow
+        exit 1
+    }
+    
+    # Create restore point using Checkpoint-Computer
+    Checkpoint-Computer -Description "$restorePointName" -RestorePointType "MODIFY_SETTINGS"
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host ""
+        Write-Host "Restore point created successfully!" -ForegroundColor Green
+        Write-Host "Restore Point Name: $restorePointName" -ForegroundColor Cyan
+    } else {
+        Write-Host ""
+        Write-Host "Failed to create restore point. Exit code: $LASTEXITCODE" -ForegroundColor Red
+        exit 1
+    }
+} catch {
+    Write-Host ""
+    Write-Host "Error creating restore point: $_" -ForegroundColor Red
+    exit 1
+}`;
+
+    const blob = new Blob([script], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `Create-RestorePoint-${timestamp}.ps1`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    toast.success("Restore point script downloaded", {
+      description: "Run this script as Administrator to create a restore point.",
+    });
+  }, []);
+
+  // Internal download function (performs actual download)
+  const performDownload = useCallback(async () => {
     setIsLoading(true);
     try {
       const tweaksToDownload = Array.from(selectedTweaks.values());
@@ -292,6 +348,30 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
       setIsLoading(false);
     }
   }, [selectedTweaks, encodingUtf8, hideSensitive, downloadEachTweak, user, userLoading]);
+
+  // Enhanced download handler that shows warning dialog if enabled
+  const handleDownloadWithSettings = useCallback(() => {
+    const tweaksToDownload = Array.from(selectedTweaks.values());
+    
+    if (tweaksToDownload.length === 0) {
+      toast.error("No tweaks selected", {
+        description: "Please select at least one tweak to download.",
+      });
+      return;
+    }
+
+    // Show warning dialog if enabled, otherwise proceed directly
+    if (alwaysShowWarning) {
+      setShowWarningDialog(true);
+    } else {
+      performDownload();
+    }
+  }, [selectedTweaks, alwaysShowWarning, performDownload]);
+
+  const handleWarningDialogContinue = useCallback(() => {
+    setShowWarningDialog(false);
+    performDownload();
+  }, [performDownload]);
 
   const handleQuickSaveToHistory = useCallback(async () => {
     const tweaksToSave = Array.from(selectedTweaks.values());
@@ -645,6 +725,8 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                           hideSensitive={hideSensitive}
                           wrapCode={settings.wrapCode}
                           showComments={showComments}
+                          enableCodeEditing={settings.enableCodeEditing}
+                          enableLineCount={settings.enableLineCount}
                           onLineCountChange={setLineCount}
                         />
                       </div>
@@ -913,6 +995,60 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
               >
                 {isSavingFavorite ? "Saving…" : "Save favorite"}
               </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Warning Dialog before Download */}
+      <AlertDialog open={showWarningDialog} onOpenChange={setShowWarningDialog}>
+        <AlertDialogContent className="max-w-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Important Warning - Read Before Downloading</AlertDialogTitle>
+            <div className="space-y-4 text-sm text-muted-foreground">
+              <div className="rounded-md border border-yellow-500/50 bg-yellow-500/10 p-3">
+                <p className="font-semibold text-yellow-600 dark:text-yellow-500 mb-2">
+                  ⚠️ Experimental Feature - Use at Your Own Risk
+                </p>
+                <p>
+                  This platform is currently in experimental phase. We take no responsibility for any damage, data loss, or system instability that may occur from using these tweaks.
+                </p>
+              </div>
+
+              <div>
+                <p className="font-medium text-foreground mb-2">
+                  Before downloading and applying tweaks, please ensure you:
+                </p>
+                <ul className="list-disc list-inside space-y-1 ml-2">
+                  <li>Have reviewed and understand each tweak you're about to apply</li>
+                  <li>Have created a system restore point (strongly recommended)</li>
+                  <li>Are aware that some tweaks may require administrator privileges</li>
+                  <li>Have backed up all important data</li>
+                  <li>Understand that combining incompatible tweaks may break your system</li>
+                  <li>Know what you're doing or are willing to accept the risks</li>
+                </ul>
+              </div>
+
+              <div className="rounded-md border border-red-500/50 bg-red-500/10 p-3">
+                <p className="font-semibold text-red-600 dark:text-red-500 mb-1">
+                  ⚠️ Compatibility Warning
+                </p>
+                <p className="text-xs">
+                  Some tweaks may not be compatible with each other or with your specific system configuration. Applying incompatible tweaks together can cause system instability, crashes, or require a system restore. Always test tweaks individually when possible.
+                </p>
+              </div>
+
+              <p className="text-xs text-muted-foreground italic">
+                By clicking "Continue Download", you acknowledge that you understand these risks and that BetterPerformance is not responsible for any consequences resulting from the use of these tweaks.
+              </p>
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setShowWarningDialog(false)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={handleWarningDialogContinue}>
+              I Understand - Continue Download
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

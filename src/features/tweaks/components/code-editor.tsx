@@ -1,20 +1,15 @@
 "use client";
 
-import React, { useMemo } from "react";
+import { useRef } from "react";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
-import {
-  getTweakCommentBlock,
-  getCombinedTweaksCode,
-} from "@/features/tweaks/utils/tweak-comments";
-import { highlightCode, tokenClass } from "@/features/tweaks/utils/code-editor";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
-import { redactSensitive } from "@/shared/lib/utils";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/shared/components/ui/tooltip";
-import { Button } from "@/shared/components/ui/button";
+import { LineNumbersGutter } from "./code-editor/line-numbers-gutter";
+import { CodePreview } from "./code-editor/code-preview";
+import { CodeEditorEdit } from "./code-editor/code-editor-edit";
+import { EditModeToggle } from "./code-editor/edit-mode-toggle";
+import { useCodeEditor } from "./code-editor/hooks/use-code-editor";
+import { useVisualLineCount } from "./code-editor/hooks/use-visual-line-count";
+import { useLineVisualMapping } from "./code-editor/hooks/use-line-visual-mapping";
 
 interface CodeEditorProps {
   selectedTweaks?: Tweak[];
@@ -25,6 +20,8 @@ interface CodeEditorProps {
   wrapCode?: boolean;
   onLineCountChange?: (count: number) => void;
   showComments?: boolean;
+  enableCodeEditing?: boolean;
+  enableLineCount?: boolean;
 }
 
 export default function CodeEditor({
@@ -36,8 +33,10 @@ export default function CodeEditor({
   wrapCode: wrapCodeProp,
   onLineCountChange,
   showComments,
+  enableCodeEditing: enableCodeEditingProp,
+  enableLineCount: enableLineCountProp,
 }: CodeEditorProps) {
-  // defaults: show line numbers and colors
+  // Defaults
   const showLineNumbers =
     typeof showLineNumbersProp === "boolean" ? showLineNumbersProp : true;
   const enableTextColors =
@@ -45,120 +44,125 @@ export default function CodeEditor({
   const hideSensitive =
     typeof hideSensitiveProp === "boolean" ? hideSensitiveProp : false;
   const wrapCode = typeof wrapCodeProp === "boolean" ? wrapCodeProp : true;
+  const enableCodeEditing =
+    typeof enableCodeEditingProp === "boolean" ? enableCodeEditingProp : true;
+  const enableLineCount =
+    typeof enableLineCountProp === "boolean" ? enableLineCountProp : true;
 
-  // Compose code with comments for each tweak
-  let codeToShow = "";
-  if (selectedTweaks && selectedTweaks.length > 0) {
-    codeToShow = getCombinedTweaksCode(
-      selectedTweaks,
-      hideSensitive,
-      Boolean(showComments)
-    );
-  } else {
-    codeToShow = hideSensitive ? redactSensitive(code || "") : code || "";
-  }
-  
-  // Remove all empty lines from the code string
-  codeToShow = codeToShow
-    .split("\n")
-    .filter(line => line.trim().length > 0)
-    .join("\n");
+  // Use custom hook for code editor logic
+  const {
+    isEditMode,
+    setIsEditMode,
+    codeToShow,
+    editedCode,
+    setEditedCode,
+    highlighted,
+    highlightedEdit,
+  } = useCodeEditor({
+    selectedTweaks,
+    code,
+    hideSensitive,
+    showComments: Boolean(showComments),
+    enableCodeEditing,
+    onLineCountChange,
+  });
 
-  const { lines, highlighted } = useMemo(() => {
-    const result = highlightCode(codeToShow);
-    // Filter out empty lines (lines with no tokens or only whitespace)
-    const nonEmptyLines: string[] = [];
-    const nonEmptyHighlighted: typeof highlighted = [];
-    
-    result.lines.forEach((line, idx) => {
-      const tokens = result.highlighted[idx];
-      // Check if line has actual content (not just whitespace)
-      const hasContent = tokens.some(token => token.value.trim().length > 0);
-      if (hasContent) {
-        nonEmptyLines.push(line);
-        nonEmptyHighlighted.push(tokens);
-      }
-    });
-    
-    return {
-      lines: nonEmptyLines,
-      highlighted: nonEmptyHighlighted,
-    };
-  }, [codeToShow]);
+  // Ensure we're in preview mode if editing is disabled
+  const actualEditMode = enableCodeEditing && isEditMode;
 
-  // Keep external line counter in sync with the actual rendered content
-  React.useEffect(() => {
-    if (typeof onLineCountChange === "function") {
-      onLineCountChange(lines.length);
-    }
-  }, [lines.length, onLineCountChange]);
+  // Calculate logical line count based on what's actually displayed
+  // In preview mode: count only non-empty lines (highlighted.length)
+  // In edit mode: count all lines including empty ones (highlightedEdit.length)
+  const logicalLineCount = actualEditMode 
+    ? highlightedEdit.length 
+    : highlighted.length;
+
+  // Refs for measuring visual line count when wordWrap is enabled
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const editContainerRef = useRef<HTMLDivElement>(null);
+  const containerRef = actualEditMode ? editContainerRef : previewContainerRef;
+
+  // Calculate visual line count when wordWrap is enabled
+  const visualLineCount = useVisualLineCount({
+    containerRef: containerRef as React.RefObject<HTMLElement>,
+    wrapCode,
+    logicalLineCount,
+  });
+
+  // Get line number mapping for each visual line when wordWrap is enabled
+  // This hook calculates both the mapping and the actual visual line count
+  // Only pass visualLineCount when wordWrap is enabled to avoid counting empty lines
+  const lineNumberMapping = useLineVisualMapping({
+    containerRef: containerRef as React.RefObject<HTMLElement>,
+    wrapCode,
+    logicalLineCount,
+    visualLineCount: wrapCode ? visualLineCount : undefined,
+  });
+
+  // When wordWrap is enabled and we have line mapping, use its length as the source of truth
+  // Otherwise, use the calculated visual line count or logical count
+  // When wordWrap is disabled, always use logicalLineCount (which excludes empty lines in preview mode)
+  const displayedLineCount = wrapCode 
+    ? (lineNumberMapping.length > 0 ? lineNumberMapping.length : visualLineCount)
+    : logicalLineCount;
 
   return (
-    <ScrollArea className="backdrop-blur-xl rounded-lg  max-w-full min-w-full max-h-full min-h-full h-full">
-      <div className="p-3">
-        <div className="rounded-lg overflow-hidden bg-transparent">
-          {/* Editor container: two columns inside the same scroll area so they scroll together */}
-          <div className="flex font-mono text-sm text-foreground">
-            {/* Gutter */}
-            {showLineNumbers && (
-              <div
-                className="select-none pr-4 text-right text-muted-foreground"
-                style={{ width: 56 }}
-              >
-                {lines.map((_, i) => (
-                  <div
-                    key={i}
-                    className="px-1 py-0.5 leading-5 text-xs text-muted-foreground"
-                  >
-                    {i + 1}
-                  </div>
-                ))}
+    <div className="relative w-full h-full">
+      <ScrollArea className="backdrop-blur-xl rounded-lg w-full h-full">
+        <div className="p-3 pb-14">
+          <div className="rounded-lg overflow-hidden bg-transparent relative">
+            {actualEditMode ? (
+              /* Edit mode */
+              <div className="flex font-mono text-sm text-foreground relative">
+                {showLineNumbers && enableLineCount && (
+                  <LineNumbersGutter 
+                    lineCount={wrapCode && lineNumberMapping.length > 0 
+                      ? lineNumberMapping.length 
+                      : logicalLineCount}
+                    enabled={enableLineCount}
+                    lineNumbers={wrapCode && lineNumberMapping.length > 0 ? lineNumberMapping : undefined}
+                  />
+                )}
+                <CodeEditorEdit
+                  key="code-editor-edit"
+                  code={editedCode}
+                  highlighted={highlightedEdit}
+                  wrapCode={wrapCode}
+                  enableTextColors={enableTextColors}
+                  onCodeChange={setEditedCode}
+                  containerRef={editContainerRef}
+                />
+              </div>
+            ) : (
+              /* Preview mode */
+              <div className="flex font-mono text-sm text-foreground">
+                {showLineNumbers && enableLineCount && (
+                  <LineNumbersGutter 
+                    lineCount={wrapCode && lineNumberMapping.length > 0 
+                      ? lineNumberMapping.length 
+                      : logicalLineCount}
+                    enabled={enableLineCount}
+                    lineNumbers={wrapCode && lineNumberMapping.length > 0 ? lineNumberMapping : undefined}
+                  />
+                )}
+                <CodePreview
+                  ref={previewContainerRef}
+                  highlighted={highlighted}
+                  wrapCode={wrapCode}
+                  enableTextColors={enableTextColors}
+                />
               </div>
             )}
-
-            {/* Code area */}
-            <div className="flex-1">
-              <div className="overflow-auto">
-                {/* Use a <pre> per line to preserve spacing but render spans for tokens */}
-                <div className="leading-5">
-                  {highlighted.map((tokens, idx) => {
-                    // Skip rendering if line is empty (no tokens or only whitespace)
-                    const hasContent = tokens.some(token => token.value.trim().length > 0);
-                    if (!hasContent) return null;
-                    
-                    return (
-                      <div key={idx} className="flex items-start">
-                        <div className="w-0" />
-                        <pre
-                          className={
-                            wrapCode
-                              ? "m-0 p-0 whitespace-pre-wrap break-words font-mono w-full"
-                              : "m-0 p-0 whitespace-pre font-mono w-full"
-                          }
-                        >
-                          {tokens.map((t, ti) => (
-                            <span
-                              key={ti}
-                              className={
-                                enableTextColors ? tokenClass(t.type) : undefined
-                              }
-                            >
-                              {t.value}
-                            </span>
-                          ))}
-                        </pre>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            </div>
           </div>
         </div>
-      </div>
-    </ScrollArea>
+      </ScrollArea>
+
+      {enableCodeEditing && (
+        <EditModeToggle
+          isEditMode={actualEditMode}
+          onToggle={() => setIsEditMode(!isEditMode)}
+        />
+      )}
+    </div>
   );
 }
-
-
-
