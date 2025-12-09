@@ -1,6 +1,6 @@
-import MainHeader from "@/components/layout/main-header";
-import QueryProvider from "@/app/providers/query-client-provider";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import MainHeader from "@/shared/components/layout/main-header";
+import QueryProvider from "@/shared/providers/query-client-provider";
+import { TooltipProvider } from "@/shared/components/ui/tooltip";
 
 export default function MainLayout({
   children,
@@ -21,3 +21,6 @@ export default function MainLayout({
     </QueryProvider>
   );
 }
+
+
+

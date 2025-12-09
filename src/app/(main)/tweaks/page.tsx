@@ -1,14 +1,21 @@
-import { createClient } from "@/utils/supabase/server";
-import TweaksPageClient from "@/components/tweaks/tweaks-page-client";
-import { redirect } from "next/navigation";
+import { Suspense } from "react";
+import { requireAuth } from "@/shared/utils/auth-guard";
+import { fetchTweakCategories } from "@/features/tweaks/utils/tweaks-server";
+import TweaksPageClient from "@/features/tweaks/components/tweaks-page-client";
 
 export default async function TweaksPage() {
-  const supabase = await createClient();
-  const {
-    data: { user: authUser },
-  } = await supabase.auth.getUser();
-  if (!authUser) {
-    return redirect("/login");
-  }
-  return <TweaksPageClient />;
+  // Ensure user is authenticated (redirects if not)
+  await requireAuth();
+
+  // Fetch data on the server
+  const categories = await fetchTweakCategories();
+
+  return (
+    <Suspense>
+      <TweaksPageClient categories={categories} />
+    </Suspense>
+  );
 }
+
+
+

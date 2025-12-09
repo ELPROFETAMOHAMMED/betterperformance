@@ -1,5 +1,5 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import { Star } from "lucide-react";
 
 export default function HistoryTweaksLoading() {
@@ -86,5 +86,8 @@ export default function HistoryTweaksLoading() {
     </ScrollArea>
   );
 }
+
+
+
 
 

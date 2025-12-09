@@ -1,8 +1,8 @@
-import { createClient } from "@/utils/supabase/server";
+import { createClient } from "@/shared/utils/supabase/server";
 import { redirect } from "next/navigation";
-import LandingPage from "@/components/landing/landing-page";
+import LandingPage from "@/features/landing/components/landing-page";
 
-export default async function Home() {
+export default async function LandingRoute() {
   const supabase = await createClient();
 
   // Check if user is authenticated
@@ -18,3 +18,6 @@ export default async function Home() {
   // Show landing page for unauthenticated users
   return <LandingPage />;
 }
+
+
+

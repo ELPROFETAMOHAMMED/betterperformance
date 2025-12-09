@@ -1,19 +1,24 @@
-import { fetchUserTweakHistory } from "@/services/server/tweak-history-server";
-import HistoryTweaksClient from "@/components/tweaks/history-tweaks-client";
-import { getCurrentUser } from "@/services/auth-server";
-import {redirect} from "next/navigation"
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Suspense } from "react";
+import { requireAuth } from "@/shared/utils/auth-guard";
+import { fetchUserTweakHistory } from "@/features/history-tweaks/utils/tweak-history-server";
+import HistoryTweaksClient from "@/features/history-tweaks/components/history-tweaks-client";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
 
 export default async function HistoryTweaksPage() {
-  const user = await getCurrentUser();
-  if (!user) {
-    return redirect("/login");
-  }
+  // Ensure user is authenticated (redirects if not)
+  const user = await requireAuth();
+
+  // Fetch user's tweak history on the server
   const history = await fetchUserTweakHistory(user.id);
 
   return (
-    <ScrollArea className="h-full w-full">
-      <HistoryTweaksClient history={history} />
-    </ScrollArea>
+    <Suspense>
+      <ScrollArea className="h-full w-full">
+        <HistoryTweaksClient history={history} />
+      </ScrollArea>
+    </Suspense>
   );
 }
+
+
+

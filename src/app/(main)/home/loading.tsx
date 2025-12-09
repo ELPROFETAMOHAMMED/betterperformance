@@ -1,5 +1,5 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 export default function HomeLoading() {
   return (
@@ -51,5 +51,8 @@ export default function HomeLoading() {
     </ScrollArea>
   );
 }
+
+
+
 
 

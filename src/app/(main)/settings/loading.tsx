@@ -1,7 +1,5 @@
-"use client";
-
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Skeleton } from "@/components/ui/skeleton";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 export default function SettingsLoading() {
   return (
@@ -56,5 +54,8 @@ export default function SettingsLoading() {
     </ScrollArea>
   );
 }
+
+
+
 
 
