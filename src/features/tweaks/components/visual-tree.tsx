@@ -124,7 +124,7 @@ export default function VisualTree({
                           key={tweak.id}
                           onClick={() => onTweakToggle(tweak)}
                           className={cn(
-                            "group relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-all duration-150",
+                            "group relative flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-all duration-150",
                             "hover:bg-accent/20",
                             isSelected
                               ? "bg-primary/5 text-foreground"
@@ -143,9 +143,16 @@ export default function VisualTree({
                               <Check className="h-2.5 w-2.5 text-primary-foreground" />
                             )}
                           </div>
-                          <span className="truncate text-sm text-foreground">
-                            {tweak.title}
-                          </span>
+                          <div className="flex min-w-0 flex-col gap-0.5">
+                            <span className="truncate text-sm text-foreground">
+                              {tweak.title}
+                            </span>
+                            {tweak.description && (
+                              <span className="line-clamp-2 text-[11px] leading-4 text-muted-foreground">
+                                {tweak.description}
+                              </span>
+                            )}
+                          </div>
                           {isSelected && (
                             <div className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
                           )}
