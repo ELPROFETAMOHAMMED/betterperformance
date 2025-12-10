@@ -40,6 +40,13 @@ export function useCodeEditor({
 
   // State for edited code when in edit mode - initialize with codeToShow
   const [editedCode, setEditedCode] = useState(() => codeToShow);
+  // Track the original code when entering edit mode to detect changes
+  const [originalCode, setOriginalCode] = useState(() => codeToShow);
+  // Track saved code (code that should be shown in preview mode after saving)
+  const [savedCode, setSavedCode] = useState<string | null>(null);
+
+  // Check if there are unsaved changes
+  const hasUnsavedChanges = editedCode !== originalCode;
 
   // If code editing is disabled, force preview mode
   useEffect(() => {
@@ -48,11 +55,26 @@ export function useCodeEditor({
     }
   }, [enableCodeEditing, isEditMode]);
 
+  // Track previous codeToShow to detect actual changes (not just mode switches)
+  const prevCodeToShowRef = useRef(codeToShow);
+  
   // Update edited code when codeToShow changes (when tweaks change)
   // But only if we're NOT in edit mode (to avoid overwriting user edits)
+  // Only reset savedCode when codeToShow actually changes, not when switching modes
   useEffect(() => {
-    if (!isEditMode) {
-      setEditedCode(codeToShow);
+    const codeToShowChanged = prevCodeToShowRef.current !== codeToShow;
+    
+    if (codeToShowChanged) {
+      prevCodeToShowRef.current = codeToShow;
+      
+      if (!isEditMode) {
+        // If codeToShow changes externally (e.g., different tweaks selected),
+        // reset everything including saved code
+        setEditedCode(codeToShow);
+        setOriginalCode(codeToShow);
+        setSavedCode(null);
+      }
+      // If in edit mode and codeToShow changes, we don't update to avoid overwriting user edits
     }
   }, [codeToShow, isEditMode]);
 
@@ -63,19 +85,33 @@ export function useCodeEditor({
     const nowInEdit = isEditMode;
     
     if (nowInEdit && wasInPreview) {
-      // Force sync when entering edit mode - this ensures we have the latest code
+      // When entering edit mode, use savedCode if it exists, otherwise use codeToShow
       // Use a small timeout to ensure codeToShow is up to date
       const timeoutId = setTimeout(() => {
-        setEditedCode(codeToShow);
+        const codeToEdit = savedCode ?? codeToShow;
+        setEditedCode(codeToEdit);
+        setOriginalCode(codeToEdit);
       }, 0);
       return () => clearTimeout(timeoutId);
     }
     
     prevEditMode.current = isEditMode;
-  }, [isEditMode, codeToShow]);
+  }, [isEditMode, codeToShow, savedCode]);
 
-  // Use edited code when in edit mode, otherwise use the generated code
-  const displayCode = isEditMode ? editedCode : codeToShow;
+  // Save changes: save editedCode as the new saved code
+  const saveChanges = () => {
+    setSavedCode(editedCode);
+    setOriginalCode(editedCode);
+  };
+
+  // Discard changes: revert editedCode to originalCode
+  const discardChanges = () => {
+    setEditedCode(originalCode);
+  };
+
+  // Use edited code when in edit mode
+  // In preview mode, use savedCode if it exists (user has saved changes), otherwise use codeToShow
+  const displayCode = isEditMode ? editedCode : (savedCode ?? codeToShow);
 
   // Generate highlighted code for preview mode
   const { lines, highlighted } = useMemo(() => {
@@ -108,14 +144,14 @@ export function useCodeEditor({
   // Use the same normalization logic as useLineCount for consistency
   useEffect(() => {
     if (typeof onLineCountChange === "function") {
-      const codeToCount = isEditMode ? editedCode : codeToShow;
+      const codeToCount = isEditMode ? editedCode : (savedCode ?? codeToShow);
       // Normalize line endings: convert CRLF (\r\n) and CR (\r) to LF (\n)
       const normalized = codeToCount.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
       // Split by normalized newlines and count
       const lineCount = normalized.split("\n").length;
       onLineCountChange(lineCount);
     }
-  }, [isEditMode, editedCode, codeToShow, onLineCountChange]);
+  }, [isEditMode, editedCode, codeToShow, savedCode, onLineCountChange]);
 
   return {
     isEditMode,
@@ -127,6 +163,9 @@ export function useCodeEditor({
     lines,
     highlighted,
     highlightedEdit,
+    hasUnsavedChanges,
+    saveChanges,
+    discardChanges,
   };
 }
 

@@ -18,6 +18,7 @@ interface UseDownloadTweaksOptions {
   encodingUtf8: boolean;
   hideSensitive: boolean;
   downloadEachTweak: boolean;
+  customCode?: string | null;
 }
 
 interface UseDownloadTweaksCallbacks {

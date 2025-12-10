@@ -90,6 +90,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     new Map()
   );
   const [activeTweakId, setActiveTweakId] = useState<string | null>(null);
+  const [savedEditedCode, setSavedEditedCode] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
   const [isLoading, setIsLoading] = useState(false);
@@ -166,6 +167,11 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     );
   }, [selectedTweaks]);
 
+  // Reset saved custom code when the selection changes (new script)
+  useEffect(() => {
+    setSavedEditedCode(null);
+  }, [selectedTweaks]);
+
   const handleTweakToggle = useCallback((tweak: Tweak) => {
     setSelectedTweaks((prev) => {
       const newMap = new Map(prev);
@@ -197,8 +203,8 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   }, [handleClearAll]);
 
   const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(code);
-  }, [code]);
+    navigator.clipboard.writeText(savedEditedCode ?? code);
+  }, [code, savedEditedCode]);
 
   // Settings now come from TanStack Query/localStorage
   const {
@@ -282,6 +288,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
           encodingUtf8,
           hideSensitive,
           downloadEachTweak,
+          customCode: savedEditedCode ?? null,
         },
         {
           onDownloadStart: () => {
@@ -310,7 +317,17 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
       });
       setIsLoading(false);
     }
-  }, [selectedTweaks, encodingUtf8, hideSensitive, downloadEachTweak, user, userLoading, handleDownloadWithWarning]);
+  }, [
+    selectedTweaks,
+    encodingUtf8,
+    hideSensitive,
+    downloadEachTweak,
+    user,
+    userLoading,
+    handleDownloadWithWarning,
+    savedEditedCode,
+    settings.alwaysShowWarning,
+  ]);
 
   const handleQuickSaveToHistory = useCallback(async () => {
     const tweaksToSave = Array.from(selectedTweaks.values());
@@ -803,6 +820,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                         <CodeEditor
                           selectedTweaks={selectedTweaksArray}
                           code={code}
+                          onSaveCode={setSavedEditedCode}
                           showLineNumbers={showLineNumbers}
                           enableTextColors={enableTextColors}
                           hideSensitive={hideSensitive}

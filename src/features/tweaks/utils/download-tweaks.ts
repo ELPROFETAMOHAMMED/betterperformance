@@ -17,6 +17,7 @@ export function downloadTweaks({
     encodingUtf8: boolean;
     hideSensitive: boolean;
     downloadEachTweak: boolean;
+    customCode?: string | null;
   };
 }) {
   // Helper to trigger download in browser
@@ -38,6 +39,17 @@ export function downloadTweaks({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
+
+  // If custom code is provided (edited script), always download a single file with that content
+  if (options.customCode) {
+    const cleaned = cleanTweakCode(options.customCode);
+    makeBlobAndDownload(
+      cleaned,
+      "Betterperformance-Custom.ps1",
+      options.encodingUtf8
+    );
+    return;
+  }
 
   if (options.downloadEachTweak) {
     tweaks.forEach((tweak, i) => {

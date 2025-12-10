@@ -22,6 +22,7 @@ interface CodeEditorProps {
   showComments?: boolean;
   enableCodeEditing?: boolean;
   enableLineCount?: boolean;
+  onSaveCode?: (code: string) => void;
 }
 
 export default function CodeEditor({
@@ -35,6 +36,7 @@ export default function CodeEditor({
   showComments,
   enableCodeEditing: enableCodeEditingProp,
   enableLineCount: enableLineCountProp,
+  onSaveCode,
 }: CodeEditorProps) {
   // Defaults
   const showLineNumbers =
@@ -58,6 +60,9 @@ export default function CodeEditor({
     setEditedCode,
     highlighted,
     highlightedEdit,
+    hasUnsavedChanges,
+    saveChanges,
+    discardChanges,
   } = useCodeEditor({
     selectedTweaks,
     code,
@@ -131,6 +136,7 @@ export default function CodeEditor({
                   enableTextColors={enableTextColors}
                   onCodeChange={setEditedCode}
                   containerRef={editContainerRef}
+                  isEditMode={actualEditMode}
                 />
               </div>
             ) : (
@@ -160,7 +166,17 @@ export default function CodeEditor({
       {enableCodeEditing && (
         <EditModeToggle
           isEditMode={actualEditMode}
-          onToggle={() => setIsEditMode(!isEditMode)}
+          hasUnsavedChanges={hasUnsavedChanges}
+          onToggleMode={() => setIsEditMode(!isEditMode)}
+          onSaveAndPreview={() => {
+            saveChanges();
+            onSaveCode?.(editedCode);
+            setIsEditMode(false);
+          }}
+          onDiscardAndPreview={() => {
+            discardChanges();
+            setIsEditMode(false);
+          }}
         />
       )}
     </div>

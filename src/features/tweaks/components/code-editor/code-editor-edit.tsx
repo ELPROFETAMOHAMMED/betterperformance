@@ -11,6 +11,7 @@ interface CodeEditorEditProps {
   enableTextColors: boolean;
   onCodeChange: (code: string) => void;
   containerRef?: React.RefObject<HTMLDivElement | null>;
+  isEditMode?: boolean;
 }
 
 export function CodeEditorEdit({
@@ -20,6 +21,7 @@ export function CodeEditorEdit({
   enableTextColors,
   onCodeChange,
   containerRef,
+  isEditMode = true,
 }: CodeEditorEditProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const highlightRef = useRef<HTMLDivElement>(null);
@@ -41,18 +43,26 @@ export function CodeEditorEdit({
     }
   };
 
-  // Focus textarea on mount and when code changes (to handle mode switching)
+  // Focus textarea when component mounts (since it's conditionally rendered)
+  // Don't reset cursor position on code changes to prevent cursor jumping
   useEffect(() => {
-    const timeoutId = setTimeout(() => {
-      if (textareaRef.current) {
-        textareaRef.current.focus();
-        // Ensure cursor is at the end
-        const length = textareaRef.current.value.length;
-        textareaRef.current.setSelectionRange(length, length);
-      }
-    }, 150);
-    return () => clearTimeout(timeoutId);
-  }, [code]);
+    // Since the component is conditionally rendered and mounts fresh each time,
+    // we can simply focus on mount when in edit mode
+    if (isEditMode && textareaRef.current) {
+      const timeoutId = setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          // Preserve cursor position if possible, otherwise set to end
+          const currentPos = textareaRef.current.selectionStart;
+          if (currentPos === 0 && textareaRef.current.value.length > 0) {
+            const length = textareaRef.current.value.length;
+            textareaRef.current.setSelectionRange(length, length);
+          }
+        }
+      }, 100);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [isEditMode]);
 
   // Handle click on container to focus textarea
   const handleContainerClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -69,7 +79,7 @@ export function CodeEditorEdit({
       {/* Syntax highlighted overlay (behind textarea) */}
       <div
         ref={highlightRef}
-        className={`absolute inset-0 overflow-auto pointer-events-none font-mono leading-5 p-0 m-0 z-[1] ${
+        className={`absolute inset-0 overflow-auto pointer-events-none font-mono leading-5 p-0 m-0 z-0 ${
           wrapCode ? "whitespace-pre-wrap break-words" : "whitespace-pre"
         }`}
       >
@@ -111,12 +121,12 @@ export function CodeEditorEdit({
         }}
         onScroll={handleScroll}
         onFocus={(e) => {
-          e.currentTarget.classList.remove("z-10");
-          e.currentTarget.classList.add("z-20");
+          // Ensure textarea is always on top when focused
+          e.currentTarget.style.zIndex = '20';
         }}
         onBlur={(e) => {
-          e.currentTarget.classList.remove("z-20");
-          e.currentTarget.classList.add("z-10");
+          // Keep textarea accessible even when blurred
+          e.currentTarget.style.zIndex = '10';
         }}
         onKeyDown={(e) => {
           // Ensure keyboard events are handled
@@ -126,14 +136,17 @@ export function CodeEditorEdit({
           // Ensure keyboard events are handled
           e.stopPropagation();
         }}
-        className={`absolute inset-0 w-full h-full font-mono text-sm bg-transparent text-transparent caret-foreground border-none outline-none resize-none p-0 leading-5 z-10 ${
+        className={`absolute inset-0 w-full h-full font-mono text-sm bg-transparent text-transparent border-none outline-none resize-none p-0 leading-5 ${
           wrapCode ? "whitespace-pre-wrap break-words" : "whitespace-pre"
         }`}
         style={{ 
           pointerEvents: 'auto',
           WebkitUserSelect: 'text',
           userSelect: 'text',
-          cursor: 'text'
+          cursor: 'text',
+          zIndex: 10,
+          caretColor: 'var(--foreground)',
+          color: 'transparent'
         }}
         spellCheck={false}
         autoFocus
