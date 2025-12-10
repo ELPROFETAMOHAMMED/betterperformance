@@ -9,30 +9,23 @@ export async function GET() {
     // Fetch tweaks with all necessary fields including code
     const { data: tweaks, error: tweaksError } = await supabase
       .from("tweaks")
-      .select("id, title, icon, description, category_id, tweak_metadata, code");
+      .select("id, title, description, category_id, code, download_count, favorite_count, image, notes, is_visible, tweak_comment")
+      .eq("is_visible", true);
     if (tweaksError) throw tweaksError;
 
-    // Fetch categories with only essential fields
+    // Fetch categories with all fields
     const { data: categories, error: catError } = await supabase
       .from("categories")
-      .select("id, name, icon");
+      .select("id, name, icon, description");
     if (catError) throw catError;
-
-    // Parse tweak_metadata if it's a string (should be object)
-    const parsedTweaks = tweaks.map((t: any) => ({
-      ...t,
-      tweak_metadata:
-        typeof t.tweak_metadata === "string"
-          ? JSON.parse(t.tweak_metadata)
-          : t.tweak_metadata,
-    }));
 
     // Group tweaks by category
     const grouped: TweakCategory[] = categories.map((cat: any) => ({
       id: cat.id,
       name: cat.name,
       icon: cat.icon,
-      tweaks: parsedTweaks.filter((t: Tweak) => t.category_id === cat.id),
+      description: cat.description,
+      tweaks: (tweaks || []).filter((t: Tweak) => t.category_id === cat.id),
     }));
 
     return NextResponse.json(grouped);

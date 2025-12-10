@@ -20,7 +20,7 @@ export async function fetchUserTweakHistory(
     name: entry.name,
     createdAt: entry.created_at,
     userId,
-    tweaks: JSON.parse(entry.tweaks),
+    tweaks: typeof entry.tweaks === "string" ? JSON.parse(entry.tweaks) : entry.tweaks,
     isFavorite: entry.is_favorite ?? false,
   }));
 }

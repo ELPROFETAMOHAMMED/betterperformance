@@ -2,23 +2,20 @@ import type { Tweak } from "@/features/tweaks/types/tweak.types";
 import { redactSensitive } from "@/shared/lib/utils";
 
 export function getTweakCommentBlock(tweak: Tweak) {
-  const meta = tweak.tweak_metadata;
-
   const desc = (tweak.description || "")
     .replace(/\r\n/g, "\n")
     .replace(/\n{2,}/g, "\n")
     .trim();
 
-  const reports = (meta?.report ?? "-").toString().trim();
-  const downloads = (meta?.downloadCount ?? "-").toString().trim();
-  const commentMeta = (meta?.tweakComment ?? "-")
+  const downloads = (tweak.download_count ?? 0).toString().trim();
+  const commentMeta = (tweak.tweak_comment ?? "")
     .toString()
     .replace(/\s+/g, " ")
     .trim();
     
   const block = [
     `# ${desc}`,
-    `# Reports: ${reports} | Downloads: ${downloads} | Comment: ${commentMeta}`,
+    `# Downloads: ${downloads} | Comment: ${commentMeta}`,
   ].join("\n");
 
   return block.trim();

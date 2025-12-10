@@ -7,26 +7,26 @@ export interface TweakHistoryEntry {
   tweaks: Tweak[];
   isFavorite?: boolean;
 }
-export interface TweakMetadata {
-  report: number;
-  downloadCount: number;
-  tweakComment: string;
-}
 
 export interface Tweak {
   id: string;
   title: string;
-  icon: string;
-  description: string;
-  tweak_metadata: TweakMetadata;
+  description?: string;
   code?: string;
-  category_id: string;
+  category_id?: string;
+  download_count: number;
+  favorite_count: number;
+  image?: string;
+  notes?: string;
+  is_visible: boolean;
+  tweak_comment?: string;
 }
 
 export interface TweakCategory {
   id: string;
   name: string;
-  icon: string;
+  icon?: string;
+  description?: string;
   tweaks: Tweak[];
 }
 

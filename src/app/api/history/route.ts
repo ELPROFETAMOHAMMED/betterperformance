@@ -26,7 +26,7 @@ export async function GET() {
       name: entry.name,
       createdAt: entry.created_at,
       userId: user.id,
-      tweaks: JSON.parse(entry.tweaks),
+      tweaks: typeof entry.tweaks === "string" ? JSON.parse(entry.tweaks) : entry.tweaks,
       isFavorite: entry.is_favorite ?? false,
     }));
 

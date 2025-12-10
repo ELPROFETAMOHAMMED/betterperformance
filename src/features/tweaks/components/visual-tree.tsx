@@ -6,10 +6,10 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/shared/components/ui/accordion";
-import { Checkbox } from "@/shared/components/ui/checkbox";
 import { cn } from "@/shared/lib/utils";
 import type { TweakCategory, Tweak } from "@/features/tweaks/types/tweak.types";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Check } from "lucide-react";
 
 interface VisualTreeProps {
   categories: TweakCategory[];
@@ -23,19 +23,20 @@ export default function VisualTree({
   onTweakToggle,
 }: VisualTreeProps) {
   return (
-    <ScrollArea className="flex h-[650px] w-full flex-col rounded-[var(--radius-md)] p-3 text-muted-foreground ">
-      <div className="mb-2 flex items-center justify-between px-1">
-        <div className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground">
+    <ScrollArea className="flex h-[650px] w-full flex-col rounded-[var(--radius-md)] p-3">
+      <div className="mb-3 flex items-center justify-between px-1">
+        <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
           Tweak categories
         </div>
-        <div className="text-[11px] text-muted-foreground/80">
+        <div className="inline-flex items-center gap-1 rounded-full bg-muted/40 px-2.5 py-1 text-[11px] text-muted-foreground/90">
+          <span className="h-1.5 w-1.5 rounded-full bg-primary/80" />
           {categories.length} groups
         </div>
       </div>
-      <div className="flex-1 overflow-y-auto rounded-sm mx-2">
+      <div className="flex-1 overflow-y-auto">
         <Accordion
           type="multiple"
-          className="h-full w-full space-y-1"
+          className="h-full w-full space-y-1.5"
           defaultValue={[]}
         >
           {categories.map((category) => {
@@ -49,16 +50,15 @@ export default function VisualTree({
             const someSelected =
               selectedCount > 0 && !allSelected && tweaksInCategory.length > 0;
 
-            const handleCategoryToggle = () => {
+            const handleCategoryToggle = (e: React.MouseEvent) => {
+              e.stopPropagation();
               if (allSelected) {
-                // Unselect all tweaks in this category
                 tweaksInCategory.forEach((tweak) => {
                   if (selectedTweaks.has(tweak.id)) {
                     onTweakToggle(tweak);
                   }
                 });
               } else {
-                // Select all tweaks in this category
                 tweaksInCategory.forEach((tweak) => {
                   if (!selectedTweaks.has(tweak.id)) {
                     onTweakToggle(tweak);
@@ -71,67 +71,85 @@ export default function VisualTree({
               <AccordionItem
                 key={category.id}
                 value={category.id}
-                className="overflow-hidden rounded-sm border border-border/30 bg-background/70  px-1  hover:bg-accent/5 mb-2"
+                className="rounded-none bg-transparent transition-colors hover:bg-accent/10"
               >
-                <div className="flex items-center justify-between  gap-3 px-2 py-2 ">
-                  <div
-                    onClick={(e) => e.stopPropagation()}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.stopPropagation();
-                      }
-                    }}
-                    role="none"
-                    className="flex items-center gap-2"
+                <div className="flex items-center gap-3 px-2.5 py-2">
+                  <button
+                    onClick={handleCategoryToggle}
+                    className={cn(
+                      "relative flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-all duration-150",
+                      "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1",
+                      allSelected
+                        ? "border-primary bg-primary"
+                        : someSelected
+                        ? "border-primary/60 bg-primary/10"
+                        : "border-border/60 bg-background hover:border-border"
+                    )}
+                    aria-label={
+                      allSelected
+                        ? "Deselect all"
+                        : someSelected
+                        ? "Select all"
+                        : "Select all"
+                    }
                   >
-                    <Checkbox
-                      checked={
-                        allSelected ? true : someSelected ? "indeterminate" : false
-                      }
-                      onCheckedChange={handleCategoryToggle}
-                      className="h-3.5 w-3.5 flex-shrink-0"
-                    />
-                     <span className="text-xs font-medium uppercase tracking-[0.12em] text-foreground">
+                    {allSelected && (
+                      <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                    )}
+                    {someSelected && (
+                      <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                    )}
+                  </button>
+                  <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                    <span className="truncate text-sm font-medium text-foreground">
                       {category.name}
                     </span>
-                    
-                  </div>
-                  <AccordionTrigger className="flex-1 hover:no-underline py-0 justify-between">
-                   
-                    <div className="flex items-center gap-2 justify-between">
-                      <span className="text-[11px] text-muted-foreground">
-                        {tweaksInCategory.length} tweaks
+                    <AccordionTrigger className="flex items-center gap-2 text-right text-xs text-muted-foreground hover:no-underline">
+                      <span className="rounded-full bg-muted/60 px-2 py-0.5 text-[11px] font-medium text-foreground/80">
+                        {selectedCount}/{tweaksInCategory.length}
                       </span>
-                    </div>
-                  </AccordionTrigger>
+                      <span>
+                        {tweaksInCategory.length}{" "}
+                        {tweaksInCategory.length === 1 ? "tweak" : "tweaks"}
+                      </span>
+                    </AccordionTrigger>
+                  </div>
                 </div>
-                <AccordionContent className="px-0 pb-2 pt-1">
-                  <div className="space-y-1.5">
+                <AccordionContent className="px-0 pb-2 pt-0.5">
+                  <div className="space-y-0.5 pl-2.5">
                     {category.tweaks.map((tweak) => {
                       const isSelected = selectedTweaks.has(tweak.id);
                       return (
-                        <div
+                        <button
                           key={tweak.id}
-                          className={cn(
-                            "group relative px-3 mx-2 flex cursor-pointer items-center gap-2 rounded-xs py-2 text-xs transition-colors",
-                            "hover:bg-accent/50",
-                            isSelected &&
-                              "bg-primary/10 text-foreground ring-1 ring-primary/40"
-                          )}
                           onClick={() => onTweakToggle(tweak)}
+                          className={cn(
+                            "group relative flex w-full items-center gap-3 rounded-md px-3 py-2 text-left transition-all duration-150",
+                            "hover:bg-accent/20",
+                            isSelected
+                              ? "bg-primary/5 text-foreground"
+                              : "text-foreground/90"
+                          )}
                         >
-                          <div className="flex min-w-0 flex-1 items-center gap-2">
-                            <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => onTweakToggle(tweak)}
-                              onClick={(e) => e.stopPropagation()}
-                              className="h-3.5 w-3.5 flex-shrink-0"
-                            />
-                            <span className="truncate text-[13px] text-foreground">
-                              {tweak.title}
-                            </span>
+                          <div
+                            className={cn(
+                              "relative flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-all duration-150",
+                              isSelected
+                                ? "border-primary bg-primary"
+                                : "border-border/50 bg-background group-hover:border-primary/40"
+                            )}
+                          >
+                            {isSelected && (
+                              <Check className="h-2.5 w-2.5 text-primary-foreground" />
+                            )}
                           </div>
-                        </div>
+                          <span className="truncate text-sm text-foreground">
+                            {tweak.title}
+                          </span>
+                          {isSelected && (
+                            <div className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
+                          )}
+                        </button>
                       );
                     })}
                   </div>

@@ -6,6 +6,7 @@ import {
   useMemo,
   useDeferredValue,
   useEffect,
+  useRef,
 } from "react";
 import { useEditorSettings } from "@/features/settings/hooks/use-editor-settings";
 import VisualTree from "./visual-tree";
@@ -17,6 +18,7 @@ import {
 } from "@/features/history-tweaks/utils/tweak-history-client";
 import type { TweakCategory, Tweak } from "@/features/tweaks/types/tweak.types";
 import { useUser } from "@/shared/hooks/use-user";
+import { cn } from "@/shared/lib/utils";
 import { format } from "date-fns";
 import {
   Sheet,
@@ -47,6 +49,10 @@ import {
   ArrowDownToLine,
   BookmarkPlus,
   CheckSquare2,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  Search,
 } from "lucide-react";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import {
@@ -87,6 +93,11 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [filters, setFilters] = useState(FILTER_DEFAULTS);
   const [isLoading, setIsLoading] = useState(false);
+  const [infoIndex, setInfoIndex] = useState(0);
+  const [suggestOpen, setSuggestOpen] = useState(false);
+  const [suggestIndex, setSuggestIndex] = useState(0);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
+  const suggestionItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const deferredSearch = useDeferredValue(searchQuery);
   const { settings } = useEditorSettings();
   const { handleDownload: handleDownloadWithWarning, WarningDialog } = useDownloadTweaks();
@@ -327,6 +338,10 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     [selectedTweaks]
   );
   const selectedTweaksArray = Array.from(selectedTweaks.values());
+  const activeFiltersCount =
+    Number(filters.selectedOnly) +
+    Number(filters.highDownloads) +
+    Number(filters.reportedOnly);
   const currentSelectionKey = useMemo(
     () =>
       selectedTweaksArray.length
@@ -350,19 +365,17 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
           }
           if (
             filters.highDownloads &&
-            (tweak.tweak_metadata?.downloadCount ?? 0) < 1000
+            (tweak.download_count ?? 0) < 1000
           ) {
             return false;
           }
-          if (
-            filters.reportedOnly &&
-            (tweak.tweak_metadata?.report ?? 0) === 0
-          ) {
+          // Only include tweaks that have reports when reportedOnly is enabled
+          if (filters.reportedOnly && ((tweak as any)?.report ?? 0) === 0) {
             return false;
           }
           if (normalized.length > 0) {
             const haystack =
-              `${category.name} ${tweak.title} ${tweak.description}`.toLowerCase();
+              `${category.name} ${tweak.title} ${tweak.description ?? ""}`.toLowerCase();
             if (!haystack.includes(normalized)) {
               return false;
             }
@@ -380,7 +393,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
         };
       })
       .filter((category): category is TweakCategory => Boolean(category));
-  }, [categories, filters, searchQuery, selectedTweaksSet]);
+  }, [categories, filters, deferredSearch, selectedTweaksSet]);
 
   const totalVisibleTweaks = useMemo(
     () =>
@@ -408,6 +421,42 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     setSearchQuery("");
   }, []);
 
+  const searchSuggestions = useMemo(() => {
+    if (!searchQuery.trim()) return [];
+    const items: { tweak: Tweak; category: string }[] = [];
+    for (const category of filteredCategories) {
+      for (const tweak of category.tweaks) {
+        items.push({ tweak, category: category.name });
+        if (items.length >= 8) break;
+      }
+      if (items.length >= 8) break;
+    }
+    return items;
+  }, [filteredCategories, searchQuery]);
+
+  useEffect(() => {
+    setSuggestIndex(0);
+    setSuggestOpen(searchQuery.trim().length > 0 && searchSuggestions.length > 0);
+  }, [searchQuery, searchSuggestions.length]);
+
+  useEffect(() => {
+    if (!selectedTweaksArray.length) {
+      setInfoIndex(0);
+      return;
+    }
+    setInfoIndex((prev) =>
+      Math.min(Math.max(prev, 0), selectedTweaksArray.length - 1)
+    );
+  }, [selectedTweaksArray.length]);
+
+  useEffect(() => {
+    if (!activeTweakId) return;
+    const idx = selectedTweaksArray.findIndex((t) => t.id === activeTweakId);
+    if (idx >= 0) {
+      setInfoIndex(idx);
+    }
+  }, [activeTweakId, selectedTweaksArray]);
+
   const activeTweak =
     (activeTweakId && selectedTweaks.get(activeTweakId)) ||
     selectedTweaksArray[selectedTweaksArray.length - 1] ||
@@ -415,6 +464,10 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   const activeCategory =
     activeTweak &&
     categories.find((category) => category.id === activeTweak.category_id);
+  const infoTweak = selectedTweaksArray[infoIndex] || null;
+  const infoCategory = infoTweak
+    ? categories.find((category) => category.id === infoTweak.category_id)
+    : null;
   const [lineCount, setLineCount] = useState(0);
   const [favoriteDialogOpen, setFavoriteDialogOpen] = useState(false);
   const [favoriteName, setFavoriteName] = useState("");
@@ -451,51 +504,123 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     });
   }, [categories, selectedTweaks.size]);
 
+  const handleSelectSuggestion = useCallback(
+    (tweak: Tweak) => {
+      handleTweakToggle(tweak);
+      setSearchQuery("");
+      setSuggestOpen(false);
+    },
+    [handleTweakToggle]
+  );
+
+  const handleSearchKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLInputElement>) => {
+      if (!suggestOpen || searchSuggestions.length === 0) return;
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+        setSuggestIndex((prev) => (prev + 1) % searchSuggestions.length);
+      } else if (event.key === "ArrowUp") {
+        event.preventDefault();
+        setSuggestIndex((prev) =>
+          prev - 1 < 0 ? searchSuggestions.length - 1 : prev - 1
+        );
+      } else if (event.key === "Enter") {
+        event.preventDefault();
+        const target = searchSuggestions[suggestIndex];
+        if (target) {
+          handleSelectSuggestion(target.tweak);
+        }
+      } else if (event.key === "Escape") {
+        setSuggestOpen(false);
+      }
+    },
+    [searchSuggestions, suggestIndex, suggestOpen, handleSelectSuggestion]
+  );
+
+  // Auto-scroll to active suggestion when navigating with keyboard
+  useEffect(() => {
+    if (!suggestOpen || !suggestionsRef.current) return;
+    const activeItem = suggestionItemRefs.current[suggestIndex];
+    if (activeItem && suggestionsRef.current) {
+      const container = suggestionsRef.current;
+      const itemTop = activeItem.offsetTop;
+      const itemBottom = itemTop + activeItem.offsetHeight;
+      const containerTop = container.scrollTop;
+      const containerBottom = containerTop + container.clientHeight;
+
+      if (itemTop < containerTop) {
+        // Item is above visible area
+        container.scrollTo({ top: itemTop, behavior: "smooth" });
+      } else if (itemBottom > containerBottom) {
+        // Item is below visible area
+        container.scrollTo({
+          top: itemBottom - container.clientHeight,
+          behavior: "smooth",
+        });
+      }
+    }
+  }, [suggestIndex, suggestOpen]);
+
+  const handleInfoNav = useCallback(
+    (direction: number) => {
+      if (!selectedTweaksArray.length) return;
+      setInfoIndex((prev) => {
+        const next =
+          (prev + direction + selectedTweaksArray.length) %
+          selectedTweaksArray.length;
+        const target = selectedTweaksArray[next];
+        setActiveTweakId(target?.id ?? null);
+        return next;
+      });
+    },
+    [selectedTweaksArray]
+  );
+
   return (
     <div className="w-full px-4 py-6">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 lg:min-h-[calc(100vh-8rem)] lg:flex-row">
         {/* Left: tree with filters */}
-        <div className="flex w-full flex-col gap-4 lg:w-[600px]">
-          <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-border/40 bg-transparent p-3">
-            <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-              <span>
-                {filteredCategories.length} categor
-                {filteredCategories.length === 1 ? "y" : "ies"} ·{" "}
-                {totalVisibleTweaks} tweak{totalVisibleTweaks === 1 ? "" : "s"}
-              </span>
-              {hasActiveFilters && (
-                <Button
-                  variant="link"
-                  size="sm"
-                  className="h-auto px-0 text-xs font-medium text-primary"
-                  onClick={resetFilters}
-                >
-                  <FilterX className="mr-1 h-3 w-3" />
-                  Reset
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Search tweaks..."
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
-                className="h-9 flex-1 rounded-[var(--radius-md)] border-border/40 bg-transparent text-sm"
+        <div className="flex w-full flex-col gap-4 lg:w-[620px]">
+          {/* Search bar with suggestions */}
+          <div className="relative">
+            {/* Backdrop for suggestions */}
+            {suggestOpen && searchSuggestions.length > 0 && (
+              <div
+                className="fixed inset-0 z-20 bg-background/70 backdrop-blur-sm"
+                onClick={() => setSuggestOpen(false)}
               />
+            )}
+            <div className="relative z-30 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Input
+                  placeholder="Search tweaks, categories, descriptions..."
+                  value={searchQuery}
+                  onChange={(event) => setSearchQuery(event.target.value)}
+                  onFocus={() =>
+                    setSuggestOpen(
+                      searchQuery.trim().length > 0 &&
+                        searchSuggestions.length > 0
+                    )
+                  }
+                  onKeyDown={handleSearchKeyDown}
+                  className="h-10 w-full rounded-sm border border-border/30 bg-background/80 pl-10 pr-3 text-sm focus-visible:ring-2 focus-visible:ring-primary/30"
+                />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="h-9 w-10 rounded-[var(--radius-md)] border-border/60 bg-background/60 text-muted-foreground transition hover:text-foreground"
+                    className="h-10 w-10 rounded-sm border border-border/30 bg-background/80 text-muted-foreground transition hover:text-foreground"
                   >
                     <SlidersHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-56 bg-background/90 backdrop-blur-sm"
+                  className="w-56 bg-background/95 backdrop-blur-sm"
                 >
                   <DropdownMenuCheckboxItem
                     checked={filters.selectedOnly}
@@ -533,12 +658,42 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                     disabled={!selectedTweaksArray.length}
                     onClick={handleClearSelection}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="w-4 h-4" />
                     Clear selection
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+            {/* Search suggestions */}
+            {suggestOpen && searchSuggestions.length > 0 && (
+              <div className="absolute z-40 mt-1 w-full rounded-sm border border-border/30 bg-background/95 backdrop-blur-sm shadow-xl">
+                <div
+                  ref={suggestionsRef}
+                  className="max-h-72 overflow-y-auto p-2"
+                >
+                  {searchSuggestions.map((item, idx) => {
+                    const isActive = idx === suggestIndex;
+                    return (
+                      <button
+                        key={item.tweak.id}
+                        ref={(el) => {
+                          suggestionItemRefs.current[idx] = el;
+                        }}
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => handleSelectSuggestion(item.tweak)}
+                        className={cn(
+                          "w-full rounded-sm px-3 py-2 text-left text-sm transition-colors",
+                          isActive ? "bg-accent text-foreground" : "hover:bg-accent/40"
+                        )}
+                      >
+                        <div className="font-medium text-foreground">{item.tweak.title}</div>
+                        <div className="text-xs text-muted-foreground">{item.category}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
           {filteredCategories.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-md)] border border-dashed border-border/40  p-4 text-center text-xs text-muted-foreground">
@@ -563,7 +718,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
         </div>
 
         {/* Right: details + controls */}
-        <div className="flex h-full w-full flex-1 flex-col rounded-[var(--radius-md)] border border-border/40 bg-card/80 p-4">
+        <div className="flex h-full w-full flex-1 flex-col rounded-md border border-border/20 bg-background/70 p-4 shadow-none">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold tracking-tight">
@@ -696,9 +851,13 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                                   size="icon"
                                   className="h-8 w-8"
                                   onClick={handleQuickSaveToHistory}
-                                  disabled={!selectedTweaksArray.length}
+                                  disabled={!selectedTweaksArray.length || isSavingFavorite}
                                 >
-                                  <BookmarkPlus className="h-4 w-4" />
+                                  {isSavingFavorite ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <BookmarkPlus className="h-4 w-4" />
+                                  )}
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent side="top">
@@ -757,76 +916,112 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
           </div>
 
           <div className="flex-1">
-            <div className="h-full rounded-[var(--radius-md)] border border-border/40 bg-background/70 p-3 text-sm">
-              {activeTweak && activeCategory ? (
-                <div className="flex h-full flex-col gap-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                        {activeCategory.name}
-                      </p>
-                      <h3 className="text-base font-semibold leading-snug">
-                        {activeTweak.title}
-                      </h3>
+            <div className="h-full rounded-[var(--radius-md)] bg-gradient-to-br from-background/90 via-background/80 to-background/70 p-3 text-sm shadow-[0_14px_70px_-40px_rgba(0,0,0,0.7)] ring-1 ring-border/15">
+              {selectedTweaksArray.length > 0 && infoTweak ? (
+                <div className="flex h-full flex-col gap-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary">
+                        {selectedTweaksArray.length} selected
+                      </span>
+                      <span className="rounded-full bg-muted/60 px-2.5 py-0.5 text-foreground/80">
+                        {infoCategory?.name ?? "Category"}
+                      </span>
                     </div>
-                    <div className="px-2 text-[11px] border-b ">
-                      {activeCategory.tweaks.length} tweaks in category
-                    </div>
-                  </div>
-
-                  <p className="line-clamp-3 text-xs text-muted-foreground">
-                    {activeTweak.description}
-                  </p>
-
-                  <div className="mt-2 grid grid-cols-2 gap-3 text-[11px] text-muted-foreground">
-                    <div className="space-y-1">
-                      <p className="font-medium text-foreground">Metrics</p>
-                      <p>
-                        Downloads:{" "}
-                        <span className="font-semibold text-foreground">
-                          {activeTweak.tweak_metadata.downloadCount}
-                        </span>
-                      </p>
-                      <p>
-                        Reports:{" "}
-                        <span className="font-semibold text-foreground">
-                          {activeTweak.tweak_metadata.report}
-                        </span>
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="font-medium text-foreground">
-                        Category insight
-                      </p>
-                      <p>
-                        Category id:{" "}
-                        <span className="font-mono text-[10px] text-muted-foreground">
-                          {activeCategory.id}
-                        </span>
-                      </p>
-                      <p>
-                        Selected in group:{" "}
-                        <span className="font-semibold text-foreground">
-                          {
-                            activeCategory.tweaks.filter((tweak) =>
-                              selectedTweaksSet.has(tweak.id)
-                            ).length
-                          }
-                        </span>
-                      </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/50 bg-background/70 text-muted-foreground transition hover:text-foreground"
+                        onClick={() => handleInfoNav(-1)}
+                        aria-label="Previous tweak"
+                      >
+                        <ChevronLeft className="h-4 w-4" />
+                      </button>
+                      <div className="text-[11px] text-muted-foreground">
+                        {infoIndex + 1} / {selectedTweaksArray.length}
+                      </div>
+                      <button
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/50 bg-background/70 text-muted-foreground transition hover:text-foreground"
+                        onClick={() => handleInfoNav(1)}
+                        aria-label="Next tweak"
+                      >
+                        <ChevronRight className="h-4 w-4" />
+                      </button>
                     </div>
                   </div>
 
-                  {activeTweak.tweak_metadata.tweakComment && (
-                    <div className="mt-auto rounded-md border border-dashed border-border/60 bg-background/60 px-3 py-2 text-[11px]">
-                      <p className="mb-1 text-[11px] font-medium text-foreground">
-                        Author notes
-                      </p>
-                      <p className="line-clamp-2 text-[11px] text-muted-foreground">
-                        {activeTweak.tweak_metadata.tweakComment}
-                      </p>
+                  <div className="rounded-[var(--radius-md)] bg-background/70 p-3 shadow-inner shadow-black/5 ring-1 ring-border/15">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+                          {infoCategory?.name || "Category"}
+                        </p>
+                        <h3 className="text-base font-semibold leading-snug text-foreground">
+                          {infoTweak.title}
+                        </h3>
+                        <p className="mt-1 line-clamp-3 text-xs text-muted-foreground">
+                          {infoTweak.description || "No description provided."}
+                        </p>
+                      </div>
+                      <div className="rounded-md bg-muted/50 px-2 py-1 text-[11px] text-muted-foreground">
+                        ID:{" "}
+                        <span className="font-mono text-[10px]">
+                          {infoTweak.id}
+                        </span>
+                      </div>
                     </div>
-                  )}
+
+                    <div className="mt-3 grid grid-cols-2 gap-3 text-[11px] text-muted-foreground">
+                      <div className="space-y-1">
+                        <p className="font-medium text-foreground">Metrics</p>
+                        <p className="flex items-center gap-1">
+                          <ArrowDownToLine className="h-3.5 w-3.5" />
+                          <span className="font-semibold text-foreground">
+                            {infoTweak.download_count ?? 0}
+                          </span>
+                          <span>downloads</span>
+                        </p>
+                        <p className="flex items-center gap-1">
+                          <BookmarkPlus className="h-3.5 w-3.5" />
+                          <span className="font-semibold text-foreground">
+                            {infoTweak.favorite_count ?? 0}
+                          </span>
+                          <span>favorites</span>
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="font-medium text-foreground">Details</p>
+                        <p className="flex items-center gap-1">
+                          <Info className="h-3.5 w-3.5" />
+                          <span className="font-semibold text-foreground">
+                            {infoCategory?.tweaks?.length ?? 0}
+                          </span>
+                          <span>in category</span>
+                        </p>
+                        <p className="flex items-center gap-1">
+                          <CheckSquare2 className="h-3.5 w-3.5" />
+                          <span className="font-semibold text-foreground">
+                            {
+                              (infoCategory?.tweaks || []).filter((tweak) =>
+                                selectedTweaksSet.has(tweak.id)
+                              ).length
+                            }
+                          </span>
+                          <span>selected in group</span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {infoTweak.tweak_comment && (
+                      <div className="mt-3 rounded-md border border-dashed border-border/40 bg-background/80 px-3 py-2 text-[11px]">
+                        <p className="mb-1 text-[11px] font-medium text-foreground">
+                          Author notes
+                        </p>
+                        <p className="line-clamp-2 text-[11px] text-muted-foreground">
+                          {infoTweak.tweak_comment}
+                        </p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="flex h-full flex-col items-start justify-center gap-2 text-xs text-muted-foreground">

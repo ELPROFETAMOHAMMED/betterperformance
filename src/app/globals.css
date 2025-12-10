@@ -175,11 +175,6 @@
 body {
   letter-spacing: var(--tracking-normal);
 }
-body {
-  letter-spacing: var(--tracking-normal);
-}
-
-
 
 @layer base {
   * {
