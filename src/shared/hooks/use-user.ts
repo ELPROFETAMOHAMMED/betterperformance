@@ -41,23 +41,7 @@ export function useUser() {
             // Silently handle errors related to RLS or API key issues
             // These are expected in some configurations and don't affect functionality
             // The profile fetch is optional - if it fails, we use auth user data only
-            if (profileError) {
-              const errorMessage = profileError.message || "";
-              const errorCode = profileError.code || "";
-              const isExpectedError = 
-                errorMessage.includes("No API key") ||
-                errorMessage.includes("RLS") ||
-                errorMessage.includes("infinite recursion") ||
-                errorMessage.includes("permission denied") ||
-                errorMessage.includes("PGRST301") || // PostgREST no rows returned
-                errorMessage.includes("PGRST116") || // PostgREST not found
-                errorCode === "PGRST301" ||
-                errorCode === "PGRST116";
-              
-              // Silently suppress all expected errors - they're normal in some setups
-              // Profile fetch is optional, so failures don't affect functionality
-              // No need to log these errors as they're expected RLS/configuration issues
-            }
+            // No need to log these errors as they're expected RLS/configuration issues
           }
         } catch (error) {
           // Silently handle any unexpected errors - profile fetch is optional

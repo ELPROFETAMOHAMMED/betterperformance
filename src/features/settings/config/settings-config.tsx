@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import { SettingSwitch } from "../components/setting-switch";
 import { SettingCard } from "../components/setting-card";
 import { ThemeToggle } from "@/shared/components/ui/theme-toggle";
 import type { EditorSettings } from "../hooks/use-editor-settings";
@@ -22,6 +21,7 @@ export type SettingItem = {
   type: "switch";
   experimental?: boolean;
   warning?: string;
+  disabled?: boolean;
 };
 
 export const SETTINGS_GROUPS: SettingGroup[] = [
@@ -109,6 +109,14 @@ export const SETTINGS_GROUPS: SettingGroup[] = [
         title: "Use UTF-8 encoding",
         description:
           "Save scripts using UTF-8 instead of UTF-16 for better compatibility.",
+        type: "switch",
+        disabled: true,
+      },
+      {
+        id: "autoCreateRestorePoint",
+        title: "Auto-create restore point",
+        description:
+          "Automatically create a system restore point before applying tweaks. If creation fails, you'll be prompted to continue or cancel.",
         type: "switch",
       },
       {

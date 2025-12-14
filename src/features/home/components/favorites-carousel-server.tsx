@@ -1,8 +1,6 @@
 import { fetchUserTweakHistory } from "@/features/history-tweaks/utils/tweak-history-server";
 import { createClient } from "@/shared/utils/supabase/server";
-import type { TweakHistoryEntry } from "@/features/tweaks/types/tweak.types";
 import { FavoritesCarouselClient } from "./favorites-carousel-client";
-import { FavoritesCarouselSkeleton } from "./favorites-carousel-skeleton";
 
 export async function FavoritesCarouselServer() {
   try {

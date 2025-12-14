@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, RefObject } from "react";
+import { useState, useEffect, RefObject } from "react";
 
 interface UseVisualLineCountProps {
   containerRef: RefObject<HTMLElement>;

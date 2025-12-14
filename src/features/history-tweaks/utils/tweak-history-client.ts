@@ -1,12 +1,10 @@
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
 
 export async function saveTweakHistory({
-  userId,
   tweaks,
   name,
   isFavorite,
 }: {
-  userId: string;
   tweaks: Tweak[];
   name?: string;
   isFavorite?: boolean;

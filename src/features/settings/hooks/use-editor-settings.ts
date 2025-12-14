@@ -12,11 +12,12 @@ export type EditorSettings = {
   showComments: boolean;
   enableCodeEditing: boolean;
   enableLineCount: boolean;
+  autoCreateRestorePoint: boolean;
 };
 
 const STORAGE_KEY = "editorSettings";
 const DEFAULT_SETTINGS: EditorSettings = {
-  showLineNumbers: true,
+  showLineNumbers: false,
   enableTextColors: true,
   encodingUtf8: true,
   hideSensitive: false,
@@ -26,6 +27,7 @@ const DEFAULT_SETTINGS: EditorSettings = {
   showComments: false,
   enableCodeEditing: true,
   enableLineCount: true,
+  autoCreateRestorePoint: true,
 };
 
 function loadSettings(): EditorSettings {
@@ -103,6 +105,10 @@ export function useEditorSettings() {
     (v: boolean) => mutation.mutate({ enableLineCount: v }),
     [mutation]
   );
+  const setAutoCreateRestorePoint = useCallback(
+    (v: boolean) => mutation.mutate({ autoCreateRestorePoint: v }),
+    [mutation]
+  );
 
   return {
     settings,
@@ -116,6 +122,7 @@ export function useEditorSettings() {
     setShowComments,
     setEnableCodeEditing,
     setEnableLineCount,
+    setAutoCreateRestorePoint,
   };
 }
 

@@ -12,7 +12,7 @@ import {
   CarouselPrevious,
 } from "@/shared/components/ui/carousel";
 import { Button } from "@/shared/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/shared/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
 import { ArrowDownToLine, Star, Calendar, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -27,7 +27,7 @@ export function FavoritesCarouselClient({ initialFavorites }: FavoritesCarouselC
   const [favorites] = useState<TweakHistoryEntry[]>(initialFavorites);
 
   const { settings } = useEditorSettings();
-  const { encodingUtf8, hideSensitive, downloadEachTweak } = settings;
+  const { encodingUtf8, hideSensitive, downloadEachTweak, autoCreateRestorePoint } = settings;
   const { handleDownload: handleDownloadWithWarning, WarningDialog } = useDownloadTweaks();
 
   const handleDownload = async (entry: TweakHistoryEntry) => {
@@ -49,6 +49,7 @@ export function FavoritesCarouselClient({ initialFavorites }: FavoritesCarouselC
           encodingUtf8,
           hideSensitive,
           downloadEachTweak,
+          autoCreateRestorePoint,
         },
         {
           onDownloadStart: () => {

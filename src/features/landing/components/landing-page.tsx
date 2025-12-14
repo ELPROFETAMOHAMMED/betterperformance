@@ -2,7 +2,7 @@ import { Shield, Zap, RotateCcw, Code, Download } from "lucide-react";
 import Image from "next/image";
 import LandingLoginButton from "./landing-login-button";
 import LandingErrorHandler from "./landing-error-handler";
-import LazyLottieHero from "./lazy-lottie-hero";
+import AnimatedHero from "@/shared/components/layout/animated-hero";
 
 const features = [
   {
@@ -99,7 +99,7 @@ export default function LandingPage() {
             <div className="flex flex-col items-center justify-center gap-6">
               <div className="relative flex items-center justify-center">
                 <div className="absolute inset-0 rounded-[var(--radius-lg)] bg-primary/15 blur-3xl" />
-                <LazyLottieHero className="absolute h-48 w-48 opacity-60 md:h-64 md:w-64" />
+                <AnimatedHero className="absolute h-48 w-48 md:h-64 md:w-64" />
                 <Image
                   src="/assets/Aplication-logo.png"
                   className="relative h-32 w-32 rounded-[var(--radius-lg)] md:h-40 md:w-40"

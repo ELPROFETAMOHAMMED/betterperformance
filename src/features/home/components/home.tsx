@@ -10,7 +10,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
-import LazyLottieHero from "@/features/landing/components/lazy-lottie-hero";
+import AnimatedHero from "@/shared/components/layout/animated-hero";
 
 interface HomeContentProps {
   children?: React.ReactNode;
@@ -122,7 +122,7 @@ export default function HomeContent({ children }: HomeContentProps) {
         <section className="flex flex-col items-center justify-center gap-6">
           <div className="relative flex items-center justify-center">
             <div className="absolute inset-0 rounded-[var(--radius-lg)] bg-primary/15 blur-3xl" />
-            <LazyLottieHero className="absolute h-48 w-48 opacity-60" />
+            <AnimatedHero className="absolute h-48 w-48" />
             <Image
               src="/assets/Aplication-logo.png"
               className="relative h-32 w-32 rounded-[var(--radius-lg)] md:h-40 md:w-40"

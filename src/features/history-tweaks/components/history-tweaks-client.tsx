@@ -33,7 +33,7 @@ export default function HistoryTweaksClient({
 }) {
   const [entries, setEntries] = useState<TweakHistoryEntry[]>(history);
   const { settings } = useEditorSettings();
-  const { encodingUtf8, hideSensitive, downloadEachTweak } = settings;
+  const { encodingUtf8, hideSensitive, downloadEachTweak, autoCreateRestorePoint } = settings;
   const { handleDownload: handleDownloadWithWarning, WarningDialog } = useDownloadTweaks();
 
   const [renameOpen, setRenameOpen] = useState(false);
@@ -84,6 +84,7 @@ export default function HistoryTweaksClient({
           encodingUtf8,
           hideSensitive,
           downloadEachTweak,
+          autoCreateRestorePoint,
         },
         {
           onDownloadStart: () => {

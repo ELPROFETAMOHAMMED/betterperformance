@@ -20,6 +20,7 @@ export default function SettingsPageClient() {
     setShowComments,
     setEnableCodeEditing,
     setEnableLineCount,
+    setAutoCreateRestorePoint,
   } = useEditorSettings();
 
   // Map setting IDs to their setter functions
@@ -34,6 +35,7 @@ export default function SettingsPageClient() {
     showComments: setShowComments,
     enableCodeEditing: setEnableCodeEditing,
     enableLineCount: setEnableLineCount,
+    autoCreateRestorePoint: setAutoCreateRestorePoint,
   };
 
   return (
@@ -75,6 +77,7 @@ export default function SettingsPageClient() {
                               onCheckedChange={setters[item.id]}
                               experimental={item.experimental}
                               warning={item.warning}
+                              disabled={item.disabled}
                             />
                           );
                         }

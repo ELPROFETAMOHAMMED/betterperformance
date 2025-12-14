@@ -32,9 +32,21 @@ export async function GET(request: Request) {
       url.searchParams.set("error_description", exchangeError.message);
       return NextResponse.redirect(url);
     }
+
+    // Verify user is authenticated before redirecting
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (user) {
+      // Redirect to home after successful authentication
+      return NextResponse.redirect(`${origin}/home`);
+    }
   }
 
-  // Redirect to home after successful authentication
-  return NextResponse.redirect(`${origin}/home`);
+  // If no code or authentication failed, redirect to landing page
+  const url = new URL(`${origin}/`);
+  url.searchParams.set("error", "authentication_failed");
+  return NextResponse.redirect(url);
 }
 

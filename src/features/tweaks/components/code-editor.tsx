@@ -55,7 +55,6 @@ export default function CodeEditor({
   const {
     isEditMode,
     setIsEditMode,
-    codeToShow,
     editedCode,
     setEditedCode,
     highlighted,
@@ -107,9 +106,6 @@ export default function CodeEditor({
   // When wordWrap is enabled and we have line mapping, use its length as the source of truth
   // Otherwise, use the calculated visual line count or logical count
   // When wordWrap is disabled, always use logicalLineCount (which excludes empty lines in preview mode)
-  const displayedLineCount = wrapCode 
-    ? (lineNumberMapping.length > 0 ? lineNumberMapping.length : visualLineCount)
-    : logicalLineCount;
 
   return (
     <div className="relative w-full h-full">

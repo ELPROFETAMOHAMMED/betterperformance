@@ -13,10 +13,8 @@ import { useEditorSettings } from "@/features/settings/hooks/use-editor-settings
 import VisualTree from "./visual-tree";
 import CodeEditor from "./code-editor";
 import { useDownloadTweaks } from "@/features/tweaks/hooks/use-download-tweaks";
-import {
-  saveTweakHistory,
-  incrementTweakDownloads,
-} from "@/features/history-tweaks/utils/tweak-history-client";
+import { prepareDownload } from "@/features/tweaks/services/download-handler-service";
+import { saveTweakHistory } from "@/features/history-tweaks/utils/tweak-history-client";
 import type { TweakCategory, Tweak } from "@/features/tweaks/types/tweak.types";
 import { useUser } from "@/shared/hooks/use-user";
 import { cn } from "@/shared/lib/utils";
@@ -41,7 +39,6 @@ import {
 } from "@/shared/components/ui/dropdown-menu";
 import {
   SlidersHorizontal,
-  FilterX,
   File,
   Trash2,
   FilterXIcon,
@@ -72,7 +69,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import LazyLottieHero from "@/features/landing/components/lazy-lottie-hero";
+import AnimatedHero from "@/shared/components/layout/animated-hero";
 import { toast } from "sonner";
 
 interface TweaksContentProps {
@@ -98,6 +95,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   const [infoIndex, setInfoIndex] = useState(0);
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestIndex, setSuggestIndex] = useState(0);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const suggestionItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const deferredSearch = useDeferredValue(searchQuery);
@@ -173,6 +171,14 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     setSavedEditedCode(null);
   }, [selectedTweaks]);
 
+  // Close sheet when selection becomes empty to prevent animation issues
+  // The key prop on SheetContent will handle remounting when selection changes
+  useEffect(() => {
+    if (sheetOpen && selectedTweaks.size === 0) {
+      setSheetOpen(false);
+    }
+  }, [selectedTweaks.size, sheetOpen]);
+
   const handleTweakToggle = useCallback((tweak: Tweak) => {
     setSelectedTweaks((prev) => {
       const newMap = new Map(prev);
@@ -214,7 +220,6 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     encodingUtf8,
     hideSensitive,
     downloadEachTweak,
-    alwaysShowWarning,
     showComments,
   } = settings;
 
@@ -223,7 +228,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   // Enhanced download handler that shows warning dialog if enabled
   const handleDownloadWithSettings = useCallback(async () => {
     const tweaksToDownload = Array.from(selectedTweaks.values());
-    
+
     if (tweaksToDownload.length === 0) {
       toast.error("No tweaks selected", {
         description: "Please select at least one tweak to download.",
@@ -232,89 +237,67 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     }
 
     setIsLoading(true);
+
+    // Safety timeout: always clear loading state after 10 seconds maximum
+    const safetyTimeout = setTimeout(() => {
+      console.warn("Download operation timed out, clearing loading state");
+      setIsLoading(false);
+    }, 10000);
+
     try {
-      // Try to get user, but don't block download if user is not available
-      // Downloads can work without user (just won't save history or increment downloads)
-      const currentUser = user;
-      
-      // If user is still loading or not available, try to get it from session
-      if ((userLoading || !currentUser) && typeof window !== "undefined") {
-        try {
-          const { createClient } = await import("@/shared/utils/supabase/client");
-          const supabase = createClient();
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session?.user && !currentUser) {
-            // We have a user from session, but we'll use the user from hook if available
-            // The download will proceed regardless
-          }
-        } catch (e) {
-          // Ignore errors, proceed with download
-          console.warn("Could not fetch user session:", e);
-        }
-      }
+      await prepareDownload({
+        tweaks: tweaksToDownload,
+        user,
+        userLoading,
+      });
 
-      // 1. Increment downloads for each tweak (only if user is available)
-      if (currentUser) {
-        try {
-          await incrementTweakDownloads(tweaksToDownload.map((t) => t.id));
-        } catch (error) {
-          console.warn("Failed to increment download count:", error);
-          // Continue with download even if this fails
-        }
-      }
-
-      // 2. Save tweak history with formatted date as name (only if user is available)
-      if (currentUser) {
-        try {
-          const now = new Date();
-          const formattedDate = format(now, "dd/MM/yyyy");
-          const historyName = `Last Tweak Applied - ${formattedDate}`;
-          await saveTweakHistory({
-            userId: currentUser.id,
-            tweaks: tweaksToDownload,
-            name: historyName,
-            isFavorite: false,
-          });
-        } catch (error) {
-          console.warn("Failed to save tweak history:", error);
-          // Continue with download even if this fails
-        }
-      }
-
-      // 3. Download tweaks using the hook (will show warning dialog if enabled)
+      // Download tweaks using the hook (will show warning dialog if enabled)
       // The callbacks ensure toast and loading state are only updated when download actually starts
-      handleDownloadWithWarning(
-        tweaksToDownload,
-        {
-          encodingUtf8,
-          hideSensitive,
-          downloadEachTweak,
-          customCode: savedEditedCode ?? null,
-        },
-        {
-          onDownloadStart: () => {
-            // Only show toast and clear loading when download actually starts
-            toast.success("Download started", {
-              description: `Downloading ${tweaksToDownload.length} tweak${tweaksToDownload.length > 1 ? "s" : ""}`,
-            });
-            setIsLoading(false);
+      try {
+        handleDownloadWithWarning(
+          tweaksToDownload,
+          {
+            encodingUtf8,
+            hideSensitive,
+            downloadEachTweak,
+            customCode: savedEditedCode ?? null,
+            autoCreateRestorePoint: settings.autoCreateRestorePoint,
           },
-          onDownloadCancel: () => {
-            // Clear loading state if user cancels
-            setIsLoading(false);
-          },
-        }
-      );
+          {
+            onDownloadStart: () => {
+              // Clear safety timeout since download started successfully
+              clearTimeout(safetyTimeout);
+              toast.success("Download started", {
+                description: `Downloading ${tweaksToDownload.length} tweak${tweaksToDownload.length > 1 ? "s" : ""}`,
+              });
+              setTimeout(() => setIsLoading(false), 100);
+            },
+            onDownloadCancel: () => {
+              // Clear safety timeout and loading state if user cancels
+              clearTimeout(safetyTimeout);
+              setIsLoading(false);
+            },
+          }
+        );
 
-      // Only clear loading if warning is disabled (download starts immediately)
-      // If warning is enabled, loading will be cleared in onDownloadStart or onDownloadCancel
-      if (!settings.alwaysShowWarning) {
+        // Only clear loading if warning is disabled (download starts immediately)
+        if (!settings.alwaysShowWarning) {
+          clearTimeout(safetyTimeout);
+          setTimeout(() => setIsLoading(false), 100);
+        }
+      } catch (downloadError) {
+        clearTimeout(safetyTimeout);
+        console.error("Error in download handler:", downloadError);
+        toast.error("Error starting download", {
+          description: "Please try again.",
+        });
         setIsLoading(false);
       }
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Error while preparing download", {
-        description: error instanceof Error ? error.message : "Please try again later...",
+        description:
+          error instanceof Error ? error.message : "Please try again later...",
       });
       setIsLoading(false);
     }
@@ -328,6 +311,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     handleDownloadWithWarning,
     savedEditedCode,
     settings.alwaysShowWarning,
+    settings.autoCreateRestorePoint,
   ]);
 
   const handleQuickSaveToHistory = useCallback(async () => {
@@ -356,20 +340,6 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     [selectedTweaks]
   );
   const selectedTweaksArray = Array.from(selectedTweaks.values());
-  const activeFiltersCount =
-    Number(filters.selectedOnly) +
-    Number(filters.highDownloads) +
-    Number(filters.reportedOnly);
-  const currentSelectionKey = useMemo(
-    () =>
-      selectedTweaksArray.length
-        ? selectedTweaksArray
-            .map((tweak) => tweak.id)
-            .sort()
-            .join("|")
-        : "",
-    [selectedTweaksArray]
-  );
   const filteredCategories = useMemo(() => {
     const normalized = deferredSearch.trim().toLowerCase();
     return categories
@@ -413,14 +383,6 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
       .filter((category): category is TweakCategory => Boolean(category));
   }, [categories, filters, deferredSearch, selectedTweaksSet]);
 
-  const totalVisibleTweaks = useMemo(
-    () =>
-      filteredCategories.reduce(
-        (sum, category) => sum + category.tweaks.length,
-        0
-      ),
-    [filteredCategories]
-  );
   const hasActiveFilters =
     filters.selectedOnly || filters.highDownloads || filters.reportedOnly;
 
@@ -475,13 +437,6 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     }
   }, [activeTweakId, selectedTweaksArray]);
 
-  const activeTweak =
-    (activeTweakId && selectedTweaks.get(activeTweakId)) ||
-    selectedTweaksArray[selectedTweaksArray.length - 1] ||
-    null;
-  const activeCategory =
-    activeTweak &&
-    categories.find((category) => category.id === activeTweak.category_id);
   const infoTweak = selectedTweaksArray[infoIndex] || null;
   const infoCategory = infoTweak
     ? categories.find((category) => category.id === infoTweak.category_id)
@@ -752,7 +707,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
           </motion.div>
           {filteredCategories.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-md)] border border-dashed border-border/40  p-4 text-center text-xs text-muted-foreground">
-              <LazyLottieHero className="h-32 w-32 opacity-60" />
+              <AnimatedHero className="h-32 w-32" />
               <p>No tweaks match your filters right now.</p>
               <Button
                 variant="link"
@@ -813,7 +768,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <Sheet>
+              <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
                 <SheetTrigger asChild>
                   <Button
                     type="button"
@@ -826,6 +781,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                   </Button>
                 </SheetTrigger>
                 <SheetContent
+                  key={`sheet-${Array.from(selectedTweaks.keys()).sort().join('-')}`}
                   side="right"
                   className="flex h-full w-full flex-col overflow-y-auto border-l border-border/70 bg-background/95 p-4 sm:max-w-xl"
                 >
@@ -1119,7 +1075,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <Sheet>
+            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
               <SheetTrigger asChild>
                 <Button
                   type="button"
@@ -1133,6 +1089,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                 </Button>
               </SheetTrigger>
               <SheetContent
+                key={`sheet-${Array.from(selectedTweaks.keys()).sort().join('-')}`}
                 side="right"
                 className="flex h-full w-full flex-col overflow-y-auto border-l border-border/70 bg-background/95 p-4 sm:max-w-xl"
               >
@@ -1340,7 +1297,6 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                   try {
                     setIsSavingFavorite(true);
                     await saveTweakHistory({
-                      userId: user.id,
                       tweaks: tweaksToSave,
                       name: favoriteName.trim(),
                       isFavorite: true,

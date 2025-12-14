@@ -1,7 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { downloadTweaks } from "@/features/tweaks/utils/download-tweaks";
+import { useState, useCallback, useEffect, useRef } from "react";
+import { downloadTweaks } from "@/features/tweaks/services/download-service";
+import type { DownloadTweaksOptions } from "@/features/tweaks/services/download-service";
 import { useEditorSettings } from "@/features/settings/hooks/use-editor-settings";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
 import {
@@ -14,12 +15,7 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 
-interface UseDownloadTweaksOptions {
-  encodingUtf8: boolean;
-  hideSensitive: boolean;
-  downloadEachTweak: boolean;
-  customCode?: string | null;
-}
+type UseDownloadTweaksOptions = DownloadTweaksOptions;
 
 interface UseDownloadTweaksCallbacks {
   onDownloadStart?: () => void;
@@ -34,6 +30,8 @@ export function useDownloadTweaks() {
     options: UseDownloadTweaksOptions;
     callbacks?: UseDownloadTweaksCallbacks;
   } | null>(null);
+  // Track if cancellation was explicitly handled to prevent double callback
+  const cancelHandledRef = useRef(false);
 
   const performDownload = useCallback(
     (tweaks: Tweak[], options: UseDownloadTweaksOptions, callbacks?: UseDownloadTweaksCallbacks) => {
@@ -54,6 +52,7 @@ export function useDownloadTweaks() {
       }
 
       if (settings.alwaysShowWarning) {
+        cancelHandledRef.current = false; // Reset flag when starting new download
         setPendingDownload({ tweaks, options, callbacks });
         setShowWarningDialog(true);
       } else {
@@ -65,6 +64,7 @@ export function useDownloadTweaks() {
 
   const handleWarningDialogContinue = useCallback(() => {
     if (pendingDownload) {
+      cancelHandledRef.current = false; // Reset flag when continuing
       setShowWarningDialog(false);
       performDownload(pendingDownload.tweaks, pendingDownload.options, pendingDownload.callbacks);
       setPendingDownload(null);
@@ -73,11 +73,29 @@ export function useDownloadTweaks() {
 
   const handleWarningDialogCancel = useCallback(() => {
     if (pendingDownload) {
-      pendingDownload.callbacks?.onDownloadCancel?.();
+      // Mark cancellation as handled to prevent cleanup effect from calling callback again
+      cancelHandledRef.current = true;
+      const callbacks = pendingDownload.callbacks;
+      setShowWarningDialog(false);
+      setPendingDownload(null);
+      // Call callback after state is cleared
+      callbacks?.onDownloadCancel?.();
+    } else {
+      setShowWarningDialog(false);
     }
-    setShowWarningDialog(false);
-    setPendingDownload(null);
   }, [pendingDownload]);
+
+  // Cleanup effect to ensure callbacks are called if component unmounts or dialog is closed unexpectedly
+  // Only call if cancellation wasn't already explicitly handled
+  useEffect(() => {
+    return () => {
+      if (pendingDownload && showWarningDialog && !cancelHandledRef.current) {
+        pendingDownload.callbacks?.onDownloadCancel?.();
+      }
+      // Reset flag when effect dependencies change (new pending download)
+      cancelHandledRef.current = false;
+    };
+  }, [pendingDownload, showWarningDialog]);
 
   const WarningDialog = () => (
     <AlertDialog open={showWarningDialog} onOpenChange={(open) => {
