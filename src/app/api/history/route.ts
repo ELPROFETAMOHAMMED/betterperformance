@@ -2,6 +2,14 @@ import { createClient } from "@/shared/utils/supabase/server";
 import type { TweakHistoryEntry } from "@/features/tweaks/types/tweak.types";
 import { NextResponse } from "next/server";
 
+interface TweakHistoryRow {
+  id: string;
+  name: string | null;
+  created_at: string;
+  tweaks: string | unknown;
+  is_favorite: boolean | null;
+}
+
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -21,7 +29,7 @@ export async function GET() {
       throw error;
     }
 
-    const history: TweakHistoryEntry[] = (data || []).map((entry: any) => ({
+    const history: TweakHistoryEntry[] = (data || []).map((entry: TweakHistoryRow) => ({
       id: entry.id,
       name: entry.name,
       createdAt: entry.created_at,

@@ -2,6 +2,13 @@ import { createClient } from "@/shared/utils/supabase/server";
 import type { TweakCategory, Tweak } from "@/features/tweaks/types/tweak.types";
 import { NextResponse } from "next/server";
 
+interface CategoryRow {
+  id: string;
+  name: string;
+  icon: string | null;
+  description: string | null;
+}
+
 export async function GET() {
   try {
     const supabase = await createClient();
@@ -20,7 +27,7 @@ export async function GET() {
     if (catError) throw catError;
 
     // Group tweaks by category
-    const grouped: TweakCategory[] = categories.map((cat: any) => ({
+    const grouped: TweakCategory[] = categories.map((cat: CategoryRow) => ({
       id: cat.id,
       name: cat.name,
       icon: cat.icon,
