@@ -50,7 +50,7 @@ export const SETTINGS_GROUPS: SettingGroup[] = [
         id: "showLineNumbers",
         title: "Show line numbers",
         description:
-          "Display a compact gutter with line numbers in the script preview.",
+          "Display line numbers in the editor gutter. Automatically enabled when code editing is active.",
         type: "switch",
       },
       {
@@ -88,13 +88,6 @@ export const SETTINGS_GROUPS: SettingGroup[] = [
         title: "Enable code editing",
         description:
           "Allow manual editing of code in the editor. When disabled, the editor is in preview mode (read-only) to prevent accidental changes.",
-        type: "switch",
-      },
-      {
-        id: "enableLineCount",
-        title: "Enable line count",
-        description:
-          "Display line numbers in the editor gutter. Disable this if you experience rendering issues or performance problems.",
         type: "switch",
       },
     ],

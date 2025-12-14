@@ -96,6 +96,8 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   const [suggestOpen, setSuggestOpen] = useState(false);
   const [suggestIndex, setSuggestIndex] = useState(0);
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [isSheetLoading, setIsSheetLoading] = useState(false);
+  const [isCopying, setIsCopying] = useState(false);
   const suggestionsRef = useRef<HTMLDivElement>(null);
   const suggestionItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const deferredSearch = useDeferredValue(searchQuery);
@@ -209,9 +211,20 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     handleClearAll();
   }, [handleClearAll]);
 
-  const handleCopy = useCallback(() => {
-    navigator.clipboard.writeText(savedEditedCode ?? code);
-  }, [code, savedEditedCode]);
+  const handleCopy = useCallback(async () => {
+    if (isCopying) return;
+    
+    setIsCopying(true);
+    try {
+      await navigator.clipboard.writeText(savedEditedCode ?? code);
+      toast.success("Code copied to clipboard");
+    } catch (error) {
+      toast.error("Failed to copy code to clipboard");
+      console.error("Copy error:", error);
+    } finally {
+      setIsCopying(false);
+    }
+  }, [code, savedEditedCode, isCopying]);
 
   // Settings now come from TanStack Query/localStorage
   const {
@@ -768,15 +781,33 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>
-              <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+              <Sheet open={sheetOpen} onOpenChange={(open) => {
+                if (!open) {
+                  setSheetOpen(false);
+                  setIsSheetLoading(false);
+                }
+              }}>
                 <SheetTrigger asChild>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
-                    disabled={!selectedTweaksArray.length}
+                    disabled={!selectedTweaksArray.length || isSheetLoading}
+                    onClick={() => {
+                      if (selectedTweaksArray.length > 0) {
+                        setIsSheetLoading(true);
+                        // Wait a bit for the CodeEditor to start loading, then open sheet
+                        setTimeout(() => {
+                          setSheetOpen(true);
+                        }, 50);
+                      }
+                    }}
                   >
-                    <File className="h-4 w-4" />
+                    {isSheetLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <File className="h-4 w-4" />
+                    )}
                     View final script
                   </Button>
                 </SheetTrigger>
@@ -823,8 +854,13 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                           wrapCode={settings.wrapCode}
                           showComments={showComments}
                           enableCodeEditing={settings.enableCodeEditing}
-                          enableLineCount={settings.enableLineCount}
                           onLineCountChange={setLineCount}
+                          onReady={() => {
+                            // CodeEditor is ready, stop loading state
+                            if (isSheetLoading) {
+                              setIsSheetLoading(false);
+                            }
+                          }}
                         />
                       </div>
                       {/* Summary of selected tweaks */}
@@ -887,9 +923,13 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                                   size="icon"
                                   className="h-8 w-8"
                                   onClick={handleCopy}
-                                  disabled={!selectedTweaksArray.length}
+                                  disabled={!selectedTweaksArray.length || isCopying}
                                 >
-                                  <Clipboard className="h-4 w-4" />
+                                  {isCopying ? (
+                                    <Loader2 className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Clipboard className="h-4 w-4" />
+                                  )}
                                 </Button>
                               </TooltipTrigger>
                               <TooltipContent side="top">
@@ -1075,16 +1115,34 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-            <Sheet open={sheetOpen} onOpenChange={setSheetOpen}>
+            <Sheet open={sheetOpen} onOpenChange={(open) => {
+              if (!open) {
+                setSheetOpen(false);
+                setIsSheetLoading(false);
+              }
+            }}>
               <SheetTrigger asChild>
                 <Button
                   type="button"
                   variant="default"
                   size="sm"
                   className="gap-2"
-                  disabled={!selectedTweaksArray.length}
+                  disabled={!selectedTweaksArray.length || isSheetLoading}
+                  onClick={() => {
+                    if (selectedTweaksArray.length > 0) {
+                      setIsSheetLoading(true);
+                      // Wait a bit for the CodeEditor to start loading, then open sheet
+                      setTimeout(() => {
+                        setSheetOpen(true);
+                      }, 50);
+                    }
+                  }}
                 >
-                  <File className="h-4 w-4" />
+                  {isSheetLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <File className="h-4 w-4" />
+                  )}
                   View final script
                 </Button>
               </SheetTrigger>
@@ -1131,8 +1189,13 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                         wrapCode={settings.wrapCode}
                         showComments={showComments}
                         enableCodeEditing={settings.enableCodeEditing}
-                        enableLineCount={settings.enableLineCount}
-                        onLineCountChange={setLineCount}
+                        onLineCountChange={(count) => {
+                          setLineCount(count);
+                          // When line count is set, CodeEditor is ready
+                          if (isSheetLoading) {
+                            setIsSheetLoading(false);
+                          }
+                        }}
                       />
                     </div>
                     {/* Summary of selected tweaks */}

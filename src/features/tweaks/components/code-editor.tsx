@@ -1,7 +1,8 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useEffect } from "react";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
 import { LineNumbersGutter } from "./code-editor/line-numbers-gutter";
 import { CodePreview } from "./code-editor/code-preview";
@@ -21,8 +22,51 @@ interface CodeEditorProps {
   onLineCountChange?: (count: number) => void;
   showComments?: boolean;
   enableCodeEditing?: boolean;
-  enableLineCount?: boolean;
   onSaveCode?: (code: string) => void;
+  onReady?: () => void;
+}
+
+// Skeleton component for code editor loading state
+function CodeEditorSkeleton({ lineCount }: { lineCount: number }) {
+  // Generate skeleton lines with varying widths to look more realistic
+  // Simulate PowerShell code patterns with different line lengths
+  const skeletonLines = Array.from({ length: Math.min(lineCount, 200) }, (_, i) => {
+    // Create more realistic patterns:
+    // - Some short lines (comments, empty-ish)
+    // - Some medium lines (commands)
+    // - Some long lines (parameters, strings)
+    const pattern = i % 7;
+    let width: number;
+    
+    if (pattern === 0 || pattern === 6) {
+      // Short lines (comments or short commands) - 20-40%
+      width = 20 + (i % 3) * 7;
+    } else if (pattern === 1 || pattern === 5) {
+      // Medium lines (commands with parameters) - 50-70%
+      width = 50 + (i % 4) * 5;
+    } else {
+      // Long lines (complex commands, strings) - 75-95%
+      width = 75 + (i % 5) * 4;
+    }
+    
+    return (
+      <div key={i} className="flex items-start min-h-[1.25rem]">
+        <div className="w-0" />
+        <Skeleton 
+          className="h-5 font-mono text-sm" 
+          style={{ width: `${width}%` }}
+        />
+      </div>
+    );
+  });
+
+  return (
+    <div className="flex-1 relative">
+      <div className="leading-5">
+        {skeletonLines}
+      </div>
+    </div>
+  );
 }
 
 export default function CodeEditor({
@@ -35,21 +79,22 @@ export default function CodeEditor({
   onLineCountChange,
   showComments,
   enableCodeEditing: enableCodeEditingProp,
-  enableLineCount: enableLineCountProp,
   onSaveCode,
+  onReady,
 }: CodeEditorProps) {
   // Defaults
+  const enableCodeEditing =
+    typeof enableCodeEditingProp === "boolean" ? enableCodeEditingProp : true;
+  // showLineNumbers is required when enableCodeEditing is true
   const showLineNumbers =
-    typeof showLineNumbersProp === "boolean" ? showLineNumbersProp : true;
+    enableCodeEditing 
+      ? true 
+      : (typeof showLineNumbersProp === "boolean" ? showLineNumbersProp : true);
   const enableTextColors =
     typeof enableTextColorsProp === "boolean" ? enableTextColorsProp : true;
   const hideSensitive =
     typeof hideSensitiveProp === "boolean" ? hideSensitiveProp : false;
   const wrapCode = typeof wrapCodeProp === "boolean" ? wrapCodeProp : true;
-  const enableCodeEditing =
-    typeof enableCodeEditingProp === "boolean" ? enableCodeEditingProp : true;
-  const enableLineCount =
-    typeof enableLineCountProp === "boolean" ? enableLineCountProp : true;
 
   // Use custom hook for code editor logic
   const {
@@ -62,6 +107,9 @@ export default function CodeEditor({
     hasUnsavedChanges,
     saveChanges,
     discardChanges,
+    isPending,
+    isEditModeLoading,
+    editModeLineCount,
   } = useCodeEditor({
     selectedTweaks,
     code,
@@ -103,6 +151,14 @@ export default function CodeEditor({
     visualLineCount: wrapCode ? visualLineCount : undefined,
   });
 
+  // Notify parent when CodeEditor is ready (not loading)
+  useEffect(() => {
+    if (!isPending && onReady) {
+      onReady();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPending]);
+
   // When wordWrap is enabled and we have line mapping, use its length as the source of truth
   // Otherwise, use the calculated visual line count or logical count
   // When wordWrap is disabled, always use logicalLineCount (which excludes empty lines in preview mode)
@@ -112,38 +168,50 @@ export default function CodeEditor({
       <ScrollArea className="backdrop-blur-xl rounded-lg w-full h-full">
         <div className="p-3 pb-14">
           <div className="rounded-lg overflow-hidden bg-transparent relative">
-            {actualEditMode ? (
+            {isPending ? (
+              /* Loading state */
+              <div className="flex items-center justify-center h-full min-h-[200px]">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                  <p className="text-sm text-muted-foreground">Loading code editor...</p>
+                </div>
+              </div>
+            ) : actualEditMode ? (
               /* Edit mode */
               <div className="flex font-mono text-sm text-foreground relative">
-                {showLineNumbers && enableLineCount && (
+                {showLineNumbers && (
                   <LineNumbersGutter 
                     lineCount={wrapCode && lineNumberMapping.length > 0 
                       ? lineNumberMapping.length 
-                      : logicalLineCount}
-                    enabled={enableLineCount}
+                      : (isEditModeLoading ? editModeLineCount : logicalLineCount)}
+                    enabled={showLineNumbers}
                     lineNumbers={wrapCode && lineNumberMapping.length > 0 ? lineNumberMapping : undefined}
                   />
                 )}
-                <CodeEditorEdit
-                  key="code-editor-edit"
-                  code={editedCode}
-                  highlighted={highlightedEdit}
-                  wrapCode={wrapCode}
-                  enableTextColors={enableTextColors}
-                  onCodeChange={setEditedCode}
-                  containerRef={editContainerRef}
-                  isEditMode={actualEditMode}
-                />
+                {(isEditModeLoading || highlightedEdit.length === 0) && editModeLineCount > 0 ? (
+                  <CodeEditorSkeleton lineCount={editModeLineCount} />
+                ) : highlightedEdit.length > 0 ? (
+                  <CodeEditorEdit
+                    key="code-editor-edit"
+                    code={editedCode}
+                    highlighted={highlightedEdit}
+                    wrapCode={wrapCode}
+                    enableTextColors={enableTextColors}
+                    onCodeChange={setEditedCode}
+                    containerRef={editContainerRef}
+                    isEditMode={actualEditMode}
+                  />
+                ) : null}
               </div>
             ) : (
               /* Preview mode */
               <div className="flex font-mono text-sm text-foreground">
-                {showLineNumbers && enableLineCount && (
+                {showLineNumbers && (
                   <LineNumbersGutter 
                     lineCount={wrapCode && lineNumberMapping.length > 0 
                       ? lineNumberMapping.length 
                       : logicalLineCount}
-                    enabled={enableLineCount}
+                    enabled={showLineNumbers}
                     lineNumbers={wrapCode && lineNumberMapping.length > 0 ? lineNumberMapping : undefined}
                   />
                 )}

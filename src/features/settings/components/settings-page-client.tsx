@@ -19,7 +19,6 @@ export default function SettingsPageClient() {
     setWrapCode,
     setShowComments,
     setEnableCodeEditing,
-    setEnableLineCount,
     setAutoCreateRestorePoint,
   } = useEditorSettings();
 
@@ -34,7 +33,6 @@ export default function SettingsPageClient() {
     wrapCode: setWrapCode,
     showComments: setShowComments,
     enableCodeEditing: setEnableCodeEditing,
-    enableLineCount: setEnableLineCount,
     autoCreateRestorePoint: setAutoCreateRestorePoint,
   };
 
@@ -68,16 +66,22 @@ export default function SettingsPageClient() {
                     <div className="space-y-4">
                       {group.items.map((item) => {
                         if (item.type === "switch") {
+                          // If enableCodeEditing is enabled, showLineNumbers must be enabled
+                          const isDisabled = item.id === "showLineNumbers" && settings.enableCodeEditing;
+                          const checked = item.id === "showLineNumbers" && settings.enableCodeEditing 
+                            ? true 
+                            : (settings[item.id] as boolean);
+                          
                           return (
                             <SettingSwitch
                               key={item.id}
                               title={item.title}
                               description={item.description}
-                              checked={settings[item.id] as boolean}
+                              checked={checked}
                               onCheckedChange={setters[item.id]}
                               experimental={item.experimental}
                               warning={item.warning}
-                              disabled={item.disabled}
+                              disabled={isDisabled || item.disabled}
                             />
                           );
                         }

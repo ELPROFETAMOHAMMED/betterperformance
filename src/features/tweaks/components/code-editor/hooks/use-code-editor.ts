@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useTransition } from "react";
 import { getCombinedTweaksCode } from "@/features/tweaks/utils/tweak-comments";
 import { highlightCode } from "@/features/tweaks/utils/code-editor";
+import type { Token } from "@/features/tweaks/utils/code-editor";
 import { redactSensitive } from "@/shared/lib/utils";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
 
@@ -25,6 +26,8 @@ export function useCodeEditor({
 }: UseCodeEditorProps) {
   // Local state for toggling edit/preview mode - always start in preview mode
   const [isEditMode, setIsEditMode] = useState(false);
+  // Track loading state for heavy operations
+  const [isPending, startTransition] = useTransition();
 
   // Compose code with comments for each tweak
   const codeToShow = useMemo(() => {
@@ -113,32 +116,64 @@ export function useCodeEditor({
   // In preview mode, use savedCode if it exists (user has saved changes), otherwise use codeToShow
   const displayCode = isEditMode ? editedCode : (savedCode ?? codeToShow);
 
-  // Generate highlighted code for preview mode
-  const { lines, highlighted } = useMemo(() => {
-    const result = highlightCode(displayCode);
-    const displayLines: string[] = [];
-    const displayHighlighted: typeof result.highlighted = [];
+  // Generate highlighted code for preview mode (with transition for heavy operations)
+  const [highlighted, setHighlighted] = useState<Token[][]>(() => {
+    // Initialize with empty to show loading state initially
+    return [];
+  });
+  const [lines, setLines] = useState<string[]>([]);
+  
+  useEffect(() => {
+    // Set loading state immediately
+    setHighlighted([]);
+    setLines([]);
+    
+    startTransition(() => {
+      const result = highlightCode(displayCode);
+      const displayLines: string[] = [];
+      const displayHighlighted: typeof result.highlighted = [];
 
-    result.lines.forEach((line, idx) => {
-      const tokens = result.highlighted[idx];
-      const hasContent = tokens.some((token) => token.value.trim().length > 0);
-      if (hasContent) {
-        displayLines.push(line);
-        displayHighlighted.push(tokens);
-      }
+      result.lines.forEach((line, idx) => {
+        const tokens = result.highlighted[idx];
+        const hasContent = tokens.some((token) => token.value.trim().length > 0);
+        if (hasContent) {
+          displayLines.push(line);
+          displayHighlighted.push(tokens);
+        }
+      });
+
+      setLines(displayLines);
+      setHighlighted(displayHighlighted);
     });
-
-    return {
-      lines: displayLines,
-      highlighted: displayHighlighted,
-    };
-  }, [displayCode]);
+  }, [displayCode, startTransition]);
 
   // Generate highlighted code for edit mode (all lines, including empty)
-  const highlightedEdit = useMemo(() => {
-    const editResult = highlightCode(editedCode);
-    return editResult.highlighted;
+  const [highlightedEdit, setHighlightedEdit] = useState<Token[][]>(() => {
+    // Initialize with empty to show loading state initially
+    return [];
+  });
+  
+  // Track if we're loading edit mode specifically (when switching to edit mode)
+  const [isEditModeLoading, setIsEditModeLoading] = useState(false);
+  
+  // Calculate line count quickly without full highlighting (for skeleton)
+  const editModeLineCount = useMemo(() => {
+    if (!editedCode) return 0;
+    const normalized = editedCode.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+    return normalized.split("\n").length;
   }, [editedCode]);
+  
+  useEffect(() => {
+    // Set loading state immediately when code changes
+    setHighlightedEdit([]);
+    setIsEditModeLoading(true);
+    
+    startTransition(() => {
+      const editResult = highlightCode(editedCode);
+      setHighlightedEdit(editResult.highlighted);
+      setIsEditModeLoading(false);
+    });
+  }, [editedCode, startTransition]);
 
   // Keep external line counter in sync - only if callback is provided
   // Use the same normalization logic as useLineCount for consistency
@@ -166,6 +201,9 @@ export function useCodeEditor({
     hasUnsavedChanges,
     saveChanges,
     discardChanges,
+    isPending, // Export loading state
+    isEditModeLoading, // Export edit mode loading state
+    editModeLineCount, // Export line count for skeleton
   };
 }
 

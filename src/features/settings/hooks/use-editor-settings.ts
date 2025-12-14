@@ -11,22 +11,20 @@ export type EditorSettings = {
   wrapCode: boolean;
   showComments: boolean;
   enableCodeEditing: boolean;
-  enableLineCount: boolean;
   autoCreateRestorePoint: boolean;
 };
 
 const STORAGE_KEY = "editorSettings";
 const DEFAULT_SETTINGS: EditorSettings = {
-  showLineNumbers: false,
+  showLineNumbers: true,
   enableTextColors: true,
   encodingUtf8: true,
   hideSensitive: false,
   downloadEachTweak: false,
   alwaysShowWarning: true,
-  wrapCode: true,
+  wrapCode: false,
   showComments: false,
   enableCodeEditing: true,
-  enableLineCount: true,
   autoCreateRestorePoint: true,
 };
 
@@ -56,6 +54,12 @@ export function useEditorSettings() {
   const mutation = useMutation({
     mutationFn: async (newSettings: Partial<EditorSettings>) => {
       const merged = { ...settings, ...newSettings };
+      
+      // If enableCodeEditing is enabled, showLineNumbers must be enabled
+      if (merged.enableCodeEditing && !merged.showLineNumbers) {
+        merged.showLineNumbers = true;
+      }
+      
       saveSettings(merged);
       return Promise.resolve(merged);
     },
@@ -66,8 +70,14 @@ export function useEditorSettings() {
 
   // Helper setters for each field
   const setShowLineNumbers = useCallback(
-    (v: boolean) => mutation.mutate({ showLineNumbers: v }),
-    [mutation]
+    (v: boolean) => {
+      // If enableCodeEditing is enabled, showLineNumbers cannot be disabled
+      if (settings.enableCodeEditing && !v) {
+        return; // Don't allow disabling when code editing is enabled
+      }
+      mutation.mutate({ showLineNumbers: v });
+    },
+    [mutation, settings.enableCodeEditing]
   );
   const setEnableTextColors = useCallback(
     (v: boolean) => mutation.mutate({ enableTextColors: v }),
@@ -98,11 +108,14 @@ export function useEditorSettings() {
     [mutation]
   );
   const setEnableCodeEditing = useCallback(
-    (v: boolean) => mutation.mutate({ enableCodeEditing: v }),
-    [mutation]
-  );
-  const setEnableLineCount = useCallback(
-    (v: boolean) => mutation.mutate({ enableLineCount: v }),
+    (v: boolean) => {
+      // When enabling code editing, also enable line numbers
+      // When disabling, keep the current showLineNumbers value
+      mutation.mutate({ 
+        enableCodeEditing: v,
+        ...(v ? { showLineNumbers: true } : {})
+      });
+    },
     [mutation]
   );
   const setAutoCreateRestorePoint = useCallback(
@@ -121,7 +134,6 @@ export function useEditorSettings() {
     setWrapCode,
     setShowComments,
     setEnableCodeEditing,
-    setEnableLineCount,
     setAutoCreateRestorePoint,
   };
 }
