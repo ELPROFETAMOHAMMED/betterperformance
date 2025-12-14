@@ -54,13 +54,13 @@ export default function LandingPage() {
 
               <div className="space-y-4">
                 <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-                  Tune your PC performance{" "}
-                  <span className="text-primary">the right way</span>.
+                  Windows 10 & 11 Performance Tweaks{" "}
+                  <span className="text-primary">Made Simple</span>
                 </h1>
                 <p className="text-base text-muted-foreground sm:text-lg md:text-xl max-w-2xl">
-                  BetterPerformance guides you through curated, reversible tweaks
-                  so you can optimise Windows without hunting through obscure
-                  forums or risky scripts.
+                  Optimize Windows 10 and Windows 11 performance with safe, reversible tweaks. 
+                  Get better performance with curated PowerShell scripts for Windows optimization. 
+                  Free Windows tweaks for Twix for Windows, Windows 10, and Windows 11.
                 </p>
               </div>
 
@@ -123,11 +123,11 @@ export default function LandingPage() {
           <div className="mx-auto max-w-6xl">
             <div className="mb-12 text-center">
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
-                Everything you need to{" "}
-                <span className="text-primary">optimize Windows</span>
+                Windows 10 & 11 Performance{" "}
+                <span className="text-primary">Optimization Tools</span>
               </h2>
               <p className="mt-4 text-muted-foreground">
-                A comprehensive toolkit for Windows power users
+                Free Windows tweaks for better performance. Optimize Windows 10 and Windows 11 with safe PowerShell scripts.
               </p>
             </div>
 
@@ -159,11 +159,11 @@ export default function LandingPage() {
         <section className="border-t border-border/40 py-20 px-4">
           <div className="mx-auto max-w-4xl text-center">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
-              Ready to optimize your PC?
+              Ready to Optimize Windows 10 & 11 Performance?
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Join thousands of users who have improved their Windows
-              performance
+              Join thousands of users who have improved their Windows 10 and Windows 11 performance 
+              with our free tweaks and optimization tools
             </p>
             <div className="mt-8">
               <LandingLoginButton className="px-8" />
