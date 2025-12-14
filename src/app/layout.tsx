@@ -81,8 +81,16 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
-  verification: {
-    google: process.env.NEXT_PUBLIC_GOOGLE_VERIFICATION,
+  icons: {
+    icon: [
+      { url: "/assets/Aplication-logo.png", type: "image/png" },
+      { url: "/assets/Aplication-logo.png", type: "image/png", sizes: "32x32" },
+      { url: "/assets/Aplication-logo.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: [
+      { url: "/assets/Aplication-logo.png", type: "image/png" },
+    ],
+    shortcut: "/assets/Aplication-logo.png",
   },
 };
 
