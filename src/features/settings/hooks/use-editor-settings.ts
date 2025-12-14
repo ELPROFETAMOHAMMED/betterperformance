@@ -24,7 +24,7 @@ const DEFAULT_SETTINGS: EditorSettings = {
   alwaysShowWarning: true,
   wrapCode: false,
   showComments: false,
-  enableCodeEditing: true,
+  enableCodeEditing: false,
   autoCreateRestorePoint: true,
 };
 

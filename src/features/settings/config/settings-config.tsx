@@ -89,6 +89,8 @@ export const SETTINGS_GROUPS: SettingGroup[] = [
         description:
           "Allow manual editing of code in the editor. When disabled, the editor is in preview mode (read-only) to prevent accidental changes.",
         type: "switch",
+        disabled: true,
+        warning: "This feature is not currently disabled due to technical limitations and will be enabled in the future.",
       },
     ],
   },
