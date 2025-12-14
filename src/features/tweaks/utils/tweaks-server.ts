@@ -1,6 +1,13 @@
 import { createClient } from "@/shared/utils/supabase/server";
 import type { TweakCategory, Tweak } from "@/features/tweaks/types/tweak.types";
 
+interface CategoryRow {
+  id: string;
+  name: string;
+  icon: string | null;
+  description: string | null;
+}
+
 export async function fetchTweakCategories(): Promise<TweakCategory[]> {
   const supabase = await createClient();
   
@@ -18,11 +25,11 @@ export async function fetchTweakCategories(): Promise<TweakCategory[]> {
   if (catError) throw catError;
 
   // Group tweaks by category
-  const grouped: TweakCategory[] = categories.map((cat: any) => ({
+  const grouped: TweakCategory[] = categories.map((cat: CategoryRow) => ({
     id: cat.id,
     name: cat.name,
-    icon: cat.icon,
-    description: cat.description,
+    icon: cat.icon ?? undefined,
+    description: cat.description ?? undefined,
     tweaks: (tweaks || []).filter((t: Tweak) => t.category_id === cat.id),
   }));
 

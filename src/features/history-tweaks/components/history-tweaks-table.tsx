@@ -60,7 +60,7 @@ export default function HistoryTweaksTable({
   const pageSize = 10;
 
   const filteredHistory = useMemo(() => {
-    let filtered = history.filter((entry: TweakHistoryEntry) => {
+    const filtered = history.filter((entry: TweakHistoryEntry) => {
       const matchesName = entry.name
         ?.toLowerCase()
         .includes(filter.toLowerCase());

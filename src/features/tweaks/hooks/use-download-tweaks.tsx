@@ -104,12 +104,12 @@ export function useDownloadTweaks() {
                 Before downloading and applying tweaks, please ensure you:
               </p>
               <ul className="list-disc list-inside space-y-1 ml-2">
-                <li>Have reviewed and understand each tweak you're about to apply</li>
+                <li>Have reviewed and understand each tweak you&apos;re about to apply</li>
                 <li>Have created a system restore point (strongly recommended)</li>
                 <li>Are aware that some tweaks may require administrator privileges</li>
                 <li>Have backed up all important data</li>
                 <li>Understand that combining incompatible tweaks may break your system</li>
-                <li>Know what you're doing or are willing to accept the risks</li>
+                <li>Know what you&apos;re doing or are willing to accept the risks</li>
               </ul>
             </div>
 
@@ -123,7 +123,7 @@ export function useDownloadTweaks() {
             </div>
 
             <p className="text-xs text-muted-foreground italic">
-              By clicking "Continue Download", you acknowledge that you understand these risks and that BetterPerformance is not responsible for any consequences resulting from the use of these tweaks.
+              By clicking &quot;Continue Download&quot;, you acknowledge that you understand these risks and that BetterPerformance is not responsible for any consequences resulting from the use of these tweaks.
             </p>
           </div>
         </AlertDialogHeader>

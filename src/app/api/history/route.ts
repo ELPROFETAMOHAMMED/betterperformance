@@ -31,7 +31,7 @@ export async function GET() {
 
     const history: TweakHistoryEntry[] = (data || []).map((entry: TweakHistoryRow) => ({
       id: entry.id,
-      name: entry.name,
+      name: entry.name ?? undefined,
       createdAt: entry.created_at,
       userId: user.id,
       tweaks: typeof entry.tweaks === "string" ? JSON.parse(entry.tweaks) : entry.tweaks,

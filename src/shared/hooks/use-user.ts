@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/shared/utils/supabase/client";
 import type { profile } from "@/features/auth/types/user.types";
+import type { User } from "@supabase/supabase-js";
 
 export function useUser() {
   const [user, setUser] = useState<profile | null>(null);
@@ -14,7 +15,7 @@ export function useUser() {
   useEffect(() => {
     let mounted = true;
 
-    const fetchUserData = async (authUser: any) => {
+    const fetchUserData = async (authUser: User) => {
       let profileData = null;
       let profileError = null;
 
@@ -60,7 +61,7 @@ export function useUser() {
           }
         } catch (error) {
           // Silently handle any unexpected errors - profile fetch is optional
-          profileError = error as any;
+          profileError = error as Error;
         }
       }
 

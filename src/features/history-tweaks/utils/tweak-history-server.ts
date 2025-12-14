@@ -1,6 +1,14 @@
 import { createClient } from "@/shared/utils/supabase/server";
 import type { TweakHistoryEntry } from "@/features/tweaks/types/tweak.types";
 
+interface TweakHistoryRow {
+  id: string;
+  name: string | null;
+  created_at: string;
+  tweaks: string | unknown;
+  is_favorite: boolean | null;
+}
+
 export async function fetchUserTweakHistory(
   userId: string
 ): Promise<TweakHistoryEntry[]> {
@@ -15,9 +23,9 @@ export async function fetchUserTweakHistory(
     throw error;
   }
 
-  return (data || []).map((entry: any) => ({
+  return (data || []).map((entry: TweakHistoryRow) => ({
     id: entry.id,
-    name: entry.name,
+    name: entry.name ?? undefined,
     createdAt: entry.created_at,
     userId,
     tweaks: typeof entry.tweaks === "string" ? JSON.parse(entry.tweaks) : entry.tweaks,

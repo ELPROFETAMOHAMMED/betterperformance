@@ -30,8 +30,8 @@ export async function GET() {
     const grouped: TweakCategory[] = categories.map((cat: CategoryRow) => ({
       id: cat.id,
       name: cat.name,
-      icon: cat.icon,
-      description: cat.description,
+      icon: cat.icon ?? undefined,
+      description: cat.description ?? undefined,
       tweaks: (tweaks || []).filter((t: Tweak) => t.category_id === cat.id),
     }));
 

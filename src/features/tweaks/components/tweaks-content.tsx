@@ -235,7 +235,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     try {
       // Try to get user, but don't block download if user is not available
       // Downloads can work without user (just won't save history or increment downloads)
-      let currentUser = user;
+      const currentUser = user;
       
       // If user is still loading or not available, try to get it from session
       if ((userLoading || !currentUser) && typeof window !== "undefined") {
@@ -388,7 +388,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
             return false;
           }
           // Only include tweaks that have reports when reportedOnly is enabled
-          if (filters.reportedOnly && ((tweak as any)?.report ?? 0) === 0) {
+          if (filters.reportedOnly && ((tweak as Tweak & { report?: number })?.report ?? 0) === 0) {
             return false;
           }
           if (normalized.length > 0) {
