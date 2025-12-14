@@ -14,9 +14,13 @@ export async function POST(request: Request) {
       );
     }
 
-    for (const id of tweakIds) {
-      await supabase.rpc("increment_download_count", { tweak_id: id });
-    }
+    // Use Promise.all for parallel execution instead of sequential await
+    // This significantly improves performance when incrementing multiple tweaks
+    await Promise.all(
+      tweakIds.map((id: string) =>
+        supabase.rpc("increment_download_count", { tweak_id: id })
+      )
+    );
 
     return NextResponse.json({ success: true });
   } catch (error) {

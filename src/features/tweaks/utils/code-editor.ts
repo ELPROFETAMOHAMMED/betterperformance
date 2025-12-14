@@ -68,6 +68,55 @@ export function tokenClass(type: string) {
   }
 }
 
+/**
+ * Highlights code asynchronously in chunks to prevent UI blocking
+ * Uses requestIdleCallback when available, falls back to setTimeout
+ */
+export async function highlightCodeAsync(
+  code: string,
+  chunkSize: number = 100
+): Promise<{ lines: string[]; highlighted: Token[][] }> {
+  const lines = code ? code.split(/\r\n|\r|\n/) : [""];
+  const highlighted: Token[][] = [];
+  
+  // Process in chunks to avoid blocking the UI
+  const processChunk = (startIndex: number): Promise<void> => {
+    return new Promise((resolve) => {
+      const process = () => {
+        const endIndex = Math.min(startIndex + chunkSize, lines.length);
+        for (let i = startIndex; i < endIndex; i++) {
+          highlighted[i] = tokenizeLine(lines[i]);
+        }
+        
+        if (endIndex < lines.length) {
+          // Use requestIdleCallback if available, otherwise setTimeout
+          if (typeof requestIdleCallback !== "undefined") {
+            requestIdleCallback(() => resolve(processChunk(endIndex)));
+          } else {
+            setTimeout(() => resolve(processChunk(endIndex)), 0);
+          }
+        } else {
+          resolve();
+        }
+      };
+      
+      // Use requestIdleCallback for first chunk if available
+      if (startIndex === 0 && typeof requestIdleCallback !== "undefined") {
+        requestIdleCallback(process, { timeout: 100 });
+      } else {
+        setTimeout(process, 0);
+      }
+    });
+  };
+  
+  await processChunk(0);
+  return { lines, highlighted };
+}
+
+/**
+ * Synchronous version for small code blocks (backward compatibility)
+ * For large code blocks, use highlightCodeAsync instead
+ */
 export function highlightCode(code: string) {
   const lines = code ? code.split(/\r\n|\r|\n/) : [""];
   const highlighted = lines.map((l) => tokenizeLine(l));

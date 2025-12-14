@@ -76,8 +76,8 @@ export function useDownloadTweaks() {
       // Mark cancellation as handled to prevent cleanup effect from calling callback again
       cancelHandledRef.current = true;
       const callbacks = pendingDownload.callbacks;
-      setShowWarningDialog(false);
-      setPendingDownload(null);
+    setShowWarningDialog(false);
+    setPendingDownload(null);
       // Call callback after state is cleared
       callbacks?.onDownloadCancel?.();
     } else {

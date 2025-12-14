@@ -41,7 +41,7 @@ export function useUser() {
             // Silently handle errors related to RLS or API key issues
             // These are expected in some configurations and don't affect functionality
             // The profile fetch is optional - if it fails, we use auth user data only
-            // No need to log these errors as they're expected RLS/configuration issues
+              // No need to log these errors as they're expected RLS/configuration issues
           }
         } catch (error) {
           // Silently handle any unexpected errors - profile fetch is optional

@@ -793,13 +793,18 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                     variant="outline"
                     size="sm"
                     disabled={!selectedTweaksArray.length || isSheetLoading}
-                    onClick={() => {
+                    onClick={async () => {
                       if (selectedTweaksArray.length > 0) {
                         setIsSheetLoading(true);
-                        // Wait a bit for the CodeEditor to start loading, then open sheet
-                        setTimeout(() => {
-                          setSheetOpen(true);
-                        }, 50);
+                        // Use requestAnimationFrame to ensure UI updates before opening sheet
+                        await new Promise<void>((resolve) => {
+                          requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                              setSheetOpen(true);
+                              resolve();
+                            });
+                          });
+                        });
                       }
                     }}
                   >
@@ -1128,13 +1133,18 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                   size="sm"
                   className="gap-2"
                   disabled={!selectedTweaksArray.length || isSheetLoading}
-                  onClick={() => {
+                  onClick={async () => {
                     if (selectedTweaksArray.length > 0) {
                       setIsSheetLoading(true);
-                      // Wait a bit for the CodeEditor to start loading, then open sheet
-                      setTimeout(() => {
-                        setSheetOpen(true);
-                      }, 50);
+                      // Use requestAnimationFrame to ensure UI updates before opening sheet
+                      await new Promise<void>((resolve) => {
+                        requestAnimationFrame(() => {
+                          requestAnimationFrame(() => {
+                            setSheetOpen(true);
+                            resolve();
+                          });
+                        });
+                      });
                     }
                   }}
                 >

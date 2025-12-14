@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef, useTransition } from "react";
 import { getCombinedTweaksCode } from "@/features/tweaks/utils/tweak-comments";
-import { highlightCode } from "@/features/tweaks/utils/code-editor";
+import { highlightCode, highlightCodeAsync } from "@/features/tweaks/utils/code-editor";
 import type { Token } from "@/features/tweaks/utils/code-editor";
 import { redactSensitive } from "@/shared/lib/utils";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
@@ -124,27 +124,79 @@ export function useCodeEditor({
   const [lines, setLines] = useState<string[]>([]);
   
   useEffect(() => {
+    let cancelled = false;
+    
     // Set loading state immediately
     setHighlighted([]);
     setLines([]);
     
-    startTransition(() => {
-      const result = highlightCode(displayCode);
-      const displayLines: string[] = [];
-      const displayHighlighted: typeof result.highlighted = [];
-
-      result.lines.forEach((line, idx) => {
-        const tokens = result.highlighted[idx];
-        const hasContent = tokens.some((token) => token.value.trim().length > 0);
-        if (hasContent) {
-          displayLines.push(line);
-          displayHighlighted.push(tokens);
+    // Use async highlighting for large code blocks to prevent UI blocking
+    const processHighlighting = async () => {
+      try {
+        // For small code blocks (< 200 lines), use synchronous highlighting
+        // For larger blocks, use async to prevent blocking
+        const lineCount = displayCode.split(/\r\n|\r|\n/).length;
+        const useAsync = lineCount > 200;
+        
+        let result;
+        if (useAsync) {
+          result = await highlightCodeAsync(displayCode);
+        } else {
+          // Use startTransition for small blocks to keep UI responsive
+          result = highlightCode(displayCode);
         }
-      });
+        
+        if (cancelled) return;
+        
+        const displayLines: string[] = [];
+        const displayHighlighted: typeof result.highlighted = [];
 
-      setLines(displayLines);
-      setHighlighted(displayHighlighted);
-    });
+        // Process lines in chunks to avoid blocking
+        for (let idx = 0; idx < result.lines.length; idx++) {
+          const tokens = result.highlighted[idx];
+          const hasContent = tokens.some((token) => token.value.trim().length > 0);
+          if (hasContent) {
+            displayLines.push(result.lines[idx]);
+            displayHighlighted.push(tokens);
+          }
+        }
+
+        if (!cancelled) {
+          startTransition(() => {
+            setLines(displayLines);
+            setHighlighted(displayHighlighted);
+          });
+        }
+      } catch (error) {
+        console.error("Error highlighting code:", error);
+        if (!cancelled) {
+          // Fallback to synchronous highlighting on error
+          const result = highlightCode(displayCode);
+          const displayLines: string[] = [];
+          const displayHighlighted: typeof result.highlighted = [];
+
+          for (let idx = 0; idx < result.lines.length; idx++) {
+            const tokens = result.highlighted[idx];
+            const hasContent = tokens.some((token) => token.value.trim().length > 0);
+            if (hasContent) {
+              displayLines.push(result.lines[idx]);
+              displayHighlighted.push(tokens);
+            }
+          }
+
+          startTransition(() => {
+            setLines(displayLines);
+            setHighlighted(displayHighlighted);
+          });
+        }
+      }
+    };
+    
+    processHighlighting();
+    
+    return () => {
+      cancelled = true;
+    };
   }, [displayCode, startTransition]);
 
   // Generate highlighted code for edit mode (all lines, including empty)
@@ -164,15 +216,51 @@ export function useCodeEditor({
   }, [editedCode]);
   
   useEffect(() => {
+    let cancelled = false;
+    
     // Set loading state immediately when code changes
     setHighlightedEdit([]);
     setIsEditModeLoading(true);
     
-    startTransition(() => {
-      const editResult = highlightCode(editedCode);
-      setHighlightedEdit(editResult.highlighted);
-      setIsEditModeLoading(false);
-    });
+    // Use async highlighting for large code blocks to prevent UI blocking
+    const processEditHighlighting = async () => {
+      try {
+        // For small code blocks (< 200 lines), use synchronous highlighting
+        // For larger blocks, use async to prevent blocking
+        const lineCount = editedCode.split(/\r\n|\r|\n/).length;
+        const useAsync = lineCount > 200;
+        
+        let editResult;
+        if (useAsync) {
+          editResult = await highlightCodeAsync(editedCode);
+        } else {
+          editResult = highlightCode(editedCode);
+        }
+        
+        if (!cancelled) {
+          startTransition(() => {
+            setHighlightedEdit(editResult.highlighted);
+            setIsEditModeLoading(false);
+          });
+        }
+      } catch (error) {
+        console.error("Error highlighting edit code:", error);
+        if (!cancelled) {
+          // Fallback to synchronous highlighting on error
+          const editResult = highlightCode(editedCode);
+          startTransition(() => {
+            setHighlightedEdit(editResult.highlighted);
+            setIsEditModeLoading(false);
+          });
+        }
+      }
+    };
+    
+    processEditHighlighting();
+    
+    return () => {
+      cancelled = true;
+    };
   }, [editedCode, startTransition]);
 
   // Keep external line counter in sync - only if callback is provided
