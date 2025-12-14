@@ -1,11 +1,11 @@
 "use client";
-import Link from "next/link";
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
+import { motion, AnimatePresence } from "framer-motion";
 import type { TweakHistoryEntry } from "@/features/tweaks/types/tweak.types";
 import HistoryTweaksTable from "@/features/history-tweaks/components/history-tweaks-table";
 import { Button } from "@/shared/components/ui/button";
-import { ArrowLeft, Star, Loader2 } from "lucide-react";
+import { Star, Loader2 } from "lucide-react";
 import { useEditorSettings } from "@/features/settings/hooks/use-editor-settings";
 import { useDownloadTweaks } from "@/features/tweaks/hooks/use-download-tweaks";
 import { incrementTweakDownloads } from "@/features/history-tweaks/utils/tweak-history-client";
@@ -243,14 +243,24 @@ export default function HistoryTweaksClient({
   return (
     <>
       <div className="w-full px-4 py-6">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+        <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
           {/* Header */}
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+          >
             <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/40 bg-background/80 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3, delay: 0.1 }}
+                className="inline-flex items-center gap-2 px-3 py-1 text-[11px] text-muted-foreground"
+              >
                 <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
                 <span>Your saved tweak selections</span>
-              </div>
+              </motion.div>
               <div>
                 <h1 className="text-xl font-semibold tracking-tight md:text-2xl">
                   Tweak history
@@ -261,95 +271,110 @@ export default function HistoryTweaksClient({
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-2 rounded-[var(--radius-md)] border border-border/40 bg-card/80 px-3 py-2 text-[11px] text-muted-foreground">
-                <div className="flex flex-col">
-                  <span className="text-[10px] uppercase tracking-[0.16em]">
-                    Saved sets
-                  </span>
-                  <span className="text-xs font-semibold text-foreground">
-                    {totalEntries}
-                  </span>
-                </div>
-                <div className="h-8 w-px bg-border/60" />
-                <div className="flex flex-col">
-                  <span className="text-[10px] uppercase tracking-[0.16em]">
-                    Favorites
-                  </span>
-                  <span className="text-xs font-semibold text-foreground">
-                    {favorites.length}
-                  </span>
-                </div>
-                {lastEntry && (
-                  <>
-                    <div className="h-8 w-px bg-border/60" />
-                    <div className="flex flex-col">
-                      <span className="text-[10px] uppercase tracking-[0.16em]">
-                        Last applied
-                      </span>
-                      <span className="text-xs text-foreground">
-                        {format(new Date(lastEntry.createdAt), "dd MMM yyyy")}
-                      </span>
-                    </div>
-                  </>
-                )}
+            <motion.div
+              initial={{ opacity: 0, x: 10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.3, delay: 0.2 }}
+              className="flex items-center gap-4 text-[11px] text-muted-foreground"
+            >
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase tracking-[0.16em]">
+                  Saved sets
+                </span>
+                <span className="text-xs font-semibold text-foreground">
+                  {totalEntries}
+                </span>
               </div>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/home" className="flex items-center gap-2">
-                  <ArrowLeft className="h-3.5 w-3.5" />
-                  <span className="text-xs">Back home</span>
-                </Link>
-              </Button>
-            </div>
-          </div>
+              <div className="h-8 w-px bg-border/30" />
+              <div className="flex flex-col">
+                <span className="text-[10px] uppercase tracking-[0.16em]">
+                  Favorites
+                </span>
+                <span className="text-xs font-semibold text-foreground">
+                  {favorites.length}
+                </span>
+              </div>
+              {lastEntry && (
+                <>
+                  <div className="h-8 w-px bg-border/30" />
+                  <div className="flex flex-col">
+                    <span className="text-[10px] uppercase tracking-[0.16em]">
+                      Last applied
+                    </span>
+                    <span className="text-xs text-foreground">
+                      {format(new Date(lastEntry.createdAt), "dd MMM yyyy")}
+                    </span>
+                  </div>
+                </>
+              )}
+            </motion.div>
+          </motion.div>
 
-          {/* Favorites strip */}
-          {favorites.length > 0 && (
-            <section className="rounded-[var(--radius-md)] border border-border/40 bg-card/80 p-4">
-              <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+          {/* Favorites strip - Modernized */}
+          <AnimatePresence>
+            {favorites.length > 0 && (
+              <motion.section
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.3, delay: 0.2 }}
+                className="space-y-4"
+              >
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
-                  <div>
-                    <h2 className="text-sm font-semibold">Favorite tweak sets</h2>
-                    <p className="text-[11px] text-muted-foreground">
-                      One click to re-open your most trusted combinations on the
-                      Tweaks page.
-                    </p>
-                  </div>
+                  <h2 className="text-sm font-semibold">Favorites</h2>
+                  <span className="text-xs text-muted-foreground">
+                    ({favorites.length})
+                  </span>
                 </div>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {favorites.map((entry) => {
-                  const isDownloading = downloadingIds.has(entry.id);
-                  return (
-                    <Button
-                      key={entry.id}
-                      size="sm"
-                      variant="outline"
-                      className="flex items-center gap-2 rounded-[var(--radius-md)] border-border/60 bg-background/60 text-xs"
-                      onClick={() => handleDownload(entry)}
-                      disabled={isDownloading}
-                    >
-                      {isDownloading ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
-                      )}
-                      <span className="font-medium">
-                        {entry.name ?? "Favorite tweaks"}
-                      </span>
-                      <span className="text-[10px] text-muted-foreground">
-                        ({entry.tweaks?.length ?? 0} tweaks)
-                      </span>
-                    </Button>
-                  );
-                })}
-              </div>
-            </section>
-          )}
+                <div className="flex flex-wrap gap-2">
+                  {favorites.map((entry, index) => {
+                    const isDownloading = downloadingIds.has(entry.id);
+                    return (
+                      <motion.div
+                        key={entry.id}
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{
+                          duration: 0.2,
+                          delay: 0.3 + index * 0.05,
+                        }}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                      >
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-auto gap-2 px-3 py-2 text-xs hover:bg-muted/50 transition-colors"
+                          onClick={() => handleDownload(entry)}
+                          disabled={isDownloading}
+                        >
+                          {isDownloading ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500" />
+                          )}
+                          <span className="font-medium">
+                            {entry.name ?? "Favorite tweaks"}
+                          </span>
+                          <span className="text-[10px] text-muted-foreground">
+                            · {entry.tweaks?.length ?? 0}
+                          </span>
+                        </Button>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              </motion.section>
+            )}
+          </AnimatePresence>
 
           {/* Table */}
-          <div className="rounded-[var(--radius-md)] border border-border/40 bg-card/80 p-4">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+          >
             <HistoryTweaksTable
               history={entries}
               onDownload={handleDownload}
@@ -360,7 +385,7 @@ export default function HistoryTweaksClient({
               downloadingIds={downloadingIds}
               favoritingIds={favoritingIds}
             />
-          </div>
+          </motion.div>
         </div>
       </div>
 

@@ -8,6 +8,7 @@ import {
   useEffect,
   useRef,
 } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { useEditorSettings } from "@/features/settings/hooks/use-editor-settings";
 import VisualTree from "./visual-tree";
 import CodeEditor from "./code-editor";
@@ -594,19 +595,36 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   );
 
   return (
-    <div className="w-full px-4 py-6">
+    <motion.div
+      className="w-full px-4 py-6"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+    >
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 lg:min-h-[calc(100vh-8rem)] lg:flex-row">
         {/* Left: tree with filters */}
-        <div className="flex w-full flex-col gap-4 lg:w-[620px]">
+        <div className="flex w-full flex-col gap-4 lg:w-1/2">
           {/* Search bar with suggestions */}
-          <div className="relative">
+          <motion.div
+            className="relative"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2, delay: 0.05 }}
+          >
             {/* Backdrop for suggestions */}
-            {suggestOpen && searchSuggestions.length > 0 && (
-              <div
-                className="fixed inset-0 z-20 bg-background/70 backdrop-blur-sm"
-                onClick={() => setSuggestOpen(false)}
-              />
-            )}
+            <AnimatePresence>
+              {suggestOpen && searchSuggestions.length > 0 && (
+                <motion.div
+                  key="suggest-backdrop"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  className="fixed inset-0 z-20 bg-background/70 backdrop-blur-sm"
+                  onClick={() => setSuggestOpen(false)}
+                />
+              )}
+            </AnimatePresence>
             <div className="relative z-30 flex items-center gap-2">
               <div className="relative flex-1">
                 <Input
@@ -630,7 +648,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="h-10 w-10 rounded-sm border border-border/30 bg-background/80 text-muted-foreground transition hover:text-foreground"
+                    className="relative z-40 h-10 w-10 rounded-sm border border-border/30 bg-background/80 text-muted-foreground transition hover:text-foreground"
                   >
                     <SlidersHorizontal className="h-4 w-4" />
                   </Button>
@@ -682,36 +700,56 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
               </DropdownMenu>
             </div>
             {/* Search suggestions */}
-            {suggestOpen && searchSuggestions.length > 0 && (
-              <div className="absolute z-40 mt-1 w-full rounded-sm border border-border/30 bg-background/95 backdrop-blur-sm shadow-xl">
-                <div
-                  ref={suggestionsRef}
-                  className="max-h-72 overflow-y-auto p-2"
+            <AnimatePresence>
+              {suggestOpen && searchSuggestions.length > 0 && (
+                <motion.div
+                  key="suggest-panel"
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.18 }}
+                  className="absolute z-40 mt-1 w-full rounded-sm border border-border/30 bg-background/95 backdrop-blur-sm shadow-xl"
                 >
-                  {searchSuggestions.map((item, idx) => {
-                    const isActive = idx === suggestIndex;
-                    return (
-                      <button
-                        key={item.tweak.id}
-                        ref={(el) => {
-                          suggestionItemRefs.current[idx] = el;
-                        }}
-                        onMouseDown={(e) => e.preventDefault()}
-                        onClick={() => handleSelectSuggestion(item.tweak)}
-                        className={cn(
-                          "w-full rounded-sm px-3 py-2 text-left text-sm transition-colors",
-                          isActive ? "bg-accent text-foreground" : "hover:bg-accent/40"
-                        )}
-                      >
-                        <div className="font-medium text-foreground">{item.tweak.title}</div>
-                        <div className="text-xs text-muted-foreground">{item.category}</div>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-          </div>
+                  <div
+                    ref={suggestionsRef}
+                    className="max-h-72 overflow-y-auto p-2"
+                  >
+                    {searchSuggestions.map((item, idx) => {
+                      const isActive = idx === suggestIndex;
+                      return (
+                        <motion.button
+                          key={item.tweak.id}
+                          ref={(el) => {
+                            suggestionItemRefs.current[idx] = el;
+                          }}
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleSelectSuggestion(item.tweak)}
+                          className={cn(
+                            "w-full rounded-sm px-3 py-2 text-left text-sm transition-colors",
+                            isActive
+                              ? "bg-accent text-foreground"
+                              : "hover:bg-accent/40"
+                          )}
+                          initial={{ opacity: 0, y: 4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ duration: 0.15, delay: idx * 0.01 }}
+                          whileHover={{ scale: 1.01 }}
+                          whileTap={{ scale: 0.99 }}
+                        >
+                          <div className="font-medium text-foreground">
+                            {item.tweak.title}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {item.category}
+                          </div>
+                        </motion.button>
+                      );
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
           {filteredCategories.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-md)] border border-dashed border-border/40  p-4 text-center text-xs text-muted-foreground">
               <LazyLottieHero className="h-32 w-32 opacity-60" />
@@ -726,16 +764,18 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
               </Button>
             </div>
           ) : (
-            <VisualTree
-              categories={filteredCategories}
-              selectedTweaks={selectedTweaksSet}
-              onTweakToggle={handleTweakToggle}
-            />
+            <div className="flex-1 overflow-hidden">
+              <VisualTree
+                categories={filteredCategories}
+                selectedTweaks={selectedTweaksSet}
+                onTweakToggle={handleTweakToggle}
+              />
+            </div>
           )}
         </div>
 
         {/* Right: details + controls */}
-        <div className="flex h-full w-full flex-1 flex-col rounded-md border border-border/20 bg-background/70 p-4 shadow-none">
+        <div className="flex h-full w-full flex-1 flex-col gap-4 p-4 lg:w-1/2">
           <div className="mb-3 flex items-center justify-between gap-3">
             <div>
               <h2 className="text-sm font-semibold tracking-tight">
@@ -749,7 +789,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                   : "Choose tweaks from the left panel to preview their script."}
               </p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="hidden items-center gap-2">
               <TooltipProvider delayDuration={200}>
                 <Tooltip>
                   <TooltipTrigger asChild>
@@ -933,8 +973,8 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
             </div>
           </div>
 
-          <div className="flex-1">
-            <div className="h-full rounded-[var(--radius-md)] bg-gradient-to-br from-background/90 via-background/80 to-background/70 p-3 text-sm shadow-[0_14px_70px_-40px_rgba(0,0,0,0.7)] ring-1 ring-border/15">
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto rounded-[var(--radius-md)] p-3 text-sm">
               {selectedTweaksArray.length > 0 && infoTweak ? (
                 <div className="flex h-full flex-col gap-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -948,7 +988,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                     </div>
                     <div className="flex items-center gap-2">
                       <button
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/50 bg-background/70 text-muted-foreground transition hover:text-foreground"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition hover:text-foreground"
                         onClick={() => handleInfoNav(-1)}
                         aria-label="Previous tweak"
                       >
@@ -958,7 +998,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                         {infoIndex + 1} / {selectedTweaksArray.length}
                       </div>
                       <button
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/50 bg-background/70 text-muted-foreground transition hover:text-foreground"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition hover:text-foreground"
                         onClick={() => handleInfoNav(1)}
                         aria-label="Next tweak"
                       >
@@ -967,7 +1007,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                     </div>
                   </div>
 
-                  <div className="rounded-[var(--radius-md)] bg-background/70 p-3 shadow-inner shadow-black/5 ring-1 ring-border/15">
+                  <div className="rounded-[var(--radius-md)] p-3">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -1054,6 +1094,192 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                 </div>
               )}
             </div>
+          </div>
+          <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-border/20 pt-3">
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="h-9 w-9"
+                    onClick={handleSelectAllTweaks}
+                    disabled={!categories.length}
+                  >
+                    <CheckSquare2 className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p className="text-[11px]">
+                    {selectedTweaksArray.length === 0
+                      ? "Select all tweaks"
+                      : "Toggle select all tweaks"}
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button
+                  type="button"
+                  variant="default"
+                  size="sm"
+                  className="gap-2"
+                  disabled={!selectedTweaksArray.length}
+                >
+                  <File className="h-4 w-4" />
+                  View final script
+                </Button>
+              </SheetTrigger>
+              <SheetContent
+                side="right"
+                className="flex h-full w-full flex-col overflow-y-auto border-l border-border/70 bg-background/95 p-4 sm:max-w-xl"
+              >
+                <SheetHeader>
+                  <SheetTitle>Final PowerShell script</SheetTitle>
+                  <SheetDescription>
+                    Combined .ps1 content for all currently selected tweaks.
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-4 flex-1 pr-2">
+                  <div className="flex flex-col gap-3 pb-4">
+                    <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
+                      <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
+                        {selectedTweaksArray.length} selected tweak
+                        {selectedTweaksArray.length === 1 ? "" : "s"}
+                      </span>
+                      <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
+                        ~{lineCount} lines
+                      </span>
+                      <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
+                        {
+                          new Set(
+                            selectedTweaksArray.map(
+                              (tweak) => tweak.category_id
+                            )
+                          ).size
+                        }{" "}
+                        categories
+                      </span>
+                    </div>
+                    <div className="h-[420px] rounded-[var(--radius-md)] border border-border/70 bg-background/80 p-2">
+                      <CodeEditor
+                        selectedTweaks={selectedTweaksArray}
+                        code={code}
+                        onSaveCode={setSavedEditedCode}
+                        showLineNumbers={showLineNumbers}
+                        enableTextColors={enableTextColors}
+                        hideSensitive={hideSensitive}
+                        wrapCode={settings.wrapCode}
+                        showComments={showComments}
+                        enableCodeEditing={settings.enableCodeEditing}
+                        enableLineCount={settings.enableLineCount}
+                        onLineCountChange={setLineCount}
+                      />
+                    </div>
+                    {/* Summary of selected tweaks */}
+                    <div className="mt-3 border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
+                      <p className="mb-2 text-[11px] font-medium text-foreground">
+                        Selected tweaks overview
+                      </p>
+                      <ScrollArea className="h-40 pr-1">
+                        <div className="space-y-2">
+                          {selectedTweaksArray.map((tweak, index) => (
+                            <div key={tweak.id}>
+                              <p className="text-[11px] font-semibold text-foreground">
+                                {index + 1}. {tweak.title}
+                              </p>
+                              <p className="line-clamp-2 text-[11px] text-muted-foreground">
+                                {tweak.description}
+                              </p>
+                              {index < selectedTweaksArray.length - 1 && (
+                                <div className="mt-2 border-b border-border/40" />
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </ScrollArea>
+                    </div>
+                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <p className="max-w-sm text-[11px] text-muted-foreground">
+                        Quick actions for this combined script: bookmark it in
+                        your history, copy it to the clipboard, or download it
+                        as a .ps1 file.
+                      </p>
+                      <TooltipProvider delayDuration={200}>
+                        <div className="flex flex-wrap items-center justify-end gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={handleQuickSaveToHistory}
+                                disabled={
+                                  !selectedTweaksArray.length || isSavingFavorite
+                                }
+                              >
+                                {isSavingFavorite ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <BookmarkPlus className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-[11px]">
+                                Save this selection as a named favorite
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={handleCopy}
+                                disabled={!selectedTweaksArray.length}
+                              >
+                                <Clipboard className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-[11px]">Copy script</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                className="h-8 w-8"
+                                onClick={handleDownloadWithSettings}
+                                disabled={!selectedTweaksArray.length || isLoading}
+                              >
+                                {isLoading ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <ArrowDownToLine className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">
+                              <p className="text-[11px]">
+                                {isLoading
+                                  ? "Preparing download..."
+                                  : "Download script"}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </TooltipProvider>
+                    </div>
+                  </div>
+                </div>
+              </SheetContent>
+            </Sheet>
           </div>
         </div>
       </div>
@@ -1143,7 +1369,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
 
       {/* Warning Dialog - handled by useDownloadTweaks hook */}
       <WarningDialog />
-    </div>
+    </motion.div>
   );
 }
 
