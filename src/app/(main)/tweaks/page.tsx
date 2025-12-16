@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import type { Metadata } from "next";
 import { requireAuth } from "@/shared/utils/auth-guard";
 import { fetchTweakCategories } from "@/features/tweaks/utils/tweaks-server";
@@ -32,9 +31,7 @@ export default async function TweaksPage() {
   const categories = await fetchTweakCategories();
 
   return (
-    <Suspense>
-      <TweaksPageClient categories={categories} />
-    </Suspense>
+    <TweaksPageClient categories={categories} />
   );
 }
 

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/shared/utils/supabase/client";
-import type { profile } from "@/features/auth/types/user.types";
+import type { profile, googleUserMetadata } from "@/features/auth/types/user.types";
 import type { User } from "@supabase/supabase-js";
 
 export function useUser() {
@@ -15,9 +15,19 @@ export function useUser() {
   useEffect(() => {
     let mounted = true;
 
+    type Role = googleUserMetadata["role"];
+
+    type ProfileRow = {
+      id: string;
+      name?: string | null;
+      avatar_url?: string | null;
+      bio?: string | null;
+      role?: Role | null;
+    };
+
     const fetchUserData = async (authUser: User) => {
-      let profileData: any = null;
-      let profileError: any = null;
+      let profileData: ProfileRow | null = null;
+      let profileError: Error | null = null;
 
       if (authUser?.id) {
         try {
@@ -27,8 +37,8 @@ export function useUser() {
             .eq("id", authUser.id)
             .single();
 
-          profileData = data;
-          profileError = error;
+          profileData = data as ProfileRow | null;
+          profileError = (error as Error) ?? null;
         } catch (error) {
           profileError = error as Error;
         }
@@ -45,7 +55,9 @@ export function useUser() {
                 profileData.avatar_url || authUser.user_metadata?.avatar_url,
               bio: profileData.bio || authUser.user_metadata?.bio,
             }),
-          role: (profileData && !profileError && profileData.role) || "user",
+          role:
+            ((profileData && !profileError && profileData.role) ??
+              "user") as Role,
         },
       };
 

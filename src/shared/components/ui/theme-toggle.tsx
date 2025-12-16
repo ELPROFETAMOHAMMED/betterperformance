@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
+import { Button } from "@/shared/components/ui/button";
 
 import { cn } from "@/shared/lib/utils";
 
@@ -58,19 +59,21 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
       {options.map((opt) => {
         const active = current === opt.value;
         return (
-          <button
+          <Button
             key={opt.value}
             type="button"
+            variant={active ? "default" : "ghost"}
+            size="sm"
             onClick={() => setTheme(opt.value)}
             className={cn(
-              "inline-flex items-center gap-1 rounded-[calc(var(--radius-md)-2px)] px-2 py-1 transition-colors",
-              "text-muted-foreground hover:text-foreground hover:bg-accent/50",
+              "h-7 gap-1 rounded-[calc(var(--radius-md)-2px)] px-2 text-[11px]",
+              !active && "text-muted-foreground hover:text-foreground hover:bg-accent/50",
               active && "bg-primary/10 text-foreground ring-1 ring-primary/40"
             )}
           >
             {opt.icon}
             <span className="hidden sm:inline">{opt.label}</span>
-          </button>
+          </Button>
         );
       })}
     </div>

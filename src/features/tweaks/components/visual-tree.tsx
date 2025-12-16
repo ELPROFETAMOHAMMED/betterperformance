@@ -9,6 +9,7 @@ import {
 import { cn } from "@/shared/lib/utils";
 import type { TweakCategory, Tweak } from "@/features/tweaks/types/tweak.types";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Button } from "@/shared/components/ui/button";
 import { Check } from "lucide-react";
 
 interface VisualTreeProps {
@@ -74,32 +75,32 @@ export default function VisualTree({
                 className="rounded-none bg-transparent transition-colors hover:bg-accent/10"
               >
                 <div className="flex items-center gap-3 px-2.5 py-2">
-                  <button
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
                     onClick={handleCategoryToggle}
                     className={cn(
-                      "relative flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border transition-all duration-150",
-                      "focus:outline-none focus:ring-2 focus:ring-primary/20 focus:ring-offset-1",
+                      "relative h-5 w-5 shrink-0 rounded-sm border border-border/60 bg-background p-0 transition-all duration-150",
                       allSelected
                         ? "border-primary bg-primary"
                         : someSelected
                         ? "border-primary/60 bg-primary/10"
-                        : "border-border/60 bg-background hover:border-border"
+                        : "hover:border-border",
                     )}
                     aria-label={
                       allSelected
                         ? "Deselect all"
-                        : someSelected
-                        ? "Select all"
                         : "Select all"
                     }
                   >
                     {allSelected && (
                       <Check className="h-2.5 w-2.5 text-primary-foreground" />
                     )}
-                    {someSelected && (
+                    {someSelected && !allSelected && (
                       <div className="h-1.5 w-1.5 rounded-full bg-primary" />
                     )}
-                  </button>
+                  </Button>
                   <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
                     <span className="truncate text-sm font-medium text-foreground">
                       {category.name}
@@ -120,15 +121,15 @@ export default function VisualTree({
                     {category.tweaks.map((tweak) => {
                       const isSelected = selectedTweaks.has(tweak.id);
                       return (
-                        <button
+                        <Button
                           key={tweak.id}
+                          type="button"
+                          variant="ghost"
                           onClick={() => onTweakToggle(tweak)}
                           className={cn(
-                            "group relative flex w-full items-start gap-3 rounded-md px-3 py-2 text-left transition-all duration-150",
+                            "group relative flex w-full h-auto items-start justify-start gap-3 rounded-md px-3 py-2 text-left text-foreground/90 transition-all duration-150",
                             "hover:bg-accent/20",
-                            isSelected
-                              ? "bg-primary/5 text-foreground"
-                              : "text-foreground/90"
+                            isSelected && "bg-primary/5 text-foreground"
                           )}
                         >
                           <div
@@ -156,7 +157,7 @@ export default function VisualTree({
                           {isSelected && (
                             <div className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
                           )}
-                        </button>
+                        </Button>
                       );
                     })}
                   </div>

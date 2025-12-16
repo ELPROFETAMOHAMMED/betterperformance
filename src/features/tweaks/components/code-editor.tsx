@@ -165,9 +165,9 @@ export default function CodeEditor({
 
   return (
     <div className="relative w-full h-full">
-      <ScrollArea className="backdrop-blur-xl rounded-lg w-full h-full">
+      <ScrollArea className="backdrop-blur-xl rounded-[var(--radius-lg)] w-full h-full">
         <div className="p-3 pb-14">
-          <div className="rounded-lg overflow-hidden bg-transparent relative">
+          <div className="rounded-[var(--radius-lg)] overflow-hidden bg-transparent relative transition-colors duration-200">
             {isPending ? (
               /* Loading state */
               <div className="flex items-center justify-center h-full min-h-[200px]">

@@ -1,4 +1,3 @@
-import { Suspense } from "react";
 import { requireAuth } from "@/shared/utils/auth-guard";
 import { fetchUserTweakHistory } from "@/features/history-tweaks/utils/tweak-history-server";
 import HistoryTweaksClient from "@/features/history-tweaks/components/history-tweaks-client";
@@ -12,11 +11,9 @@ export default async function HistoryTweaksPage() {
   const history = await fetchUserTweakHistory(user.id);
 
   return (
-    <Suspense>
-      <ScrollArea className="h-full w-full">
-        <HistoryTweaksClient history={history} />
-      </ScrollArea>
-    </Suspense>
+    <ScrollArea className="h-full w-full">
+      <HistoryTweaksClient history={history} />
+    </ScrollArea>
   );
 }
 

@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   useState,
   useCallback,
@@ -11,7 +12,6 @@ import {
 import { AnimatePresence, motion } from "framer-motion";
 import { useEditorSettings } from "@/features/settings/hooks/use-editor-settings";
 import VisualTree from "./visual-tree";
-import CodeEditor from "./code-editor";
 import { useDownloadTweaks } from "@/features/tweaks/hooks/use-download-tweaks";
 import { prepareDownload } from "@/features/tweaks/services/download-handler-service";
 import { saveTweakHistory } from "@/features/history-tweaks/utils/tweak-history-client";
@@ -51,6 +51,7 @@ import {
   ChevronRight,
   Info,
   Search,
+  Flag,
 } from "lucide-react";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import {
@@ -69,8 +70,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
+import { Textarea } from "@/shared/components/ui/textarea";
+import { TweakReportDialog } from "./tweak-report-dialog";
 import AnimatedHero from "@/shared/components/layout/animated-hero";
 import { toast } from "sonner";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 interface TweaksContentProps {
   categories: TweakCategory[];
@@ -81,6 +85,18 @@ const FILTER_DEFAULTS = {
   highDownloads: false,
   reportedOnly: false,
 };
+
+const CodeEditor = dynamic(() => import("./code-editor"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center rounded-[var(--radius-md)] border border-border/60 bg-background/80">
+      <div className="flex flex-col items-center gap-3 p-4">
+        <Skeleton className="h-5 w-32 rounded-[var(--radius-md)]" />
+        <Skeleton className="h-4 w-56 rounded-[var(--radius-md)]" />
+      </div>
+    </div>
+  ),
+});
 
 export default function TweaksContent({ categories }: TweaksContentProps) {
   const { user, loading: userLoading } = useUser();
@@ -458,6 +474,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   const [favoriteDialogOpen, setFavoriteDialogOpen] = useState(false);
   const [favoriteName, setFavoriteName] = useState("");
   const [isSavingFavorite, setIsSavingFavorite] = useState(false);
+  const [reportDialogOpen, setReportDialogOpen] = useState(false);
 
   const handleSelectAllTweaks = useCallback(() => {
     const allTweaks: Tweak[] = [];
@@ -606,7 +623,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                     )
                   }
                   onKeyDown={handleSearchKeyDown}
-                  className="h-10 w-full rounded-sm border border-border/30 bg-background/80 pl-10 pr-3 text-sm focus-visible:ring-2 focus-visible:ring-primary/30"
+                  className="h-10 w-full rounded-[var(--radius-md)] border border-border/30 bg-background/80 pl-10 pr-3 text-sm transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary/30"
                 />
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               </div>
@@ -616,14 +633,14 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                     type="button"
                     variant="outline"
                     size="icon"
-                    className="relative z-40 h-10 w-10 rounded-sm border border-border/30 bg-background/80 text-muted-foreground transition hover:text-foreground"
+                    className="relative z-40 h-10 w-10 rounded-[var(--radius-md)] border border-border/30 bg-background/80 text-muted-foreground transition-colors duration-200 hover:text-foreground"
                   >
                     <SlidersHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="end"
-                  className="w-56 bg-background/95 backdrop-blur-sm"
+                  className="w-56 rounded-[var(--radius-md)] bg-background/95 backdrop-blur-sm"
                 >
                   <DropdownMenuCheckboxItem
                     checked={filters.selectedOnly}
@@ -676,7 +693,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -4 }}
                   transition={{ duration: 0.18 }}
-                  className="absolute z-40 mt-1 w-full rounded-sm border border-border/30 bg-background/95 backdrop-blur-sm shadow-xl"
+                  className="absolute z-40 mt-1 w-full rounded-[var(--radius-md)] border border-border/30 bg-background/95 backdrop-blur-sm shadow-xl"
                 >
                   <div
                     ref={suggestionsRef}
@@ -975,7 +992,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
           </div>
 
           <div className="flex-1 overflow-hidden">
-            <div className="h-full overflow-y-auto rounded-[var(--radius-md)] p-3 text-sm">
+            <div className="h-full overflow-y-auto rounded-[var(--radius-md)] border border-border/30 bg-card/80 p-3 text-sm shadow-sm">
               {selectedTweaksArray.length > 0 && infoTweak ? (
                 <div className="flex h-full flex-col gap-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -988,27 +1005,33 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition hover:text-foreground"
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full bg-muted/50 text-muted-foreground hover:text-foreground"
                         onClick={() => handleInfoNav(-1)}
                         aria-label="Previous tweak"
                       >
                         <ChevronLeft className="h-4 w-4" />
-                      </button>
+                      </Button>
                       <div className="text-[11px] text-muted-foreground">
                         {infoIndex + 1} / {selectedTweaksArray.length}
                       </div>
-                      <button
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted/50 text-muted-foreground transition hover:text-foreground"
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full bg-muted/50 text-muted-foreground hover:text-foreground"
                         onClick={() => handleInfoNav(1)}
                         aria-label="Next tweak"
                       >
                         <ChevronRight className="h-4 w-4" />
-                      </button>
+                      </Button>
                     </div>
                   </div>
 
-                  <div className="rounded-[var(--radius-md)] p-3">
+                  <div className="rounded-[var(--radius-md)] border border-border/40 bg-gradient-to-br from-background/95 via-card/95 to-background/90 p-3 shadow-sm">
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
@@ -1021,11 +1044,36 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                           {infoTweak.description || "No description provided."}
                         </p>
                       </div>
-                      <div className="rounded-md bg-muted/50 px-2 py-1 text-[11px] text-muted-foreground">
-                        ID:{" "}
-                        <span className="font-mono text-[10px]">
-                          {infoTweak.id}
-                        </span>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="rounded-md bg-muted/60 px-2 py-1 text-[11px] text-muted-foreground">
+                            ID:{" "}
+                            <span className="font-mono text-[10px]">
+                              {infoTweak.id}
+                            </span>
+                          </div>
+                          <TooltipProvider delayDuration={200}>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="sm"
+                                  className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-border/60 bg-background/80 px-2.5 py-1 text-[11px] text-muted-foreground hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
+                                  onClick={() => setReportDialogOpen(true)}
+                                >
+                                  <Flag className="h-3.5 w-3.5" />
+                                  <span className="hidden sm:inline">Report</span>
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent side="left">
+                                <p className="text-[11px]">
+                                  Report an issue with this tweak
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
+                        </div>
                       </div>
                     </div>
 
@@ -1102,9 +1150,9 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                 <TooltipTrigger asChild>
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="icon"
-                    className="h-9 w-9"
+                    className="h-8 w-8 rounded-[var(--radius-md)] border-dashed border-border/60 bg-background/70 text-muted-foreground hover:bg-accent/40 hover:text-foreground"
                     onClick={handleSelectAllTweaks}
                     disabled={!categories.length}
                   >
@@ -1129,9 +1177,9 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
               <SheetTrigger asChild>
                 <Button
                   type="button"
-                  variant="default"
+                  variant="outline"
                   size="sm"
-                  className="gap-2"
+                  className="gap-2 rounded-[var(--radius-md)] border-border/60 bg-primary/5 px-4 text-xs font-medium hover:bg-primary/15"
                   disabled={!selectedTweaksArray.length || isSheetLoading}
                   onClick={async () => {
                     if (selectedTweaksArray.length > 0) {
@@ -1395,6 +1443,12 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <TweakReportDialog
+        open={reportDialogOpen}
+        onOpenChange={setReportDialogOpen}
+        tweak={infoTweak}
+      />
 
       {/* Warning Dialog - handled by useDownloadTweaks hook */}
       <WarningDialog />

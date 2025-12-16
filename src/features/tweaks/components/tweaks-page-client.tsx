@@ -1,12 +1,25 @@
 "use client";
 
-import TweaksContent from "./tweaks-content";
+import dynamic from "next/dynamic";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import type { TweakCategory } from "@/features/tweaks/types/tweak.types";
+import { Skeleton } from "@/shared/components/ui/skeleton";
 
 interface TweaksPageClientProps {
   categories: TweakCategory[];
 }
+
+const TweaksContent = dynamic(() => import("./tweaks-content"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full w-full items-center justify-center py-8">
+      <div className="flex flex-col items-center gap-3">
+        <Skeleton className="h-6 w-40 rounded-[var(--radius-md)]" />
+        <Skeleton className="h-4 w-64 rounded-[var(--radius-md)]" />
+      </div>
+    </div>
+  ),
+});
 
 export default function TweaksPageClient({ categories }: TweaksPageClientProps) {
   if (!categories || categories.length === 0) {

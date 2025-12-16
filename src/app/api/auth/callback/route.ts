@@ -66,6 +66,18 @@ export async function GET(request: NextRequest) {
 
     if (user) {
       try {
+        const userMetadata = user.user_metadata as Record<string, unknown> | null;
+        const fullName =
+          userMetadata && typeof userMetadata["full_name"] === "string"
+            ? (userMetadata["full_name"] as string)
+            : userMetadata && typeof userMetadata["name"] === "string"
+            ? (userMetadata["name"] as string)
+            : null;
+        const avatarUrl =
+          userMetadata && typeof userMetadata["avatar_url"] === "string"
+            ? (userMetadata["avatar_url"] as string)
+            : null;
+
         // Ensure there is a corresponding profile row for this user
         await supabase
           .from("profiles")
@@ -74,11 +86,8 @@ export async function GET(request: NextRequest) {
               id: user.id,
               email: user.email,
               role: "user",
-              name:
-                (user.user_metadata as any)?.full_name ??
-                (user.user_metadata as any)?.name ??
-                null,
-              avatar_url: (user.user_metadata as any)?.avatar_url ?? null,
+              name: fullName,
+              avatar_url: avatarUrl,
             },
             { onConflict: "id" }
           );
