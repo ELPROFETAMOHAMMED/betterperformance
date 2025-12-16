@@ -34,16 +34,49 @@ export function useUser() {
 
       if (authUser?.id) {
         try {
-          const { data, error } = await supabase
+          // Add timeout to profile query to prevent hanging if RLS blocks it
+          const profileQueryPromise = supabase
             .from("profiles")
             .select("*")
             .eq("id", authUser.id)
             .single();
 
-          profileData = data as ProfileRow | null;
-          profileError = (error as Error) ?? null;
+          const timeoutPromise = new Promise<{ data: null; error: Error }>(
+            (resolve) => {
+              setTimeout(() => {
+                resolve({
+                  data: null,
+                  error: new Error("Profile query timeout - check RLS policies"),
+                });
+              }, 3000); // 3 second timeout for profile query
+            }
+          );
+
+          const result = await Promise.race([
+            profileQueryPromise,
+            timeoutPromise,
+          ]);
+
+          profileData = result.data as ProfileRow | null;
+          profileError = result.error as Error | null;
+
+          // Log RLS-related errors for debugging
+          if (profileError) {
+            if (
+              profileError.message.includes("timeout") ||
+              profileError.message.includes("RLS") ||
+              profileError.message.includes("permission") ||
+              profileError.message.includes("policy")
+            ) {
+              console.warn(
+                "Profile query failed (likely RLS issue):",
+                profileError.message
+              );
+            }
+          }
         } catch (error) {
           profileError = error as Error;
+          console.warn("Profile query exception:", error);
         }
       }
 
