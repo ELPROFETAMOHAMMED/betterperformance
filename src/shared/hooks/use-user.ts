@@ -2,7 +2,10 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { createClient } from "@/shared/utils/supabase/client";
-import type { profile, googleUserMetadata } from "@/features/auth/types/user.types";
+import type {
+  profile,
+  googleUserMetadata,
+} from "@/features/auth/types/user.types";
 import type { User } from "@supabase/supabase-js";
 
 export function useUser() {
@@ -55,9 +58,8 @@ export function useUser() {
                 profileData.avatar_url || authUser.user_metadata?.avatar_url,
               bio: profileData.bio || authUser.user_metadata?.bio,
             }),
-          role:
-            ((profileData && !profileError && profileData.role) ??
-              "user") as Role,
+          role: ((profileData && !profileError && profileData.role) ??
+            "user") as Role,
         },
       };
 
@@ -67,25 +69,66 @@ export function useUser() {
       }
     };
 
+    // Helper to get user with timeout
+    // getSession() can hang in Chrome/Edge/Brave, so we use getUser() directly
+    // which is more reliable in Chromium-based browsers
+    const getUserWithTimeout = async (
+      timeoutMs = 5000
+    ): Promise<{ user: User | null; error: Error | null }> => {
+      let timeoutId: NodeJS.Timeout | null = null;
+
+      try {
+        // Use getUser() directly (more reliable than getSession in Chromium browsers)
+        const getUserPromise = supabase.auth.getUser();
+
+        // Create timeout promise
+        const timeoutPromise = new Promise<{ user: null; error: Error }>(
+          (resolve) => {
+            timeoutId = setTimeout(() => {
+              resolve({
+                user: null,
+                error: new Error("getUser timeout after 5s"),
+              });
+            }, timeoutMs);
+          }
+        );
+
+        const result = await Promise.race([getUserPromise, timeoutPromise]);
+
+        // Clear timeout if getUser completed first
+        if (timeoutId) clearTimeout(timeoutId);
+
+        // Handle result
+        if ("data" in result) {
+          // This is the getUser result
+          return { user: result.data.user, error: result.error };
+        } else {
+          // This is the timeout result
+          console.warn("getUser timed out, user may not be authenticated");
+          return result;
+        }
+      } catch (error) {
+        if (timeoutId) clearTimeout(timeoutId);
+        console.error("Error in getUserWithTimeout:", error);
+        return { user: null, error: error as Error };
+      }
+    };
+
     const init = async () => {
       try {
-        const {
-          data: { session },
-          error,
-        } = await supabase.auth.getSession();
-
-        if (error) {
-          console.error("Error getting session:", error);
-          if (mounted) {
-            setUser(null);
-            setLoading(false);
-          }
-          return;
-        }
-
-        const authUser = session?.user;
+        const { user: authUser, error } = await getUserWithTimeout(5000);
 
         if (!mounted) return;
+
+        if (error) {
+          // Don't log timeout errors as errors, they're expected if user isn't logged in
+          if (!error.message.includes("timeout")) {
+            console.error("Error getting user:", error);
+          }
+          setUser(null);
+          setLoading(false);
+          return;
+        }
 
         if (authUser) {
           await fetchUserData(authUser);

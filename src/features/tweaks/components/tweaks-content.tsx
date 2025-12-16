@@ -70,7 +70,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
-import { Textarea } from "@/shared/components/ui/textarea";
 import { TweakReportDialog } from "./tweak-report-dialog";
 import AnimatedHero from "@/shared/components/layout/animated-hero";
 import { toast } from "sonner";
