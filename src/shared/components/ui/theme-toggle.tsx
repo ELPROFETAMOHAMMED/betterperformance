@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { ComputerDesktopIcon, MoonIcon, SunIcon } from "@heroicons/react/24/outline";
 import { useTheme } from "next-themes";
 import { Button } from "@/shared/components/ui/button";
 
@@ -18,9 +18,9 @@ const options: {
   label: string;
   icon: React.ReactNode;
 }[] = [
-  { value: "system", label: "System", icon: <Monitor className="h-3.5 w-3.5" /> },
-  { value: "light", label: "Light", icon: <Sun className="h-3.5 w-3.5" /> },
-  { value: "dark", label: "Dark", icon: <Moon className="h-3.5 w-3.5" /> },
+  { value: "system", label: "System", icon: <ComputerDesktopIcon className="h-3.5 w-3.5" /> },
+  { value: "light", label: "Light", icon: <SunIcon className="h-3.5 w-3.5" /> },
+  { value: "dark", label: "Dark", icon: <MoonIcon className="h-3.5 w-3.5" /> },
 ];
 
 export function ThemeToggle({ className }: ThemeToggleProps) {

@@ -2,7 +2,7 @@
 
 import { Button } from "@/shared/components/ui/button";
 import { Separator } from "@/shared/components/ui/separator";
-import { UserCircle2Icon } from "lucide-react";
+import { UserCircleIcon } from "@heroicons/react/24/outline";
 import { createClient } from "@/shared/utils/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/shared/lib/utils";
@@ -40,7 +40,7 @@ export default function LandingLoginButton({
         className
       )}
     >
-      <UserCircle2Icon className="h-5 w-5" />
+      <UserCircleIcon className="h-5 w-5" />
       <Separator orientation="vertical" className="h-5" />
       <span>Get started with Google</span>
     </Button>

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { History, RocketIcon, Users } from "lucide-react";
+import { ClockIcon, RocketLaunchIcon, UsersIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -46,20 +46,18 @@ export default function HomeContent({ children }: HomeContentProps) {
               className="inline-flex items-center gap-2 rounded-[var(--radius-md)] px-4 py-2 text-sm font-medium"
             >
               <Link href="/tweaks">
-                <RocketIcon className="h-4 w-4" />
+                <RocketLaunchIcon className="h-4 w-4" />
                 Start tweaking
               </Link>
             </Button>
             <Button
               size="sm"
               variant="outline"
-              asChild
-              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-border/60 bg-background/80 px-3 py-2 text-xs font-medium text-foreground hover:bg-accent/50"
+              disabled
+              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-border/60 bg-background/80 px-3 py-2 text-xs font-medium text-muted-foreground cursor-not-allowed opacity-60 pointer-events-none"
             >
-              <Link href="/history-tweaks">
-                <History className="h-3.5 w-3.5" />
-                View history
-              </Link>
+              <ClockIcon className="h-3.5 w-3.5" />
+              View history
             </Button>
             <TooltipProvider>
               <Tooltip delayDuration={300}>
@@ -71,7 +69,7 @@ export default function HomeContent({ children }: HomeContentProps) {
                       disabled
                       className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-border/60 bg-background/80 px-3 py-2 text-xs font-medium text-muted-foreground cursor-not-allowed opacity-60 pointer-events-none"
                     >
-                      <Users className="h-3.5 w-3.5" />
+                      <UsersIcon className="h-3.5 w-3.5" />
                       Community Tweaks
                     </Button>
                   </span>

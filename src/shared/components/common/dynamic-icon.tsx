@@ -1,9 +1,10 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
 import { cn } from "@/shared/lib/utils";
 import { useState, useEffect, useRef } from "react";
 import IconSkeleton from "./icon-skeleton";
+
+type HeroIcon = React.ComponentType<React.ComponentProps<"svg">>;
 
 interface DynamicIconProps {
   name?: string | null;
@@ -12,8 +13,8 @@ interface DynamicIconProps {
 }
 
 // Cache for individual icons - only load what we need
-const iconCache = new Map<string, LucideIcon>();
-const iconLoadPromises = new Map<string, Promise<LucideIcon>>();
+const iconCache = new Map<string, HeroIcon>();
+const iconLoadPromises = new Map<string, Promise<HeroIcon>>();
 
 // Convert icon name to PascalCase
 const toPascalCase = (value?: string | null) => {
@@ -29,7 +30,7 @@ const stripNumericSuffix = (value?: string | null) =>
   value?.replace(/[-_\s]*\d+$/g, "") ?? value ?? "";
 
 // Load a single icon dynamically
-const loadIcon = async (iconName: string): Promise<LucideIcon> => {
+const loadIcon = async (iconName: string): Promise<HeroIcon> => {
   // Check cache first
   if (iconCache.has(iconName)) {
     return iconCache.get(iconName)!;
@@ -41,40 +42,43 @@ const loadIcon = async (iconName: string): Promise<LucideIcon> => {
   }
 
   const pascalName = toPascalCase(iconName);
+  // Ensure "Icon" suffix
+  const properName = pascalName.endsWith("Icon") ? pascalName : `${pascalName}Icon`;
 
   // Create promise to load icon
-  const loadPromise = import("lucide-react")
-    .then((module) => {
+  const loadPromise = import("@heroicons/react/24/outline")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .then((module: any) => {
       // Try different name variations
       const candidates = [
-        pascalName,
-        iconName,
-        toPascalCase(stripNumericSuffix(iconName)),
+        properName,
+        pascalName, // In case it already had Icon or didn't need it (unlikely for Heroicons)
+        toPascalCase(stripNumericSuffix(iconName)) + "Icon",
       ].filter(Boolean);
 
       for (const candidate of candidates) {
-        if (candidate && module[candidate as keyof typeof module]) {
-          const Icon = module[candidate as keyof typeof module] as LucideIcon;
-          if (Icon && typeof Icon === "function") {
+        if (candidate && module[candidate]) {
+          const Icon = module[candidate] as HeroIcon;
+          if (Icon) {
             iconCache.set(iconName, Icon);
             return Icon;
           }
         }
       }
 
-      // Fallback to Square
-      const Square = module.Square as LucideIcon;
-      if (Square) {
-        iconCache.set(iconName, Square);
-        return Square;
+      // Fallback to Square equivalent (StopIcon)
+      const Fallback = module.StopIcon as HeroIcon;
+      if (Fallback) {
+        iconCache.set(iconName, Fallback);
+        return Fallback;
       }
 
       throw new Error(`Icon not found: ${iconName}`);
     })
     .catch((error) => {
       console.error(`Failed to load icon ${iconName}:`, error);
-      // Return a default icon
-      return import("lucide-react").then((m) => m.Square as LucideIcon);
+      // Return a default icon from a new import to ensure we get something
+      return import("@heroicons/react/24/outline").then((m) => m.StopIcon as HeroIcon);
     });
 
   iconLoadPromises.set(iconName, loadPromise);
@@ -87,7 +91,7 @@ const loadIcon = async (iconName: string): Promise<LucideIcon> => {
 };
 
 export default function DynamicIcon({ name, className, delayLoad = false }: DynamicIconProps) {
-  const [IconComponent, setIconComponent] = useState<LucideIcon | null>(null);
+  const [IconComponent, setIconComponent] = useState<HeroIcon | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [shouldLoad, setShouldLoad] = useState(!delayLoad);
   const observerRef = useRef<IntersectionObserver | null>(null);

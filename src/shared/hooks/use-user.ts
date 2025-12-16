@@ -69,24 +69,11 @@ export function useUser() {
               profileError.message.includes("policy") ||
               profileError.message.includes("infinite recursion")
             ) {
-              console.warn(
-                "Profile query failed (likely RLS issue):",
-                profileError.message
-              );
-              
-              // If infinite recursion, log a helpful message
-              if (profileError.message.includes("infinite recursion")) {
-                console.error(
-                  "❌ RLS Policy Error: Your 'profiles' table has a policy that causes infinite recursion. " +
-                  "This usually happens when a policy queries the same table it's protecting. " +
-                  "Please check your RLS policies in Supabase and remove any policy that queries 'profiles' within a 'profiles' policy."
-                );
-              }
+             
             }
           }
         } catch (error) {
           profileError = error as Error;
-          console.warn("Profile query exception:", error);
         }
       }
 
@@ -147,7 +134,6 @@ export function useUser() {
           return { user: result.data.user, error: result.error };
         } else {
           // This is the timeout result
-          console.warn("getUser timed out, user may not be authenticated");
           return result;
         }
       } catch (error) {
@@ -166,7 +152,6 @@ export function useUser() {
         if (error) {
           // Don't log timeout errors as errors, they're expected if user isn't logged in
           if (!error.message.includes("timeout")) {
-            console.error("Error getting user:", error);
           }
           setUser(null);
           setLoading(false);
@@ -179,8 +164,7 @@ export function useUser() {
           setUser(null);
           setLoading(false);
         }
-      } catch (e) {
-        console.error("Unexpected error in useUser:", e);
+      } catch {
         if (mounted) {
           setUser(null);
           setLoading(false);

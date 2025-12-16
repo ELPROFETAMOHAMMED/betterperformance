@@ -8,7 +8,7 @@ import { cn } from "@/shared/lib/utils";
 const NAV_ITEMS = [
   { href: "/home", label: "Home" },
   { href: "/tweaks", label: "Tweaks" },
-  { href: "/history-tweaks", label: "History" },
+// History link removed
   { href: "/settings", label: "Settings" },
 ];
 

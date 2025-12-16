@@ -25,6 +25,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
+import { toast } from "sonner";
 
 interface TweakReportDialogProps {
   open: boolean;
@@ -42,6 +43,7 @@ export function TweakReportDialog({
   const [reportRisk, setReportRisk] = useState<"low" | "medium" | "high" | "">(
     ""
   );
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
@@ -49,6 +51,38 @@ export function TweakReportDialog({
       setReportTitle("");
       setReportDescription("");
       setReportRisk("");
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!tweak) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await fetch("/api/tweaks/report", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tweakId: tweak.id,
+          title: reportTitle,
+          description: reportDescription,
+          riskLevel: reportRisk,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to submit report");
+      }
+
+      toast.success("Report submitted successfully");
+      handleOpenChange(false);
+    } catch (error) {
+      toast.error(
+        error instanceof Error ? error.message : "Failed to submit report"
+      );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -170,10 +204,14 @@ export function TweakReportDialog({
             type="button"
             size="sm"
             disabled={
-              !reportTitle.trim() || !reportDescription.trim() || !reportRisk
+              !reportTitle.trim() ||
+              !reportDescription.trim() ||
+              !reportRisk ||
+              isSubmitting
             }
+            onClick={handleSubmit}
           >
-            Save report (local only)
+            {isSubmitting ? "Submitting..." : "Submit report"}
           </Button>
         </DialogFooter>
       </DialogContent>

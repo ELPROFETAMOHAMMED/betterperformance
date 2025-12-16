@@ -1,7 +1,7 @@
 "use client";
 
 import { Switch } from "@/shared/components/ui/switch";
-import { AlertTriangle } from "lucide-react";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 interface SettingSwitchProps {
   title: string;
@@ -46,7 +46,7 @@ export function SettingSwitch({
       </div>
       {showWarning && (
         <div className="flex items-start gap-2 rounded-md bg-yellow-50 p-2 text-xs text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-500">
-          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+          <ExclamationTriangleIcon className="h-4 w-4 shrink-0 mt-0.5" />
           <p>{warning}</p>
         </div>
       )}

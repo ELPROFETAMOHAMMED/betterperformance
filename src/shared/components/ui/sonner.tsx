@@ -1,12 +1,12 @@
 "use client"
 
 import {
-  CircleCheck,
-  Info,
-  LoaderCircle,
-  OctagonX,
-  TriangleAlert,
-} from "lucide-react"
+  CheckCircleIcon,
+  InformationCircleIcon,
+  ArrowPathIcon,
+  XCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline"
 import { useTheme } from "next-themes"
 import { Toaster as Sonner } from "sonner"
 
@@ -20,11 +20,11 @@ const Toaster = ({ ...props }: ToasterProps) => {
       theme={theme as ToasterProps["theme"]}
       className="toaster group"
       icons={{
-        success: <CircleCheck className="h-4 w-4" />,
-        info: <Info className="h-4 w-4" />,
-        warning: <TriangleAlert className="h-4 w-4" />,
-        error: <OctagonX className="h-4 w-4" />,
-        loading: <LoaderCircle className="h-4 w-4 animate-spin" />,
+        success: <CheckCircleIcon className="h-4 w-4" />,
+        info: <InformationCircleIcon className="h-4 w-4" />,
+        warning: <ExclamationTriangleIcon className="h-4 w-4" />,
+        error: <XCircleIcon className="h-4 w-4" />,
+        loading: <ArrowPathIcon className="h-4 w-4 animate-spin" />,
       }}
       toastOptions={{
         classNames: {

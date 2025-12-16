@@ -1,4 +1,4 @@
-import { Shield, Zap, RotateCcw, Code, Download } from "lucide-react";
+import { ShieldCheckIcon, BoltIcon, ArrowUturnLeftIcon, CodeBracketIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import LandingLoginButton from "./landing-login-button";
 import LandingErrorHandler from "./landing-error-handler";
@@ -6,31 +6,31 @@ import AnimatedHero from "@/shared/components/layout/animated-hero";
 
 const features = [
   {
-    icon: Shield,
+    icon: ShieldCheckIcon,
     title: "Safe & Reversible",
     description:
       "All tweaks are carefully curated and can be easily undone. No risky scripts or permanent changes.",
   },
   {
-    icon: Zap,
+    icon: BoltIcon,
     title: "Performance Boost",
     description:
       "Optimize your Windows system with proven tweaks that actually improve performance.",
   },
   {
-    icon: RotateCcw,
+    icon: ArrowUturnLeftIcon,
     title: "Easy Rollback",
     description:
       "Every change is documented. Revert any tweak with a single click if needed.",
   },
   {
-    icon: Code,
+    icon: CodeBracketIcon,
     title: "Transparent Code",
     description:
       "See exactly what each tweak does. No hidden scripts or mysterious changes.",
   },
   {
-    icon: Download,
+    icon: ArrowDownTrayIcon,
     title: "Manual Control",
     description:
       "Download and review tweaks before applying. You're always in control.",

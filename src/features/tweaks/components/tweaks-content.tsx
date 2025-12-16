@@ -1,65 +1,23 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import {
   useState,
   useCallback,
   useMemo,
-  useDeferredValue,
   useEffect,
-  useRef,
 } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { motion } from "framer-motion";
 import { useEditorSettings } from "@/features/settings/hooks/use-editor-settings";
 import VisualTree from "./visual-tree";
 import { useDownloadTweaks } from "@/features/tweaks/hooks/use-download-tweaks";
 import { prepareDownload } from "@/features/tweaks/services/download-handler-service";
-import { saveTweakHistory } from "@/features/history-tweaks/utils/tweak-history-client";
+import { saveTweakHistory, updateTweakHistory, deleteTweakHistory } from "@/features/history-tweaks/utils/tweak-history-client";
+import { useHistoryTweaks } from "@/features/history-tweaks/hooks/use-history-tweaks";
 import type { TweakCategory, Tweak } from "@/features/tweaks/types/tweak.types";
 import { useUser } from "@/shared/hooks/use-user";
-import { cn } from "@/shared/lib/utils";
 import { format } from "date-fns";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-  SheetTrigger,
-} from "@/shared/components/ui/sheet";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/shared/components/ui/dropdown-menu";
-import {
-  SlidersHorizontal,
-  File,
-  Trash2,
-  FilterXIcon,
-  Loader2,
-  Clipboard,
-  ArrowDownToLine,
-  BookmarkPlus,
-  CheckSquare2,
-  ChevronLeft,
-  ChevronRight,
-  Info,
-  Search,
-  Flag,
-} from "lucide-react";
-import { ScrollArea } from "@/shared/components/ui/scroll-area";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/shared/components/ui/tooltip";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -71,31 +29,13 @@ import {
   AlertDialogTitle,
 } from "@/shared/components/ui/alert-dialog";
 import { TweakReportDialog } from "./tweak-report-dialog";
-import AnimatedHero from "@/shared/components/layout/animated-hero";
+import { TweakDetailsPanel } from "./tweak-details-panel";
 import { toast } from "sonner";
-import { Skeleton } from "@/shared/components/ui/skeleton";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface TweaksContentProps {
   categories: TweakCategory[];
 }
-
-const FILTER_DEFAULTS = {
-  selectedOnly: false,
-  highDownloads: false,
-  reportedOnly: false,
-};
-
-const CodeEditor = dynamic(() => import("./code-editor"), {
-  ssr: false,
-  loading: () => (
-    <div className="flex h-full items-center justify-center rounded-[var(--radius-md)] border border-border/60 bg-background/80">
-      <div className="flex flex-col items-center gap-3 p-4">
-        <Skeleton className="h-5 w-32 rounded-[var(--radius-md)]" />
-        <Skeleton className="h-4 w-56 rounded-[var(--radius-md)]" />
-      </div>
-    </div>
-  ),
-});
 
 export default function TweaksContent({ categories }: TweaksContentProps) {
   const { user, loading: userLoading } = useUser();
@@ -103,23 +43,50 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     new Map()
   );
   const [activeTweakId, setActiveTweakId] = useState<string | null>(null);
-  const [savedEditedCode, setSavedEditedCode] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [filters, setFilters] = useState(FILTER_DEFAULTS);
   const [isLoading, setIsLoading] = useState(false);
-  const [infoIndex, setInfoIndex] = useState(0);
-  const [suggestOpen, setSuggestOpen] = useState(false);
-  const [suggestIndex, setSuggestIndex] = useState(0);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [isSheetLoading, setIsSheetLoading] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
-  const suggestionsRef = useRef<HTMLDivElement>(null);
-  const suggestionItemRefs = useRef<(HTMLButtonElement | null)[]>([]);
-  const deferredSearch = useDeferredValue(searchQuery);
   const { settings } = useEditorSettings();
   const { handleDownload: handleDownloadWithWarning, WarningDialog } = useDownloadTweaks();
+  const queryClient = useQueryClient();
 
-  // Pre-select tweaks coming from history/favorites
+  // Fetch user history for the filter
+  const { 
+    data: historyEntries, 
+    isLoading: isHistoryLoading,
+    isRefetching: isHistoryRefetching,
+    refetch: refetchHistory 
+  } = useHistoryTweaks(!!user);
+  
+  const { historyTweakIds, favoriteTweakIds, userFavoriteSelections, userHistorySelections } = useMemo(() => {
+    const historyIds = new Set<string>();
+    const favoriteIds = new Set<string>();
+    const favSelections = [];
+    const histSelections = [];
+
+    if (historyEntries) {
+      for (const entry of historyEntries) {
+        if (entry.isFavorite) {
+          favSelections.push(entry);
+          if (Array.isArray(entry.tweaks)) {
+            (entry.tweaks as { id: string }[]).forEach((t) => favoriteIds.add(t.id));
+          }
+        } else {
+           histSelections.push(entry);
+           if (Array.isArray(entry.tweaks)) {
+             (entry.tweaks as { id: string }[]).forEach((t) => historyIds.add(t.id));
+           }
+        }
+      }
+    }
+    return { 
+      historyTweakIds: historyIds, 
+      favoriteTweakIds: favoriteIds,
+      userFavoriteSelections: favSelections,
+      userHistorySelections: histSelections
+    };
+  }, [historyEntries]);
+
+  // Pre-select tweaks coming from history/favorites (localStorage logic)
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -155,47 +122,6 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     }
   }, [categories]);
 
-  const code = useMemo(() => {
-    const selectedTweaksArray = Array.from(selectedTweaks.values());
-    const cleanedBlocks = selectedTweaksArray.map((tweak) => {
-      const raw =
-        tweak.code || `# ${tweak.title}\n# ${tweak.description || ""}`;
-      // Remove trailing whitespace and filter out empty lines
-      const lines = raw
-        .replace(/\r\n/g, "\n")
-        .replace(/[ \t]+$/gm, "")
-        .split("\n")
-        .filter(line => line.trim().length > 0);
-      return lines.join("\n");
-    });
-
-    // Join blocks and remove all empty lines
-    const combinedCode = cleanedBlocks
-      .filter(Boolean)
-      .join("\n")
-      .split("\n")
-      .filter(line => line.trim().length > 0)
-      .join("\n");
-
-    return (
-      combinedCode ||
-      "# BetterPerformance code editor\n# Select tweaks on the left to build your script."
-    );
-  }, [selectedTweaks]);
-
-  // Reset saved custom code when the selection changes (new script)
-  useEffect(() => {
-    setSavedEditedCode(null);
-  }, [selectedTweaks]);
-
-  // Close sheet when selection becomes empty to prevent animation issues
-  // The key prop on SheetContent will handle remounting when selection changes
-  useEffect(() => {
-    if (sheetOpen && selectedTweaks.size === 0) {
-      setSheetOpen(false);
-    }
-  }, [selectedTweaks.size, sheetOpen]);
-
   const handleTweakToggle = useCallback((tweak: Tweak) => {
     setSelectedTweaks((prev) => {
       const newMap = new Map(prev);
@@ -215,23 +141,40 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     });
   }, []);
 
-
-
   const handleClearAll = useCallback(() => {
     setSelectedTweaks(new Map());
     setActiveTweakId(null);
   }, []);
 
-  const handleClearSelection = useCallback(() => {
-    handleClearAll();
-  }, [handleClearAll]);
+  const handleSelectAllTweaks = useCallback(() => {
+    const newMap = new Map<string, Tweak>();
+    categories.forEach(cat => {
+      cat.tweaks?.forEach(t => newMap.set(t.id, t));
+    });
+    setSelectedTweaks(newMap);
+    if (newMap.size > 0) {
+      const last = Array.from(newMap.values()).pop();
+      if (last) setActiveTweakId(last.id);
+    }
+  }, [categories]);
 
   const handleCopy = useCallback(async () => {
     if (isCopying) return;
     
+    // For single tweak copy, we get the active tweak's code
+    const activeTweak = activeTweakId ? selectedTweaks.get(activeTweakId) : null;
+    // If no active tweak selected (or not in map), check if we can use the first selected
+    const tweakToCopy = activeTweak || Array.from(selectedTweaks.values())[0];
+    const codeToCopy = tweakToCopy?.code;
+
+    if (!codeToCopy) {
+      toast.error("No code to copy", { description: "Select a tweak with code first." });
+      return;
+    }
+    
     setIsCopying(true);
     try {
-      await navigator.clipboard.writeText(savedEditedCode ?? code);
+      await navigator.clipboard.writeText(codeToCopy);
       toast.success("Code copied to clipboard");
     } catch (error) {
       toast.error("Failed to copy code to clipboard");
@@ -239,19 +182,14 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     } finally {
       setIsCopying(false);
     }
-  }, [code, savedEditedCode, isCopying]);
+  }, [selectedTweaks, activeTweakId, isCopying]);
 
   // Settings now come from TanStack Query/localStorage
   const {
-    showLineNumbers,
-    enableTextColors,
     encodingUtf8,
     hideSensitive,
     downloadEachTweak,
-    showComments,
   } = settings;
-
- 
 
   // Enhanced download handler that shows warning dialog if enabled
   const handleDownloadWithSettings = useCallback(async () => {
@@ -280,7 +218,6 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
       });
 
       // Download tweaks using the hook (will show warning dialog if enabled)
-      // The callbacks ensure toast and loading state are only updated when download actually starts
       try {
         handleDownloadWithWarning(
           tweaksToDownload,
@@ -288,7 +225,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
             encodingUtf8,
             hideSensitive,
             downloadEachTweak,
-            customCode: savedEditedCode ?? null,
+            customCode: null, // Custom code editing removed
             autoCreateRestorePoint: settings.autoCreateRestorePoint,
           },
           {
@@ -337,10 +274,11 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     user,
     userLoading,
     handleDownloadWithWarning,
-    savedEditedCode,
     settings.alwaysShowWarning,
     settings.autoCreateRestorePoint,
   ]);
+
+  const [tweaksForFavorite, setTweaksForFavorite] = useState<Tweak[]>([]);
 
   const handleQuickSaveToHistory = useCallback(async () => {
     const tweaksToSave = Array.from(selectedTweaks.values());
@@ -359,224 +297,64 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
       "dd/MM/yyyy HH:mm"
     )}`;
 
+    setTweaksForFavorite(tweaksToSave);
     setFavoriteName(defaultName);
     setFavoriteDialogOpen(true);
   }, [selectedTweaks, user]);
 
-  const selectedTweaksSet = useMemo(
-    () => new Set(selectedTweaks.keys()),
-    [selectedTweaks]
-  );
-  const selectedTweaksArray = Array.from(selectedTweaks.values());
-  const filteredCategories = useMemo(() => {
-    const normalized = deferredSearch.trim().toLowerCase();
-    return categories
-      .map((category) => {
-        if (!category.tweaks || category.tweaks.length === 0) {
-          return null;
-        }
-        const tweaksForCategory = category.tweaks.filter((tweak) => {
-          if (filters.selectedOnly && !selectedTweaksSet.has(tweak.id)) {
-            return false;
-          }
-          if (
-            filters.highDownloads &&
-            (tweak.download_count ?? 0) < 1000
-          ) {
-            return false;
-          }
-          // Only include tweaks that have reports when reportedOnly is enabled
-          if (filters.reportedOnly && ((tweak as Tweak & { report?: number })?.report ?? 0) === 0) {
-            return false;
-          }
-          if (normalized.length > 0) {
-            const haystack =
-              `${category.name} ${tweak.title} ${tweak.description ?? ""}`.toLowerCase();
-            if (!haystack.includes(normalized)) {
-              return false;
-            }
-          }
-          return true;
-        });
-
-        if (tweaksForCategory.length === 0) {
-          return null;
-        }
-
-        return {
-          ...category,
-          tweaks: tweaksForCategory,
-        };
-      })
-      .filter((category): category is TweakCategory => Boolean(category));
-  }, [categories, filters, deferredSearch, selectedTweaksSet]);
-
-  const hasActiveFilters =
-    filters.selectedOnly || filters.highDownloads || filters.reportedOnly;
-
-  const toggleFilter = useCallback(
-    (key: keyof typeof FILTER_DEFAULTS, value?: boolean) => {
-      setFilters((prev) => ({
-        ...prev,
-        [key]: typeof value === "boolean" ? value : !prev[key],
-      }));
-    },
-    []
-  );
-
-  const resetFilters = useCallback(() => {
-    setFilters(FILTER_DEFAULTS);
-    setSearchQuery("");
-  }, []);
-
-  const searchSuggestions = useMemo(() => {
-    if (!searchQuery.trim()) return [];
-    const items: { tweak: Tweak; category: string }[] = [];
-    for (const category of filteredCategories) {
-      for (const tweak of category.tweaks) {
-        items.push({ tweak, category: category.name });
-        if (items.length >= 8) break;
+  const handleRefresh = useCallback(async () => {
+    try {
+      if (user) {
+        await refetchHistory();
+        toast.success("History refreshed");
       }
-      if (items.length >= 8) break;
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to refresh");
     }
-    return items;
-  }, [filteredCategories, searchQuery]);
+  }, [user, refetchHistory]);
 
-  useEffect(() => {
-    setSuggestIndex(0);
-    setSuggestOpen(searchQuery.trim().length > 0 && searchSuggestions.length > 0);
-  }, [searchQuery, searchSuggestions.length]);
+  const selectedTweaksArray = Array.from(selectedTweaks.values());
+  const selectedTweaksSet = useMemo(() => new Set(selectedTweaks.keys()), [selectedTweaks]);
 
-  useEffect(() => {
-    if (!selectedTweaksArray.length) {
-      setInfoIndex(0);
-      return;
+  const infoTweak = useMemo(() => {
+    if (activeTweakId && selectedTweaks.has(activeTweakId)) {
+      return selectedTweaks.get(activeTweakId) || null;
     }
-    setInfoIndex((prev) =>
-      Math.min(Math.max(prev, 0), selectedTweaksArray.length - 1)
-    );
-  }, [selectedTweaksArray.length]);
+    return selectedTweaksArray[0] || null;
+  }, [activeTweakId, selectedTweaks, selectedTweaksArray]);
 
-  useEffect(() => {
-    if (!activeTweakId) return;
-    const idx = selectedTweaksArray.findIndex((t) => t.id === activeTweakId);
-    if (idx >= 0) {
-      setInfoIndex(idx);
-    }
-  }, [activeTweakId, selectedTweaksArray]);
-
-  const infoTweak = selectedTweaksArray[infoIndex] || null;
-  const infoCategory = infoTweak
-    ? categories.find((category) => category.id === infoTweak.category_id)
-    : null;
-  const [lineCount, setLineCount] = useState(0);
   const [favoriteDialogOpen, setFavoriteDialogOpen] = useState(false);
   const [favoriteName, setFavoriteName] = useState("");
   const [isSavingFavorite, setIsSavingFavorite] = useState(false);
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
 
-  const handleSelectAllTweaks = useCallback(() => {
-    const allTweaks: Tweak[] = [];
-    categories.forEach((category) => {
-      (category.tweaks || []).forEach((tweak) => {
-        allTweaks.push(tweak);
-      });
-    });
+  // Rename & Delete Dialog States
+  const [renameDialogOpen, setRenameDialogOpen] = useState(false);
+  const [renameId, setRenameId] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState("");
+  const [isRenaming, setIsRenaming] = useState(false);
 
-    if (!allTweaks.length) return;
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
-    const totalTweaksCount = allTweaks.length;
-    const currentlySelectedCount = selectedTweaks.size;
-    const selectingAll = currentlySelectedCount !== totalTweaksCount;
+  const handleRenameSelection = (id: string, currentName: string) => {
+    setRenameId(id);
+    setRenameValue(currentName);
+    setRenameDialogOpen(true);
+  };
 
-    setSelectedTweaks(() => {
-      const newMap = new Map<string, Tweak>();
+  const handleDeleteSelection = (id: string) => {
+    setDeleteId(id);
+    setDeleteDialogOpen(true);
+  };
 
-      if (selectingAll) {
-        allTweaks.forEach((tweak) => {
-          newMap.set(tweak.id, tweak);
-        });
-        const last = allTweaks[allTweaks.length - 1];
-        setActiveTweakId(last ? last.id : null);
-      } else {
-        setActiveTweakId(null);
-      }
-
-      return newMap;
-    });
-  }, [categories, selectedTweaks.size]);
-
-  const handleSelectSuggestion = useCallback(
-    (tweak: Tweak) => {
-      handleTweakToggle(tweak);
-      setSearchQuery("");
-      setSuggestOpen(false);
-    },
-    [handleTweakToggle]
-  );
-
-  const handleSearchKeyDown = useCallback(
-    (event: React.KeyboardEvent<HTMLInputElement>) => {
-      if (!suggestOpen || searchSuggestions.length === 0) return;
-      if (event.key === "ArrowDown") {
-        event.preventDefault();
-        setSuggestIndex((prev) => (prev + 1) % searchSuggestions.length);
-      } else if (event.key === "ArrowUp") {
-        event.preventDefault();
-        setSuggestIndex((prev) =>
-          prev - 1 < 0 ? searchSuggestions.length - 1 : prev - 1
-        );
-      } else if (event.key === "Enter") {
-        event.preventDefault();
-        const target = searchSuggestions[suggestIndex];
-        if (target) {
-          handleSelectSuggestion(target.tweak);
-        }
-      } else if (event.key === "Escape") {
-        setSuggestOpen(false);
-      }
-    },
-    [searchSuggestions, suggestIndex, suggestOpen, handleSelectSuggestion]
-  );
-
-  // Auto-scroll to active suggestion when navigating with keyboard
-  useEffect(() => {
-    if (!suggestOpen || !suggestionsRef.current) return;
-    const activeItem = suggestionItemRefs.current[suggestIndex];
-    if (activeItem && suggestionsRef.current) {
-      const container = suggestionsRef.current;
-      const itemTop = activeItem.offsetTop;
-      const itemBottom = itemTop + activeItem.offsetHeight;
-      const containerTop = container.scrollTop;
-      const containerBottom = containerTop + container.clientHeight;
-
-      if (itemTop < containerTop) {
-        // Item is above visible area
-        container.scrollTo({ top: itemTop, behavior: "smooth" });
-      } else if (itemBottom > containerBottom) {
-        // Item is below visible area
-        container.scrollTo({
-          top: itemBottom - container.clientHeight,
-          behavior: "smooth",
-        });
-      }
-    }
-  }, [suggestIndex, suggestOpen]);
-
-  const handleInfoNav = useCallback(
-    (direction: number) => {
-      if (!selectedTweaksArray.length) return;
-      setInfoIndex((prev) => {
-        const next =
-          (prev + direction + selectedTweaksArray.length) %
-          selectedTweaksArray.length;
-        const target = selectedTweaksArray[next];
-        setActiveTweakId(target?.id ?? null);
-        return next;
-      });
-    },
-    [selectedTweaksArray]
-  );
+  const handleSaveAsFavorite = (tweaks: Tweak[], defaultName: string) => {
+    setTweaksForFavorite(tweaks);
+    setFavoriteName(defaultName);
+    setFavoriteDialogOpen(true);
+  };
 
   return (
     <motion.div
@@ -585,779 +363,68 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 lg:min-h-[calc(100vh-8rem)] lg:flex-row">
-        {/* Left: tree with filters */}
-        <div className="flex w-full flex-col gap-4 lg:w-1/2">
-          {/* Search bar with suggestions */}
-          <motion.div
-            className="relative"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2, delay: 0.05 }}
-          >
-            {/* Backdrop for suggestions */}
-            <AnimatePresence>
-              {suggestOpen && searchSuggestions.length > 0 && (
-                <motion.div
-                  key="suggest-backdrop"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.15 }}
-                  className="fixed inset-0 z-20 bg-background/70 backdrop-blur-sm"
-                  onClick={() => setSuggestOpen(false)}
-                />
-              )}
-            </AnimatePresence>
-            <div className="relative z-30 flex items-center gap-2">
-              <div className="relative flex-1">
-                <Input
-                  placeholder="Search tweaks, categories, descriptions..."
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                  onFocus={() =>
-                    setSuggestOpen(
-                      searchQuery.trim().length > 0 &&
-                        searchSuggestions.length > 0
-                    )
-                  }
-                  onKeyDown={handleSearchKeyDown}
-                  className="h-10 w-full rounded-[var(--radius-md)] border border-border/30 bg-background/80 pl-10 pr-3 text-sm transition-colors duration-200 focus-visible:ring-2 focus-visible:ring-primary/30"
-                />
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="relative z-40 h-10 w-10 rounded-[var(--radius-md)] border border-border/30 bg-background/80 text-muted-foreground transition-colors duration-200 hover:text-foreground"
-                  >
-                    <SlidersHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-56 rounded-[var(--radius-md)] bg-background/95 backdrop-blur-sm"
-                >
-                  <DropdownMenuCheckboxItem
-                    checked={filters.selectedOnly}
-                    onCheckedChange={(checked) =>
-                      toggleFilter("selectedOnly", Boolean(checked))
-                    }
-                  >
-                    Show selected tweaks
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={filters.highDownloads}
-                    onCheckedChange={(checked) =>
-                      toggleFilter("highDownloads", Boolean(checked))
-                    }
-                  >
-                    Popular tweaks only
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuCheckboxItem
-                    checked={filters.reportedOnly}
-                    onCheckedChange={(checked) =>
-                      toggleFilter("reportedOnly", Boolean(checked))
-                    }
-                  >
-                    Show reported tweaks
-                  </DropdownMenuCheckboxItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={resetFilters}
-                    disabled={!hasActiveFilters}
-                  >
-                    <FilterXIcon className="w-4 h-4" />
-                    Reset filters
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    disabled={!selectedTweaksArray.length}
-                    onClick={handleClearSelection}
-                  >
-                    <Trash2 className="w-4 h-4" />
-                    Clear selection
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            {/* Search suggestions */}
-            <AnimatePresence>
-              {suggestOpen && searchSuggestions.length > 0 && (
-                <motion.div
-                  key="suggest-panel"
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.18 }}
-                  className="absolute z-40 mt-1 w-full rounded-[var(--radius-md)] border border-border/30 bg-background/95 backdrop-blur-sm shadow-xl"
-                >
-                  <div
-                    ref={suggestionsRef}
-                    className="max-h-72 overflow-y-auto p-2"
-                  >
-                    {searchSuggestions.map((item, idx) => {
-                      const isActive = idx === suggestIndex;
-                      return (
-                        <motion.button
-                          key={item.tweak.id}
-                          ref={(el) => {
-                            suggestionItemRefs.current[idx] = el;
-                          }}
-                          onMouseDown={(e) => e.preventDefault()}
-                          onClick={() => handleSelectSuggestion(item.tweak)}
-                          className={cn(
-                            "w-full rounded-sm px-3 py-2 text-left text-sm transition-colors",
-                            isActive
-                              ? "bg-accent text-foreground"
-                              : "hover:bg-accent/40"
-                          )}
-                          initial={{ opacity: 0, y: 4 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ duration: 0.15, delay: idx * 0.01 }}
-                          whileHover={{ scale: 1.01 }}
-                          whileTap={{ scale: 0.99 }}
-                        >
-                          <div className="font-medium text-foreground">
-                            {item.tweak.title}
-                          </div>
-                          <div className="text-xs text-muted-foreground">
-                            {item.category}
-                          </div>
-                        </motion.button>
-                      );
-                    })}
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-          {filteredCategories.length === 0 ? (
-            <div className="flex flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-md)] border border-dashed border-border/40  p-4 text-center text-xs text-muted-foreground">
-              <AnimatedHero className="h-32 w-32" />
-              <p>No tweaks match your filters right now.</p>
-              <Button
-                variant="link"
-                size="sm"
-                className="text-xs font-medium text-primary"
-                onClick={resetFilters}
-              >
-                Clear filters
-              </Button>
-            </div>
-          ) : (
-            <div className="flex-1 overflow-hidden">
-              <VisualTree
-                categories={filteredCategories}
-                selectedTweaks={selectedTweaksSet}
-                onTweakToggle={handleTweakToggle}
-              />
-            </div>
-          )}
+      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 h-[calc(100vh-8rem)] lg:flex-row overflow-hidden">
+        {/* Left: Library Panel (VisualTree) */}
+        <div className="flex w-full flex-col lg:w-1/2 h-full overflow-hidden">
+          <VisualTree
+            categories={categories}
+            selectedTweaks={selectedTweaksSet}
+            onTweakToggle={handleTweakToggle}
+            historyTweakIds={historyTweakIds}
+            favoriteTweakIds={favoriteTweakIds}
+            userFavoriteSelections={userFavoriteSelections}
+            userHistorySelections={userHistorySelections}
+            onSelectAll={handleSelectAllTweaks}
+            onClearSelection={handleClearAll}
+            isLoading={(isHistoryLoading || isHistoryRefetching) && !!user}
+            onRenameSelection={handleRenameSelection}
+            onDeleteSelection={handleDeleteSelection}
+            onSaveAsFavorite={handleSaveAsFavorite}
+            onRefresh={handleRefresh}
+          />
         </div>
 
-        {/* Right: details + controls */}
-        <div className="flex h-full w-full flex-1 flex-col gap-4 p-4 lg:w-1/2">
-          <div className="mb-3 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-sm font-semibold tracking-tight">
-                Selected tweaks
-              </h2>
-              <p className="text-xs text-muted-foreground">
-                {selectedTweaksArray.length > 0
-                  ? `${selectedTweaksArray.length} tweak${
-                      selectedTweaksArray.length > 1 ? "s" : ""
-                    } selected`
-                  : "Choose tweaks from the left panel to preview their script."}
-              </p>
-            </div>
-            <div className="hidden items-center gap-2">
-              <TooltipProvider delayDuration={200}>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={handleSelectAllTweaks}
-                      disabled={!categories.length}
-                    >
-                      <CheckSquare2 className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="bottom">
-                    <p className="text-[11px]">
-                      {selectedTweaksArray.length === 0
-                        ? "Select all tweaks"
-                        : "Toggle select all tweaks"}
-                    </p>
-                  </TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-              <Sheet open={sheetOpen} onOpenChange={(open) => {
-                if (!open) {
-                  setSheetOpen(false);
-                  setIsSheetLoading(false);
-                }
-              }}>
-                <SheetTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={!selectedTweaksArray.length || isSheetLoading}
-                    onClick={async () => {
-                      if (selectedTweaksArray.length > 0) {
-                        setIsSheetLoading(true);
-                        // Use requestAnimationFrame to ensure UI updates before opening sheet
-                        await new Promise<void>((resolve) => {
-                          requestAnimationFrame(() => {
-                            requestAnimationFrame(() => {
-                              setSheetOpen(true);
-                              resolve();
-                            });
-                          });
-                        });
-                      }
-                    }}
-                  >
-                    {isSheetLoading ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <File className="h-4 w-4" />
-                    )}
-                    View final script
-                  </Button>
-                </SheetTrigger>
-                <SheetContent
-                  key={`sheet-${Array.from(selectedTweaks.keys()).sort().join('-')}`}
-                  side="right"
-                  className="flex h-full w-full flex-col overflow-y-auto border-l border-border/70 bg-background/95 p-4 sm:max-w-xl"
-                >
-                  <SheetHeader>
-                    <SheetTitle>Final PowerShell script</SheetTitle>
-                    <SheetDescription>
-                      Combined .ps1 content for all currently selected tweaks.
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="mt-4 flex-1 pr-2">
-                    <div className="flex flex-col gap-3 pb-4">
-                      <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                      <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
-                        {selectedTweaksArray.length} selected tweak
-                        {selectedTweaksArray.length === 1 ? "" : "s"}
-                      </span>
-                      <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
-                        ~{lineCount} lines
-                      </span>
-                      <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
-                        {
-                          new Set(
-                            selectedTweaksArray.map(
-                              (tweak) => tweak.category_id
-                            )
-                          ).size
-                        }{" "}
-                        categories
-                      </span>
-                    </div>
-                      <div className="h-[420px] rounded-[var(--radius-md)] border border-border/70 bg-background/80 p-2">
-                        <CodeEditor
-                          selectedTweaks={selectedTweaksArray}
-                          code={code}
-                          onSaveCode={setSavedEditedCode}
-                          showLineNumbers={showLineNumbers}
-                          enableTextColors={enableTextColors}
-                          hideSensitive={hideSensitive}
-                          wrapCode={settings.wrapCode}
-                          showComments={showComments}
-                          enableCodeEditing={settings.enableCodeEditing}
-                          onLineCountChange={setLineCount}
-                          onReady={() => {
-                            // CodeEditor is ready, stop loading state
-                            if (isSheetLoading) {
-                              setIsSheetLoading(false);
-                            }
-                          }}
-                        />
-                      </div>
-                      {/* Summary of selected tweaks */}
-                      <div className="mt-3 border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
-                        <p className="mb-2 text-[11px] font-medium text-foreground">
-                          Selected tweaks overview
-                        </p>
-                        <ScrollArea className="h-40 pr-1">
-                          <div className="space-y-2">
-                            {selectedTweaksArray.map((tweak, index) => (
-                              <div key={tweak.id}>
-                                <p className="text-[11px] font-semibold text-foreground">
-                                  {index + 1}. {tweak.title}
-                                </p>
-                                <p className="line-clamp-2 text-[11px] text-muted-foreground">
-                                  {tweak.description}
-                                </p>
-                                {index < selectedTweaksArray.length - 1 && (
-                                  <div className="mt-2 border-b border-border/40" />
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </ScrollArea>
-                      </div>
-                      <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <p className="max-w-sm text-[11px] text-muted-foreground">
-                          Quick actions for this combined script: bookmark it in
-                          your history, copy it to the clipboard, or download it
-                          as a .ps1 file.
-                        </p>
-                        <TooltipProvider delayDuration={200}>
-                          <div className="flex flex-wrap items-center justify-end gap-1">
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={handleQuickSaveToHistory}
-                                  disabled={!selectedTweaksArray.length || isSavingFavorite}
-                                >
-                                  {isSavingFavorite ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <BookmarkPlus className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                <p className="text-[11px]">
-                                  Save this selection as a named favorite
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={handleCopy}
-                                  disabled={!selectedTweaksArray.length || isCopying}
-                                >
-                                  {isCopying ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <Clipboard className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                <p className="text-[11px]">Copy script</p>
-                              </TooltipContent>
-                            </Tooltip>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  size="icon"
-                                  className="h-8 w-8"
-                                  onClick={handleDownloadWithSettings}
-                                  disabled={!selectedTweaksArray.length || isLoading}
-                                >
-                                  {isLoading ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <ArrowDownToLine className="h-4 w-4" />
-                                  )}
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="top">
-                                <p className="text-[11px]">
-                                  {isLoading
-                                    ? "Preparing download..."
-                                    : "Download script"}
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </div>
-                        </TooltipProvider>
-                      </div>
-                    </div>
-                  </div>
-                </SheetContent>
-              </Sheet>
-            </div>
-          </div>
-
-          <div className="flex-1 overflow-hidden">
-            <div className="h-full overflow-y-auto rounded-[var(--radius-md)] border border-border/30 bg-card/80 p-3 text-sm shadow-sm">
-              {selectedTweaksArray.length > 0 && infoTweak ? (
-                <div className="flex h-full flex-col gap-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                      <span className="rounded-full bg-primary/10 px-2.5 py-0.5 font-medium text-primary">
-                        {selectedTweaksArray.length} selected
-                      </span>
-                      <span className="rounded-full bg-muted/60 px-2.5 py-0.5 text-foreground/80">
-                        {infoCategory?.name ?? "Category"}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-full bg-muted/50 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleInfoNav(-1)}
-                        aria-label="Previous tweak"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      <div className="text-[11px] text-muted-foreground">
-                        {infoIndex + 1} / {selectedTweaksArray.length}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 rounded-full bg-muted/50 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleInfoNav(1)}
-                        aria-label="Next tweak"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="rounded-[var(--radius-md)] border border-border/40 bg-gradient-to-br from-background/95 via-card/95 to-background/90 p-3 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-                          {infoCategory?.name || "Category"}
-                        </p>
-                        <h3 className="text-base font-semibold leading-snug text-foreground">
-                          {infoTweak.title}
-                        </h3>
-                        <p className="mt-1 line-clamp-3 text-xs text-muted-foreground">
-                          {infoTweak.description || "No description provided."}
-                        </p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-2">
-                          <div className="rounded-md bg-muted/60 px-2 py-1 text-[11px] text-muted-foreground">
-                            ID:{" "}
-                            <span className="font-mono text-[10px]">
-                              {infoTweak.id}
-                            </span>
-                          </div>
-                          <TooltipProvider delayDuration={200}>
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  size="sm"
-                                  className="inline-flex items-center gap-1 rounded-[var(--radius-md)] border-border/60 bg-background/80 px-2.5 py-1 text-[11px] text-muted-foreground hover:border-destructive/60 hover:bg-destructive/5 hover:text-destructive"
-                                  onClick={() => setReportDialogOpen(true)}
-                                >
-                                  <Flag className="h-3.5 w-3.5" />
-                                  <span className="hidden sm:inline">Report</span>
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent side="left">
-                                <p className="text-[11px]">
-                                  Report an issue with this tweak
-                                </p>
-                              </TooltipContent>
-                            </Tooltip>
-                          </TooltipProvider>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-2 gap-3 text-[11px] text-muted-foreground">
-                      <div className="space-y-1">
-                        <p className="font-medium text-foreground">Metrics</p>
-                        <p className="flex items-center gap-1">
-                          <ArrowDownToLine className="h-3.5 w-3.5" />
-                          <span className="font-semibold text-foreground">
-                            {infoTweak.download_count ?? 0}
-                          </span>
-                          <span>downloads</span>
-                        </p>
-                        <p className="flex items-center gap-1">
-                          <BookmarkPlus className="h-3.5 w-3.5" />
-                          <span className="font-semibold text-foreground">
-                            {infoTweak.favorite_count ?? 0}
-                          </span>
-                          <span>favorites</span>
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="font-medium text-foreground">Details</p>
-                        <p className="flex items-center gap-1">
-                          <Info className="h-3.5 w-3.5" />
-                          <span className="font-semibold text-foreground">
-                            {infoCategory?.tweaks?.length ?? 0}
-                          </span>
-                          <span>in category</span>
-                        </p>
-                        <p className="flex items-center gap-1">
-                          <CheckSquare2 className="h-3.5 w-3.5" />
-                          <span className="font-semibold text-foreground">
-                            {
-                              (infoCategory?.tweaks || []).filter((tweak) =>
-                                selectedTweaksSet.has(tweak.id)
-                              ).length
-                            }
-                          </span>
-                          <span>selected in group</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    {infoTweak.tweak_comment && (
-                      <div className="mt-3 rounded-md border border-dashed border-border/40 bg-background/80 px-3 py-2 text-[11px]">
-                        <p className="mb-1 text-[11px] font-medium text-foreground">
-                          Author notes
-                        </p>
-                        <p className="line-clamp-2 text-[11px] text-muted-foreground">
-                          {infoTweak.tweak_comment}
-                        </p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="flex h-full flex-col items-start justify-center gap-2 text-xs text-muted-foreground">
-                  <p className="text-sm font-medium text-foreground">
-                    No tweak selected yet
-                  </p>
-                  <p>
-                    Start by choosing a category and one or more tweaks from the
-                    left panel. We will show here a concise explanation and
-                    impact overview.
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-          <div className="mt-auto flex flex-wrap items-center gap-2 border-t border-border/20 pt-3">
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-8 w-8 rounded-[var(--radius-md)] border-dashed border-border/60 bg-background/70 text-muted-foreground hover:bg-accent/40 hover:text-foreground"
-                    onClick={handleSelectAllTweaks}
-                    disabled={!categories.length}
-                  >
-                    <CheckSquare2 className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent side="top">
-                  <p className="text-[11px]">
-                    {selectedTweaksArray.length === 0
-                      ? "Select all tweaks"
-                      : "Toggle select all tweaks"}
-                  </p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-            <Sheet open={sheetOpen} onOpenChange={(open) => {
-              if (!open) {
-                setSheetOpen(false);
-                setIsSheetLoading(false);
+        {/* Right: Details Panel */}
+        <div className="flex h-full w-full flex-1 flex-col gap-4 lg:w-1/2 overflow-hidden">
+          <TweakDetailsPanel
+            selectedTweaks={selectedTweaksArray}
+            activeTweakId={activeTweakId}
+            onTweakChange={setActiveTweakId}
+            categories={categories}
+            onReport={() => setReportDialogOpen(true)}
+            onSelectAll={handleSelectAllTweaks}
+            onDownload={handleDownloadWithSettings}
+            onCopy={handleCopy}
+            onSaveFavorite={handleQuickSaveToHistory}
+            onSaveSingleFavorite={async (tweak) => {
+              if (!user) {
+                toast.error("Unable to save favorite", {
+                  description: "You need to be signed in to save favorites.",
+                });
+                return;
               }
-            }}>
-              <SheetTrigger asChild>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="gap-2 rounded-[var(--radius-md)] border-border/60 bg-primary/5 px-4 text-xs font-medium hover:bg-primary/15"
-                  disabled={!selectedTweaksArray.length || isSheetLoading}
-                  onClick={async () => {
-                    if (selectedTweaksArray.length > 0) {
-                      setIsSheetLoading(true);
-                      // Use requestAnimationFrame to ensure UI updates before opening sheet
-                      await new Promise<void>((resolve) => {
-                        requestAnimationFrame(() => {
-                          requestAnimationFrame(() => {
-                            setSheetOpen(true);
-                            resolve();
-                          });
-                        });
-                      });
-                    }
-                  }}
-                >
-                  {isSheetLoading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <File className="h-4 w-4" />
-                  )}
-                  View final script
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                key={`sheet-${Array.from(selectedTweaks.keys()).sort().join('-')}`}
-                side="right"
-                className="flex h-full w-full flex-col overflow-y-auto border-l border-border/70 bg-background/95 p-4 sm:max-w-xl"
-              >
-                <SheetHeader>
-                  <SheetTitle>Final PowerShell script</SheetTitle>
-                  <SheetDescription>
-                    Combined .ps1 content for all currently selected tweaks.
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="mt-4 flex-1 pr-2">
-                  <div className="flex flex-col gap-3 pb-4">
-                    <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                      <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
-                        {selectedTweaksArray.length} selected tweak
-                        {selectedTweaksArray.length === 1 ? "" : "s"}
-                      </span>
-                      <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
-                        ~{lineCount} lines
-                      </span>
-                      <span className="rounded-full border border-border/60 bg-background/70 px-2 py-0.5">
-                        {
-                          new Set(
-                            selectedTweaksArray.map(
-                              (tweak) => tweak.category_id
-                            )
-                          ).size
-                        }{" "}
-                        categories
-                      </span>
-                    </div>
-                    <div className="h-[420px] rounded-[var(--radius-md)] border border-border/70 bg-background/80 p-2">
-                      <CodeEditor
-                        selectedTweaks={selectedTweaksArray}
-                        code={code}
-                        onSaveCode={setSavedEditedCode}
-                        showLineNumbers={showLineNumbers}
-                        enableTextColors={enableTextColors}
-                        hideSensitive={hideSensitive}
-                        wrapCode={settings.wrapCode}
-                        showComments={showComments}
-                        enableCodeEditing={settings.enableCodeEditing}
-                        onLineCountChange={(count) => {
-                          setLineCount(count);
-                          // When line count is set, CodeEditor is ready
-                          if (isSheetLoading) {
-                            setIsSheetLoading(false);
-                          }
-                        }}
-                      />
-                    </div>
-                    {/* Summary of selected tweaks */}
-                    <div className="mt-3 border-t border-border/60 pt-3 text-[11px] text-muted-foreground">
-                      <p className="mb-2 text-[11px] font-medium text-foreground">
-                        Selected tweaks overview
-                      </p>
-                      <ScrollArea className="h-40 pr-1">
-                        <div className="space-y-2">
-                          {selectedTweaksArray.map((tweak, index) => (
-                            <div key={tweak.id}>
-                              <p className="text-[11px] font-semibold text-foreground">
-                                {index + 1}. {tweak.title}
-                              </p>
-                              <p className="line-clamp-2 text-[11px] text-muted-foreground">
-                                {tweak.description}
-                              </p>
-                              {index < selectedTweaksArray.length - 1 && (
-                                <div className="mt-2 border-b border-border/40" />
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      </ScrollArea>
-                    </div>
-                    <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <p className="max-w-sm text-[11px] text-muted-foreground">
-                        Quick actions for this combined script: bookmark it in
-                        your history, copy it to the clipboard, or download it
-                        as a .ps1 file.
-                      </p>
-                      <TooltipProvider delayDuration={200}>
-                        <div className="flex flex-wrap items-center justify-end gap-1">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={handleQuickSaveToHistory}
-                                disabled={
-                                  !selectedTweaksArray.length || isSavingFavorite
-                                }
-                              >
-                                {isSavingFavorite ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <BookmarkPlus className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                              <p className="text-[11px]">
-                                Save this selection as a named favorite
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={handleCopy}
-                                disabled={!selectedTweaksArray.length}
-                              >
-                                <Clipboard className="h-4 w-4" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                              <p className="text-[11px]">Copy script</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant="outline"
-                                size="icon"
-                                className="h-8 w-8"
-                                onClick={handleDownloadWithSettings}
-                                disabled={!selectedTweaksArray.length || isLoading}
-                              >
-                                {isLoading ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <ArrowDownToLine className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent side="top">
-                              <p className="text-[11px]">
-                                {isLoading
-                                  ? "Preparing download..."
-                                  : "Download script"}
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
-                      </TooltipProvider>
-                    </div>
-                  </div>
-                </div>
-              </SheetContent>
-            </Sheet>
-          </div>
+              try {
+                setIsSavingFavorite(true);
+                await saveTweakHistory({
+                  tweaks: [tweak],
+                  name: `Favorite: ${tweak.title}`,
+                  isFavorite: true,
+                });
+                await queryClient.invalidateQueries({ queryKey: ["history-tweaks"] });
+                toast.success("Saved to favorites", {
+                  description: `${tweak.title} has been added to your favorites.`,
+                });
+              } catch (error) {
+                console.error(error);
+                toast.error("Failed to save favorite");
+              } finally {
+                setIsSavingFavorite(false);
+              }
+            }}
+            isDownloading={isLoading}
+            isCopying={isCopying}
+            isSavingFavorite={isSavingFavorite}
+          />
         </div>
       </div>
 
@@ -1366,7 +433,9 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
         onOpenChange={(open) => {
           setFavoriteDialogOpen(open);
           if (!open) {
-            setIsSavingFavorite(false);
+             setIsSavingFavorite(false);
+             // Clear temp tweaks when closing if not saving?
+             // Not strictly necessary as it's overwritten on next open
           }
         }}
       >
@@ -1374,8 +443,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
           <AlertDialogHeader>
             <AlertDialogTitle>Save selection as favorite</AlertDialogTitle>
             <AlertDialogDescription>
-              Give this combination of tweaks a descriptive name so you can
-              quickly find it in your history later.
+              Give this combination of tweaks a descriptive name.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="mt-2 space-y-2">
@@ -1383,37 +451,31 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
               autoFocus
               value={favoriteName}
               onChange={(e) => setFavoriteName(e.target.value)}
-              placeholder="e.g. Gaming preset, Work essentials..."
+              placeholder="e.g. Gaming preset..."
             />
-            {selectedTweaksArray.length > 0 && (
+            {tweaksForFavorite.length > 0 && (
               <p className="text-xs text-muted-foreground">
-                This selection contains {selectedTweaksArray.length} tweak
-                {selectedTweaksArray.length === 1 ? "" : "s"}.
+                Contains {tweaksForFavorite.length} tweak
+                {tweaksForFavorite.length === 1 ? "" : "s"}.
               </p>
             )}
           </div>
           <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSavingFavorite}>
-              Cancel
-            </AlertDialogCancel>
+            <AlertDialogCancel disabled={isSavingFavorite}>Cancel</AlertDialogCancel>
             <AlertDialogAction
               asChild
               disabled={isSavingFavorite || !favoriteName.trim()}
             >
               <Button
                 onClick={async () => {
-                  if (!user) {
-                    toast.error("Unable to save selection", {
-                      description:
-                        "You need to be signed in to keep a history of tweaks.",
-                    });
-                    return;
-                  }
-                  const tweaksToSave = Array.from(selectedTweaks.values());
-                  if (!tweaksToSave.length) {
-                    setFavoriteDialogOpen(false);
-                    return;
-                  }
+                  if (!user) return;
+                  // Use the specific tweaks for favorite if set, otherwise fallback to selection (though we set it now always)
+                  const tweaksToSave = tweaksForFavorite.length > 0 
+                    ? tweaksForFavorite 
+                    : Array.from(selectedTweaks.values());
+                  
+                  if (!tweaksToSave.length) return;
+                  
                   try {
                     setIsSavingFavorite(true);
                     await saveTweakHistory({
@@ -1421,16 +483,12 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
                       name: favoriteName.trim(),
                       isFavorite: true,
                     });
-                    toast.success("Saved as favorite in history", {
-                      description:
-                        "You can find it later in the History tab, marked with a star.",
-                    });
+                    await queryClient.invalidateQueries({ queryKey: ["history-tweaks"] });
+                    toast.success("Saved as favorite");
                     setFavoriteDialogOpen(false);
                   } catch (error) {
                     console.error(error);
-                    toast.error("Failed to save selection", {
-                      description: "Please try again later...",
-                    });
+                    toast.error("Failed to save selection");
                   } finally {
                     setIsSavingFavorite(false);
                   }
@@ -1443,17 +501,102 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Rename Dialog */}
+      <AlertDialog
+        open={renameDialogOpen}
+        onOpenChange={(open) => {
+          setRenameDialogOpen(open);
+          if (!open) {
+            setRenameId(null);
+            setRenameValue("");
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Rename Selection</AlertDialogTitle>
+            <AlertDialogDescription>Enter a new name for this selection.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="mt-2">
+             <Input
+               value={renameValue}
+               onChange={(e) => setRenameValue(e.target.value)}
+               placeholder="Selection name"
+               autoFocus
+             />
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRenaming}>Cancel</AlertDialogCancel>
+            <AlertDialogAction asChild disabled={isRenaming || !renameValue.trim()}>
+              <Button onClick={async () => {
+                 if (!renameId) return;
+                 try {
+                   setIsRenaming(true);
+                   await updateTweakHistory(renameId, { name: renameValue.trim() });
+                   await queryClient.invalidateQueries({ queryKey: ["history-tweaks"] });
+                   toast.success("Renamed successfully");
+                   setRenameDialogOpen(false);
+                 } catch (error) {
+                   console.error(error);
+                   toast.error("Failed to rename selection");
+                 } finally {
+                   setIsRenaming(false);
+                 }
+              }}>
+                {isRenaming ? "Renaming..." : "Rename"}
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Dialog */}
+      <AlertDialog
+        open={deleteDialogOpen}
+        onOpenChange={(open) => {
+          setDeleteDialogOpen(open);
+          if (!open) setDeleteId(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Selection</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this selection? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction asChild disabled={isDeleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              <Button onClick={async () => {
+                if (!deleteId) return;
+                try {
+                  setIsDeleting(true);
+                  await deleteTweakHistory(deleteId);
+                  await queryClient.invalidateQueries({ queryKey: ["history-tweaks"] });
+                  toast.success("Selection deleted");
+                  setDeleteDialogOpen(false);
+                } catch (error) {
+                  console.error(error);
+                  toast.error("Failed to delete selection");
+                } finally {
+                  setIsDeleting(false);
+                }
+              }}>
+                {isDeleting ? "Deleting..." : "Delete"}
+              </Button>
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <TweakReportDialog
         open={reportDialogOpen}
         onOpenChange={setReportDialogOpen}
         tweak={infoTweak}
       />
 
-      {/* Warning Dialog - handled by useDownloadTweaks hook */}
       <WarningDialog />
     </motion.div>
   );
 }
-
-
-

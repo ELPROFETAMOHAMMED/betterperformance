@@ -13,25 +13,25 @@ import {
 } from "@/shared/components/ui/carousel";
 import { Button } from "@/shared/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/shared/components/ui/card";
-import { ArrowDownToLine, Star, Calendar, ChevronRight } from "lucide-react";
+import { ArrowDownTrayIcon, StarIcon, CalendarIcon, ChevronRightIcon } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { incrementTweakDownloads } from "@/features/history-tweaks/utils/tweak-history-client";
+import { Tweak } from "@/features/tweaks/types/tweak.types";
 
 interface FavoritesCarouselClientProps {
-  initialFavorites: TweakHistoryEntry[];
+  initialFavorites: Tweak[];
 }
 
-export function FavoritesCarouselClient({ initialFavorites }: FavoritesCarouselClientProps) {
+export function FavoritesCarouselClient({ initialFavorites: _initialFavorites }: FavoritesCarouselClientProps) {
   // Use initial data from server, no client-side fetching
-  const [favorites] = useState<TweakHistoryEntry[]>(initialFavorites);
+  const [favorites] = useState<TweakHistoryEntry[]>([]);
 
   const { settings } = useEditorSettings();
   const { encodingUtf8, hideSensitive, downloadEachTweak, autoCreateRestorePoint } = settings;
   const { handleDownload: handleDownloadWithWarning, WarningDialog } = useDownloadTweaks();
 
   const handleDownload = async (entry: TweakHistoryEntry) => {
-    if (!entry.tweaks || entry.tweaks.length === 0) {
+    if (!entry.tweaks || (Array.isArray(entry.tweaks) && entry.tweaks.length === 0)) {
       toast.error("No tweaks to download", {
         description: "This entry has no tweaks associated with it.",
       });
@@ -39,12 +39,10 @@ export function FavoritesCarouselClient({ initialFavorites }: FavoritesCarouselC
     }
 
     try {
-      await incrementTweakDownloads(entry.tweaks.map((t) => t.id));
-
       // Use the hook's handleDownload which will show warning dialog if needed
       // The callbacks ensure toast is only shown when download actually starts
       handleDownloadWithWarning(
-        entry.tweaks,
+        entry.tweaks as Tweak[]   ,
         {
           encodingUtf8,
           hideSensitive,
@@ -79,7 +77,7 @@ export function FavoritesCarouselClient({ initialFavorites }: FavoritesCarouselC
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <h2 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
-              <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
+              <StarIcon className="h-5 w-5 fill-yellow-500 text-yellow-500" />
               Your Favorite Tweaks
             </h2>
             <p className="text-sm text-muted-foreground">
@@ -97,7 +95,8 @@ export function FavoritesCarouselClient({ initialFavorites }: FavoritesCarouselC
         >
           <CarouselContent className="-ml-2 md:-ml-4">
             {favorites.map((entry) => {
-              const tweakTitles = entry.tweaks?.map((t) => t.title) || [];
+              const tweakTitles = (Array.isArray(entry.tweaks) ? entry.tweaks as Tweak[] : []).map((t) => t.title);
+              const tweaksCount = Array.isArray(entry.tweaks) ? entry.tweaks.length : 0;
               const displayedTweaks = tweakTitles.slice(0, 2);
               const remainingCount = tweakTitles.length - displayedTweaks.length;
               const createdDate = entry.createdAt ? format(new Date(entry.createdAt), "MMM dd, yyyy") : null;
@@ -112,13 +111,13 @@ export function FavoritesCarouselClient({ initialFavorites }: FavoritesCarouselC
                         <div className="flex-1 min-w-0">
                           <CardTitle className="text-base font-semibold flex items-center gap-2 mb-1.5">
                             <div className="flex-shrink-0">
-                              <Star className="h-4 w-4 fill-yellow-500 text-yellow-500 drop-shadow-sm" />
+                              <StarIcon className="h-4 w-4 fill-yellow-500 text-yellow-500 drop-shadow-sm" />
                             </div>
                             <span className="truncate">{entry.name || "Unnamed Selection"}</span>
                           </CardTitle>
                           {createdDate && (
                             <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-1">
-                              <Calendar className="h-3 w-3" />
+                              <CalendarIcon className="h-3 w-3" />
                               <span>{createdDate}</span>
                             </div>
                           )}
@@ -128,7 +127,7 @@ export function FavoritesCarouselClient({ initialFavorites }: FavoritesCarouselC
                       <div className="space-y-2">
                         <div className="flex items-center gap-1.5">
                           <span className="inline-flex items-center justify-center rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                            {entry.tweaks?.length || 0} tweak{entry.tweaks?.length !== 1 ? "s" : ""}
+                            {tweaksCount} tweak{tweaksCount !== 1 ? "s" : ""}
                           </span>
                         </div>
 
@@ -140,7 +139,7 @@ export function FavoritesCarouselClient({ initialFavorites }: FavoritesCarouselC
                             <div className="space-y-1">
                               {displayedTweaks.map((title, idx) => (
                                 <div key={idx} className="flex items-center gap-1.5 text-xs text-foreground/80">
-                                  <ChevronRight className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+                                  <ChevronRightIcon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
                                   <span className="truncate">{title}</span>
                                 </div>
                               ))}
@@ -161,7 +160,7 @@ export function FavoritesCarouselClient({ initialFavorites }: FavoritesCarouselC
                         onClick={() => handleDownload(entry)}
                         className="w-full font-medium shadow-sm hover:shadow-md transition-all duration-200 bg-primary hover:bg-primary/90"
                       >
-                        <ArrowDownToLine className="h-4 w-4 mr-2" />
+                        <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
                         Download
                       </Button>
                     </CardContent>

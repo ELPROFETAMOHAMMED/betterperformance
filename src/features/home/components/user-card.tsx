@@ -1,7 +1,7 @@
 "use client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { Button } from "@/shared/components/ui/button";
-import { ArrowRight, Loader2, AlertCircleIcon, Crown } from "lucide-react";
+import { ArrowRightIcon, ArrowPathIcon, ExclamationCircleIcon, TrophyIcon } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/shared/hooks/use-user";
@@ -57,7 +57,7 @@ export default function UserCard() {
   if (!user) {
     return (
       <div className="flex items-center gap-3 rounded-sm border border-border/70 bg-background/80 px-3 py-1.5 backdrop-blur">
-        <AlertCircleIcon className="w-4 h-4" />
+        <ExclamationCircleIcon className="w-4 h-4" />
         <div className="flex flex-col">
           <span className="text-xs font-medium text-muted-foreground">
             Error trying to load user data
@@ -97,7 +97,7 @@ export default function UserCard() {
             className="absolute -right-1 -bottom-1 rounded-full bg-background/95 p-0.5"
             title="Admin"
           >
-            <Crown className="h-3.5 w-3.5 text-yellow-400" />
+            <TrophyIcon className="h-3.5 w-3.5 text-yellow-400" />
           </span>
         )}
       </div>
@@ -108,9 +108,9 @@ export default function UserCard() {
         </span>
       </div>
       {isLoading ? (
-        <Loader2 className="ml-auto h-4 w-4 animate-spin" />
+        <ArrowPathIcon className="ml-auto h-4 w-4 animate-spin" />
       ) : (
-        <ArrowRight className="ml-auto h-4 w-4" />
+        <ArrowRightIcon className="ml-auto h-4 w-4" />
       )}
     </Button>
   );

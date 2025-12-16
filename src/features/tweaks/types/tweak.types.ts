@@ -1,10 +1,9 @@
-// Represents a saved tweak history/configuration for a user
 export interface TweakHistoryEntry {
   id: string;
   userId: string;
   createdAt: string;
   name?: string;
-  tweaks: Tweak[];
+  tweaks: { id: string }[] | string | unknown;
   isFavorite?: boolean;
 }
 
@@ -16,6 +15,7 @@ export interface Tweak {
   category_id?: string;
   download_count: number;
   favorite_count: number;
+  report_count?: number;
   image?: string;
   notes?: string;
   is_visible: boolean;
@@ -27,8 +27,5 @@ export interface TweakCategory {
   name: string;
   icon?: string;
   description?: string;
-  tweaks: Tweak[];
+  tweaks?: Tweak[];
 }
-
-
-
