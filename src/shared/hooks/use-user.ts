@@ -66,12 +66,22 @@ export function useUser() {
               profileError.message.includes("timeout") ||
               profileError.message.includes("RLS") ||
               profileError.message.includes("permission") ||
-              profileError.message.includes("policy")
+              profileError.message.includes("policy") ||
+              profileError.message.includes("infinite recursion")
             ) {
               console.warn(
                 "Profile query failed (likely RLS issue):",
                 profileError.message
               );
+              
+              // If infinite recursion, log a helpful message
+              if (profileError.message.includes("infinite recursion")) {
+                console.error(
+                  "❌ RLS Policy Error: Your 'profiles' table has a policy that causes infinite recursion. " +
+                  "This usually happens when a policy queries the same table it's protecting. " +
+                  "Please check your RLS policies in Supabase and remove any policy that queries 'profiles' within a 'profiles' policy."
+                );
+              }
             }
           }
         } catch (error) {
