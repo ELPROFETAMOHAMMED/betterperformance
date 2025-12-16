@@ -105,11 +105,11 @@ export default function VisualTree({
                       {category.name}
                     </span>
                     <AccordionTrigger className="flex items-center gap-2 text-right text-xs text-muted-foreground hover:no-underline">
-                      <span className="rounded-full bg-muted/60 px-2 py-0.5 text-[11px] font-medium text-foreground/80">
-                        {selectedCount}/{tweaksInCategory.length}
+                      <span className="rounded-full  items-center font-medium text-foreground/80">
+                        
+                      {selectedCount}/{tweaksInCategory.length}
                       </span>
-                      <span>
-                        {tweaksInCategory.length}{" "}
+                      <span className="flex items-center ">
                         {tweaksInCategory.length === 1 ? "tweak" : "tweaks"}
                       </span>
                     </AccordionTrigger>

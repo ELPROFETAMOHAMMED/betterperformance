@@ -65,6 +65,28 @@ export async function GET(request: NextRequest) {
     } = await supabase.auth.getUser();
 
     if (user) {
+      try {
+        // Ensure there is a corresponding profile row for this user
+        await supabase
+          .from("profiles")
+          .upsert(
+            {
+              id: user.id,
+              email: user.email,
+              role: "user",
+              name:
+                (user.user_metadata as any)?.full_name ??
+                (user.user_metadata as any)?.name ??
+                null,
+              avatar_url: (user.user_metadata as any)?.avatar_url ?? null,
+            },
+            { onConflict: "id" }
+          );
+      } catch (profileError) {
+        // Log but don't break the login flow if profile sync fails
+        console.error("Error upserting profile:", profileError);
+      }
+
       // Return redirect response with cookies already set by exchangeCodeForSession
       return redirectResponse;
     }
@@ -75,4 +97,3 @@ export async function GET(request: NextRequest) {
   url.searchParams.set("error", "authentication_failed");
   return NextResponse.redirect(url);
 }
-
