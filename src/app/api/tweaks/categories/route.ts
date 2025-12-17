@@ -30,7 +30,6 @@ export async function GET() {
         is_visible, 
         tweak_comment,
         docs,
-        default_tweak_value,
         tweak_reports(id)
       `
       )

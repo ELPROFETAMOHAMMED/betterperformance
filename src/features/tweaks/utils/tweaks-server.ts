@@ -14,7 +14,7 @@ export async function fetchTweakCategories(): Promise<TweakCategory[]> {
   // Fetch tweaks with all necessary fields including code
   const { data: tweaks, error: tweaksError } = await supabase
     .from("tweaks")
-    .select("id, title, description, category_id, code, download_count, favorite_count, image, notes, is_visible, tweak_comment, docs, default_tweak_value")
+    .select("id, title, description, category_id, code, download_count, favorite_count, image, notes, is_visible, tweak_comment, docs")
     .eq("is_visible", true);
   if (tweaksError) throw tweaksError;
 
