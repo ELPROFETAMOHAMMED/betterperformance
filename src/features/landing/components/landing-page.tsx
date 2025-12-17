@@ -1,8 +1,12 @@
 import { ShieldCheckIcon, BoltIcon, ArrowUturnLeftIcon, CodeBracketIcon, ArrowDownTrayIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
+import Link from "next/link";
 import LandingLoginButton from "./landing-login-button";
 import LandingErrorHandler from "./landing-error-handler";
 import AnimatedHero from "@/shared/components/layout/animated-hero";
+import { OnboardingHints } from "@/shared/components/layout/onboarding-hints";
+import { HeroBadge } from "@/shared/components/layout/hero-badge";
+import { AppFooter } from "@/shared/components/layout/app-footer";
 
 const features = [
   {
@@ -47,20 +51,17 @@ export default function LandingPage() {
           <div className="grid w-full max-w-6xl items-center gap-12 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             {/* Left: Hero Content */}
             <div className="space-y-8">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/40 bg-background/80 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Safe, opinionated tweaks for Windows power users</span>
-              </div>
+              <HeroBadge />
 
               <div className="space-y-4">
                 <h1 className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl md:text-5xl lg:text-6xl">
-                  Windows 10 & 11 Performance Tweaks{" "}
+                  Windows Performance Tweaks{" "}
                   <span className="text-primary">Made Simple</span>
                 </h1>
                 <p className="text-base text-muted-foreground sm:text-lg md:text-xl max-w-2xl">
-                  Optimize Windows 10 and Windows 11 performance with safe, reversible tweaks. 
+                  Optimize Windows systems (Windows 7, 8, 10, 11) with safe, reversible tweaks. 
                   Get better performance with curated PowerShell scripts for Windows optimization. 
-                  Free Windows tweaks for Twix for Windows, Windows 10, and Windows 11.
+                  Free Windows tweaks for all Windows versions.
                 </p>
               </div>
 
@@ -68,31 +69,25 @@ export default function LandingPage() {
               <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                 <LandingLoginButton />
                 <p className="text-xs text-muted-foreground sm:text-sm">
-                  Free to use • No credit card required
+                  <strong className="text-foreground">100% Free</strong> • <strong className="text-foreground">Open Source</strong> • No credit card required
                 </p>
+              </div>
+              
+              {/* Open Source Badge */}
+              <div className="flex items-center gap-2">
+                <Link
+                  href="https://github.com/ELPROFETAMOHAMMED/betterperformance"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded-full border border-border/40 bg-background/80 px-3 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/50"
+                >
+                  <CodeBracketIcon className="h-3.5 w-3.5" />
+                  <span>View source code on GitHub</span>
+                </Link>
               </div>
 
               {/* Trust indicators */}
-              <div className="grid gap-3 rounded-lg border border-dashed border-border/50 bg-card/80 p-4 text-xs text-muted-foreground md:grid-cols-2">
-                <div>
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    New to system tweaks?
-                  </p>
-                  <p>
-                    Start on the Tweaks page. Each category explains what it
-                    does, why it is safe, and how to undo it.
-                  </p>
-                </div>
-                <div>
-                  <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                    Prefer to read first?
-                  </p>
-                  <p>
-                    Our documentation walks through each step so you always know
-                    what you are changing.
-                  </p>
-                </div>
-              </div>
+              <OnboardingHints />
             </div>
 
             {/* Right: Logo / Visual */}
@@ -123,11 +118,11 @@ export default function LandingPage() {
           <div className="mx-auto max-w-6xl">
             <div className="mb-12 text-center">
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
-                Windows 10 & 11 Performance{" "}
+                Windows Performance{" "}
                 <span className="text-primary">Optimization Tools</span>
               </h2>
               <p className="mt-4 text-muted-foreground">
-                Free Windows tweaks for better performance. Optimize Windows 10 and Windows 11 with safe PowerShell scripts.
+                <strong className="text-foreground">100% Free</strong> and <strong className="text-foreground">Open Source</strong> Windows tweaks for better performance. Optimize Windows systems (Windows 7, 8, 10, 11) with safe PowerShell scripts.
               </p>
             </div>
 
@@ -159,17 +154,20 @@ export default function LandingPage() {
         <section className="border-t border-border/40 py-20 px-4">
           <div className="mx-auto max-w-4xl text-center">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
-              Ready to Optimize Windows 10 & 11 Performance?
+              Ready to Optimize Windows Performance?
             </h2>
             <p className="mt-4 text-muted-foreground">
-              Join thousands of users who have improved their Windows 10 and Windows 11 performance 
-              with our free tweaks and optimization tools
+              Join thousands of users who have improved their Windows performance 
+              with our free tweaks and optimization tools for all Windows versions
             </p>
             <div className="mt-8">
               <LandingLoginButton className="px-8" />
             </div>
           </div>
         </section>
+        
+        {/* Footer */}
+        <AppFooter />
       </div>
     </>
   );

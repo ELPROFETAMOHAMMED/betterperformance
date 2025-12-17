@@ -1,6 +1,28 @@
+"use client";
+
+import { usePathname } from "next/navigation";
 import MainHeader from "@/shared/components/layout/main-header";
+import { AppFooter } from "@/shared/components/layout/app-footer";
 import QueryProvider from "@/shared/providers/query-client-provider";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
+
+function LayoutContent({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const showFooter = pathname !== "/tweaks";
+
+  return (
+    <div
+      className={"flex flex-col w-full h-screen"}
+      suppressHydrationWarning={true}
+    >
+      <MainHeader />
+      <div className="flex-1 overflow-hidden">
+        {children}
+      </div>
+      {showFooter && <AppFooter />}
+    </div>
+  );
+}
 
 export default function MainLayout({
   children,
@@ -10,13 +32,7 @@ export default function MainLayout({
   return (
     <QueryProvider>
       <TooltipProvider>
-        <div
-          className={"flex flex-col w-full h-screen"}
-          suppressHydrationWarning={true}
-        >
-          <MainHeader />
-          {children}
-        </div>
+        <LayoutContent>{children}</LayoutContent>
       </TooltipProvider>
     </QueryProvider>
   );

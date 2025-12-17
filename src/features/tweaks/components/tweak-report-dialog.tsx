@@ -115,7 +115,7 @@ export function TweakReportDialog({
               Report title
             </p>
             <Input
-              placeholder="e.g. Script fails on Windows 11 24H2"
+              placeholder="e.g. Script fails on my Windows system"
               value={reportTitle}
               onChange={(e) => setReportTitle(e.target.value)}
             />

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ClockIcon, RocketLaunchIcon, UsersIcon } from "@heroicons/react/24/outline";
+import { RocketLaunchIcon, UsersIcon, CodeBracketIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -11,6 +11,8 @@ import {
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
 import AnimatedHero from "@/shared/components/layout/animated-hero";
+import { OnboardingHints } from "@/shared/components/layout/onboarding-hints";
+import { HeroBadge } from "@/shared/components/layout/hero-badge";
 
 interface HomeContentProps {
   children?: React.ReactNode;
@@ -18,14 +20,11 @@ interface HomeContentProps {
 
 export default function HomeContent({ children }: HomeContentProps) {
   return (
-    <main className="flex min-h-[calc(100vh-5rem)] w-full flex-col items-center justify-center gap-8 px-4 py-8">
-      <div className="grid w-full max-w-6xl items-center gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+    <main className="flex min-h-[calc(100vh-5rem)] w-full flex-col items-center gap-10 px-4 py-10">
+      <div className="grid w-full max-w-7xl items-center gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         {/* Left: hero content */}
         <section className="space-y-6">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border/40 bg-background/80 px-3 py-1 text-[11px] text-muted-foreground backdrop-blur">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Safe, opinionated tweaks for Windows power users</span>
-          </div>
+          <HeroBadge />
 
           <div className="space-y-3">
             <h1 className="text-balance text-2xl font-semibold tracking-tight sm:text-3xl md:text-4xl">
@@ -49,15 +48,6 @@ export default function HomeContent({ children }: HomeContentProps) {
                 <RocketLaunchIcon className="h-4 w-4" />
                 Start tweaking
               </Link>
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              disabled
-              className="inline-flex items-center gap-2 rounded-[var(--radius-md)] border-border/60 bg-background/80 px-3 py-2 text-xs font-medium text-muted-foreground cursor-not-allowed opacity-60 pointer-events-none"
-            >
-              <ClockIcon className="h-3.5 w-3.5" />
-              View history
             </Button>
             <TooltipProvider>
               <Tooltip delayDuration={300}>
@@ -94,26 +84,7 @@ export default function HomeContent({ children }: HomeContentProps) {
             </TooltipProvider>
           </div>
 
-          <div className="grid gap-3 rounded-lg border border-dashed border-border/50 bg-card/80 p-4 text-xs text-muted-foreground md:grid-cols-2">
-            <div>
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                New to system tweaks?
-              </p>
-              <p>
-                Start on the Tweaks page. Each category explains what it does,
-                why it is safe, and how to undo it.
-              </p>
-            </div>
-            <div>
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-                Prefer to read first?
-              </p>
-              <p>
-                Our documentation walks through each step so you always know
-                what you are changing.
-              </p>
-            </div>
-          </div>
+          <OnboardingHints />
         </section>
 
         {/* Right: logo / ambient visual */}
@@ -137,6 +108,86 @@ export default function HomeContent({ children }: HomeContentProps) {
           </div>
         </section>
       </div>
+
+      {/* SEO / Feature content */}
+      <section className="w-full max-w-7xl space-y-8">
+        <div className="grid gap-4 md:grid-cols-3">
+          <div className="rounded-xl border border-border/40 bg-card/70 p-4 shadow-sm">
+            <h3 className="text-sm font-semibold">Safe Windows tweaks</h3>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Every Windows tweak includes a plain‑language explanation,
+              recommended usage, and how to undo the change so you always stay in control.
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/40 bg-card/70 p-4 shadow-sm">
+            <h3 className="text-sm font-semibold">PowerShell scripts you can trust</h3>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Generate clean, readable PowerShell scripts instead of copying random commands
+              from forums. Keep a history of your favorite performance presets.
+            </p>
+          </div>
+          <div className="rounded-xl border border-border/40 bg-card/70 p-4 shadow-sm">
+            <h3 className="text-sm font-semibold">Focus on performance, not guesswork</h3>
+            <p className="mt-2 text-xs text-muted-foreground">
+              BetterPerformance groups tweaks by category so you can quickly optimise gaming,
+              productivity, or general Windows responsiveness without breaking core features.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-8 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          <div className="space-y-3">
+            <h2 className="text-lg font-semibold tracking-tight">
+              Windows performance optimisation without risk
+            </h2>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              BetterPerformance is built for people who want a faster Windows PC (Windows 7, 8, 10, 11)
+              without reinstalling the operating system or installing shady "optimizer" tools.
+              Our library of tweaks focuses on transparent, reversible performance improvements:
+              services you can safely disable, visual effects that impact FPS, scheduled tasks that
+              slow down boot time, and more.
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Because every tweak is stored as a PowerShell script, you can export exactly what
+              you are going to run, version it in Git, and reuse the same performance profile on
+              multiple machines. This makes BetterPerformance ideal for gamers, creators, and
+              IT professionals who manage several Windows devices.
+            </p>
+            <div className="flex items-center gap-2 pt-2">
+              <Link
+                href="https://github.com/ELPROFETAMOHAMMED/betterperformance"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-md border border-border/40 bg-background/80 px-3 py-1.5 text-[11px] text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/50"
+              >
+                <CodeBracketIcon className="h-3.5 w-3.5" />
+                <span>Open source on GitHub</span>
+              </Link>
+              <span className="text-[10px] text-muted-foreground/70">•</span>
+              <span className="text-[10px] text-muted-foreground/70">
+                <strong className="text-foreground">100% Free</strong> and <strong className="text-foreground">Open Source</strong>
+              </span>
+            </div>
+          </div>
+          <div className="space-y-3 rounded-xl border border-dashed border-border/50 bg-card/70 p-4 text-xs text-muted-foreground">
+            <h3 className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em]">
+              Why BetterPerformance ranks for Windows tweaks
+            </h3>
+            <p>
+              This dashboard focuses on long‑term{" "}
+              <strong>Windows performance tweaks</strong> rather than short‑lived “registry hacks”.
+              That means clear descriptions, safe defaults, and the ability to revert changes at
+              any time.
+            </p>
+            <p>
+              Search phrases like <strong>Windows performance tweaks</strong>,{" "}
+              <strong>PowerShell Windows optimisation</strong>, and{" "}
+              <strong>safe tweaks for Windows</strong> are built into our help content so you
+              can easily rediscover the app when you need it again.
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Favorites Carousel - shown at bottom if user has favorites */}
       {children}

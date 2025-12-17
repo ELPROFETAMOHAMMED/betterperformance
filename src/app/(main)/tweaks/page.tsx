@@ -6,20 +6,22 @@ import TweaksPageClient from "@/features/tweaks/components/tweaks-page-client";
 export const metadata: Metadata = {
   title: "Windows Tweaks - PowerShell Scripts & Performance Optimization",
   description:
-    "Browse and customize Windows 10 and Windows 11 tweaks. Create custom PowerShell scripts for system optimization. Safe, reversible Windows performance tweaks with code preview.",
+    "Browse and customize Windows tweaks for all Windows versions (Windows 7, 8, 10, 11). Create custom PowerShell scripts for system optimization. Safe, reversible Windows performance tweaks with code preview.",
   keywords: [
     "Windows tweaks",
     "PowerShell scripts",
-    "Windows 10 tweaks",
-    "Windows 11 tweaks",
-    "Twix for Windows",
+    "Tweaks for Windows",
     "Windows performance scripts",
     "custom Windows tweaks",
+    "Windows 7 tweaks",
+    "Windows 8 tweaks",
+    "Windows 10 tweaks",
+    "Windows 11 tweaks",
   ],
   openGraph: {
     title: "Windows Tweaks - PowerShell Scripts & Performance Optimization",
     description:
-      "Browse and customize Windows 10 and Windows 11 tweaks. Create custom PowerShell scripts for system optimization.",
+      "Browse and customize Windows tweaks for all Windows versions. Create custom PowerShell scripts for system optimization.",
   },
 };
 

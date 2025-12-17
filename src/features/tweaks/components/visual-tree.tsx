@@ -3,7 +3,10 @@
 import { useState, useMemo, useRef, useEffect } from "react";
 import { cn } from "@/shared/lib/utils";
 import type { TweakCategory, Tweak, TweakHistoryEntry } from "@/features/tweaks/types/tweak.types";
-import { filterAndSortTweaks, type SortOption } from "@/features/tweaks/utils/filter-tweaks";
+import {
+  filterAndSortTweaks,
+  type SortOption,
+} from "@/features/tweaks/utils/filter-tweaks";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -13,11 +16,8 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
-  DropdownMenuLabel,
+  DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { 
   Square2StackIcon,
@@ -26,7 +26,6 @@ import {
   ClockIcon,
   ExclamationTriangleIcon,
   MagnifyingGlassIcon,
-  FunnelIcon,
   TrashIcon,
   StarIcon,
   ListBulletIcon,
@@ -45,6 +44,8 @@ import { CheckCircleIcon as CheckCircleIconSolid } from "@heroicons/react/24/sol
 import { motion, AnimatePresence } from "framer-motion";
 import { TweakItem } from "./tweak-item";
 import { VisualTreeTabTrigger } from "./visual-tree-tab-trigger";
+import { VisualTreeSortMenu } from "./visual-tree-sort-menu";
+import { TweaksEmptyState } from "./tweaks-empty-state";
 
 interface VisualTreeProps {
   categories: TweakCategory[];
@@ -249,31 +250,6 @@ export default function VisualTree({
     }
   }, [activeTab, searchQuery, favoritesView, historyView, favoritesScope, reportedScope]);
 
-  const renderSortMenu = () => (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm" className="h-7 gap-1 text-xs">
-          <FunnelIcon className="h-3 w-3" />
-          Sort & Filter
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-48">
-        <DropdownMenuLabel>Sort By</DropdownMenuLabel>
-        <DropdownMenuRadioGroup value={sortOption} onValueChange={(v) => setSortOption(v as SortOption)}>
-          <DropdownMenuRadioItem value="alphabetical">Alphabetical</DropdownMenuRadioItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuRadioItem value="downloads-desc">Most Downloads</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="favorites-desc">Most Favorites</DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="reports-desc">Most Reported</DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={onSelectAll}>
-          Select All Visible
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-
   return (
     <div className="flex h-full flex-col rounded-xl bg-card border border-border/40 shadow-sm overflow-hidden">
       {/* Header & Tabs */}
@@ -371,7 +347,13 @@ export default function VisualTree({
                    </Button>
                 </div>
               )}
-              {favoritesScope === "global" && renderSortMenu()}
+              {favoritesScope === "global" && (
+                <VisualTreeSortMenu
+                  sortOption={sortOption}
+                  onSortChange={(v) => setSortOption(v)}
+                  onSelectAllVisible={onSelectAll}
+                />
+              )}
             </div>
           )}
 
@@ -395,7 +377,11 @@ export default function VisualTree({
                   <GlobeAmericasIcon className="h-3 w-3 mr-1" /> All Reports
                 </Button>
               </div>
-              {renderSortMenu()}
+              <VisualTreeSortMenu
+                sortOption={sortOption}
+                onSortChange={(v) => setSortOption(v)}
+                onSelectAllVisible={onSelectAll}
+              />
             </div>
           )}
 
@@ -437,9 +423,13 @@ export default function VisualTree({
           )}
 
           {activeTab === "popular" && (
-             <div className="flex items-center justify-end gap-2 px-1">
-               {renderSortMenu()}
-             </div>
+            <div className="flex items-center justify-end gap-2 px-1">
+              <VisualTreeSortMenu
+                sortOption={sortOption}
+                onSortChange={(v) => setSortOption(v)}
+                onSelectAllVisible={onSelectAll}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -614,47 +604,51 @@ export default function VisualTree({
                              </Button>
 
                              {group.isUserSelection && (
-                               <DropdownMenu>
-                                 <DropdownMenuTrigger asChild>
-                                   <Button
-                                     variant="ghost"
-                                     size="icon"
-                                     className="h-6 w-6 text-muted-foreground hover:text-foreground"
-                                     onClick={(e) => e.stopPropagation()}
-                                   >
-                                     <EllipsisHorizontalIcon className="h-4 w-4" />
-                                   </Button>
-                                 </DropdownMenuTrigger>
-                                 <DropdownMenuContent align="end">
-                                   <DropdownMenuItem onClick={(e) => {
-                                      e.stopPropagation();
-                                      onRenameSelection?.(group.id, group.title);
-                                   }}>
-                                     <PencilIcon className="h-4 w-4 mr-2" />
-                                     Rename
-                                   </DropdownMenuItem>
-                                   {group.isHistoryItem && (
-                                     <DropdownMenuItem onClick={(e) => {
-                                        e.stopPropagation();
-                                        onSaveAsFavorite?.(group.tweaks, group.title);
-                                     }}>
-                                       <StarIcon className="h-4 w-4 mr-2" />
-                                       Save to Favorites
-                                     </DropdownMenuItem>
-                                   )}
-                                   <DropdownMenuSeparator />
-                                   <DropdownMenuItem 
-                                     className="text-destructive focus:text-destructive"
-                                     onClick={(e) => {
-                                       e.stopPropagation();
-                                       onDeleteSelection?.(group.id);
-                                     }}
-                                   >
-                                     <TrashIcon className="h-4 w-4 mr-2" />
-                                     Delete
-                                   </DropdownMenuItem>
-                                 </DropdownMenuContent>
-                               </DropdownMenu>
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  <EllipsisHorizontalIcon className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuItem
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onRenameSelection?.(group.id, group.title);
+                                  }}
+                                >
+                                  <PencilIcon className="h-4 w-4 mr-2" />
+                                  Rename
+                                </DropdownMenuItem>
+                                {group.isHistoryItem && (
+                                  <DropdownMenuItem
+                                    onClick={(event) => {
+                                      event.stopPropagation();
+                                      onSaveAsFavorite?.(group.tweaks, group.title);
+                                    }}
+                                  >
+                                    <StarIcon className="h-4 w-4 mr-2" />
+                                    Save to Favorites
+                                  </DropdownMenuItem>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    onDeleteSelection?.(group.id);
+                                  }}
+                                >
+                                  <TrashIcon className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                              )}
                            </div>
                          </div>
@@ -684,10 +678,7 @@ export default function VisualTree({
                     )
                   })
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
-                    <MagnifyingGlassIcon className="h-10 w-10 mb-2 opacity-20" />
-                    <p className="text-sm">No items found</p>
-                  </div>
+                  <TweaksEmptyState title="No items found" />
                 )
               )}
 
@@ -712,11 +703,10 @@ export default function VisualTree({
                     )}
                   </>
                 ) : (
-                  <div className="flex flex-col items-center justify-center py-10 text-center text-muted-foreground">
-                    <MagnifyingGlassIcon className="h-10 w-10 mb-2 opacity-20" />
-                    <p className="text-sm">No tweaks found</p>
-                    <p className="text-xs opacity-60">Try adjusting your filters</p>
-                  </div>
+                  <TweaksEmptyState
+                    title="No tweaks found"
+                    description="Try adjusting your filters"
+                  />
                 )
               )}
             </>

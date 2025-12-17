@@ -16,8 +16,8 @@ export default function MainHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="sticky top-0 z-30 w-full border-b border-border/40 bg-background/70 backdrop-blur-xl">
-      <div className="mx-auto flex h-16 max-w-6xl items-center gap-4 px-4 sm:px-6 lg:px-8">
+    <header className="sticky top-0 z-30 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
+      <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6 lg:px-8">
         {/* Brand */}
         <div className="flex items-center gap-2">
           <Image
@@ -32,13 +32,13 @@ export default function MainHeader() {
               BetterPerformance
             </span>
             <span className="text-[11px] text-muted-foreground">
-              Tweak your PC with confidence
+              Windows Performance Tweaks
             </span>
           </div>
         </div>
 
         {/* Nav */}
-        <nav className="ml-6 hidden flex-1 items-center gap-2 text-sm font-medium md:flex">
+        <nav className="ml-6 hidden flex-1 items-center gap-1 text-sm font-medium md:flex">
           {NAV_ITEMS.map((item) => {
             const active =
               pathname === item.href ||
@@ -51,15 +51,12 @@ export default function MainHeader() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "relative rounded-[var(--radius-sm)] px-2.5 py-1 text-xs transition-colors",
-                  "text-muted-foreground hover:text-foreground",
-                  active && "text-foreground"
+                  "relative rounded-full px-3 py-1.5 text-xs transition-colors",
+                  "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+                  active && "text-foreground bg-muted/80"
                 )}
               >
                 {item.label}
-                {active && (
-                  <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary" />
-                )}
               </Link>
             );
           })}

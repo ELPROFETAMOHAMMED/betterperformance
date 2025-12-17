@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Image from "next/image";
+import { motion } from "framer-motion";
 import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
 import { useTweakReports } from "@/features/tweaks/hooks/use-tweak-reports";
 import { cn } from "@/shared/lib/utils";
@@ -49,7 +51,6 @@ interface TweakDetailsPanelProps {
   onTweakChange: (tweakId: string) => void;
   categories: TweakCategory[];
   onReport: () => void;
-  onSelectAll: () => void;
   onDownload: () => void;
   onCopy: () => void;
   onSaveFavorite: () => void;
@@ -65,7 +66,6 @@ export function TweakDetailsPanel({
   onTweakChange,
   categories,
   onReport,
-  onSelectAll,
   onDownload,
   onCopy,
   onSaveFavorite,
@@ -113,20 +113,40 @@ export function TweakDetailsPanel({
 
   if (!selectedTweaks.length) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/40 bg-card/30 p-8 text-center">
-        <div className="rounded-full bg-muted/50 p-4">
-          <SwatchIcon className="h-8 w-8 text-muted-foreground/50" />
+      <motion.div
+        className="flex h-full flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border/40 bg-card/30 p-8 text-center"
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.25 }}
+      >
+        <div className="relative">
+          <motion.div
+            className="absolute inset-0 rounded-full bg-primary/20 blur-3xl"
+            animate={{ opacity: [0.3, 0.8, 0.3], scale: [0.9, 1.05, 0.9] }}
+            transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
+          />
+          <motion.div
+            className="relative flex items-center justify-center rounded-2xl border border-border/50 bg-background/80 p-4"
+            animate={{ rotate: [-3, 3, -3] }}
+            transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+          >
+            <Image
+              src="/assets/Aplication-logo.png"
+              alt="BetterPerformance logo"
+              width={80}
+              height={80}
+              className="rounded-[var(--radius-lg)] shadow-lg"
+            />
+          </motion.div>
         </div>
-        <div className="space-y-1">
+        <div className="space-y-2 max-w-sm mx-auto">
           <h3 className="font-medium text-foreground">No tweaks selected</h3>
-          <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-            Select items from the list on the left to view their details, reports, and configure your script.
+          <p className="text-sm text-muted-foreground">
+            Choose one or more tweaks from the explorer on the left to preview the PowerShell script,
+            read the description, and manage reports.
           </p>
         </div>
-        <Button variant="outline" size="sm" onClick={onSelectAll} disabled={!categories.length}>
-          Select all available
-        </Button>
-      </div>
+      </motion.div>
     );
   }
 

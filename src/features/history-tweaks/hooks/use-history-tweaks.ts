@@ -7,6 +7,7 @@ export function useHistoryTweaks(enabled: boolean = true) {
     queryKey: ["history-tweaks"],
     queryFn: fetchTweakHistory,
     enabled,
+    refetchOnWindowFocus: false,
   });
 }
 

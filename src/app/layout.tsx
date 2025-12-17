@@ -6,23 +6,21 @@ import { AnimatedBackground } from "@/shared/components/layout/animated-backgrou
 
 export const metadata: Metadata = {
   title: {
-    default: "BetterPerformance - Windows 10 & 11 Tweaks & Performance Optimization",
+    default: "BetterPerformance - Windows Tweaks & Performance Optimization",
     template: "%s | BetterPerformance",
   },
   description:
-    "Optimize Windows 10 and Windows 11 performance with safe, reversible tweaks. Get the best Windows performance tweaks, PowerShell scripts, and system optimization tools. Free Windows tweaks for better performance.",
+    "Optimize Windows systems (Windows 7, 8, 10, 11) with safe, reversible tweaks. Get the best Windows performance tweaks, PowerShell scripts, and system optimization tools. Free Windows tweaks for better performance.",
   keywords: [
-    "Windows 10 tweaks",
-    "Windows 11 tweaks",
-    "Twix for Windows",
-    "Twix Windows 10",
-    "Twix Windows 11",
+    "Windows tweaks",
     "Windows performance tweaks",
-    "better performance Windows",
+    "Tweaks for Windows",
     "Windows optimization",
     "PowerShell tweaks",
-    "Windows 10 optimization",
-    "Windows 11 optimization",
+    "Windows 7 tweaks",
+    "Windows 8 tweaks",
+    "Windows 10 tweaks",
+    "Windows 11 tweaks",
     "system performance",
     "Windows registry tweaks",
     "Windows speed up",
@@ -50,9 +48,9 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "/",
     siteName: "BetterPerformance",
-    title: "BetterPerformance - Windows 10 & 11 Tweaks & Performance Optimization",
+    title: "BetterPerformance - Windows Tweaks & Performance Optimization",
     description:
-      "Optimize Windows 10 and Windows 11 performance with safe, reversible tweaks. Get the best Windows performance tweaks and system optimization tools.",
+      "Optimize Windows systems (Windows 7, 8, 10, 11) with safe, reversible tweaks. Get the best Windows performance tweaks and system optimization tools.",
     images: [
       {
         url: "/assets/Aplication-logo.png",
@@ -64,9 +62,9 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "BetterPerformance - Windows 10 & 11 Tweaks & Performance Optimization",
+    title: "BetterPerformance - Windows Tweaks & Performance Optimization",
     description:
-      "Optimize Windows 10 and Windows 11 performance with safe, reversible tweaks. Get the best Windows performance tweaks and system optimization tools.",
+      "Optimize Windows systems (Windows 7, 8, 10, 11) with safe, reversible tweaks. Get the best Windows performance tweaks and system optimization tools.",
     images: ["/assets/Aplication-logo.png"],
     creator: "@betterperformance",
   },
@@ -109,7 +107,7 @@ const structuredData = {
     priceCurrency: "USD",
   },
   description:
-    "Optimize Windows 10 and Windows 11 performance with safe, reversible tweaks. Get the best Windows performance tweaks, PowerShell scripts, and system optimization tools.",
+    "Optimize Windows systems (Windows 7, 8, 10, 11) with safe, reversible tweaks. Get the best Windows performance tweaks, PowerShell scripts, and system optimization tools.",
   url: process.env.NEXT_PUBLIC_SITE_URL || "https://betterperformance.vercel.app",
   aggregateRating: {
     "@type": "AggregateRating",
@@ -117,15 +115,17 @@ const structuredData = {
     ratingCount: "1000",
   },
   featureList: [
-    "Windows 10 Tweaks",
-    "Windows 11 Tweaks",
+    "Windows Tweaks",
     "PowerShell Scripts",
     "Performance Optimization",
     "System Optimization",
     "Safe Reversible Changes",
+    "Windows 7, 8, 10, 11 Support",
+    "100% Free",
+    "Open Source",
   ],
   keywords:
-    "Windows 10 tweaks, Windows 11 tweaks, Twix for Windows, Windows performance, better performance Windows, Windows optimization, PowerShell tweaks",
+    "Windows tweaks, Windows performance tweaks, Tweaks for Windows, Windows performance, better performance Windows, Windows optimization, PowerShell tweaks, Windows 7 tweaks, Windows 8 tweaks, Windows 10 tweaks, Windows 11 tweaks",
 };
 
 export default function RootLayout({
