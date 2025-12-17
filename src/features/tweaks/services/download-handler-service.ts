@@ -59,17 +59,15 @@ export async function prepareDownload({
       }
     }
 
-    // Increment downloads for each tweak (only if user is available, with timeout)
-    if (currentUser) {
-      try {
-        const incrementPromise = incrementTweakDownloads(
-          tweaks.map((t) => t.id)
-        );
-        await withTimeout(incrementPromise, 5000);
-      } catch (error) {
-        console.warn("Failed to increment download count:", error);
-        // Continue with download even if this fails
-      }
+    // Increment downloads for each tweak (works for both logged in and anonymous users)
+    try {
+      const incrementPromise = incrementTweakDownloads(
+        tweaks.map((t) => t.id)
+      );
+      await withTimeout(incrementPromise, 5000);
+    } catch (error) {
+      console.warn("Failed to increment download count:", error);
+      // Continue with download even if this fails
     }
 
     // Save tweak history with formatted date as name (only if user is available, with timeout)

@@ -29,6 +29,8 @@ export async function GET() {
         notes, 
         is_visible, 
         tweak_comment,
+        docs,
+        default_tweak_value,
         tweak_reports(id)
       `
       )

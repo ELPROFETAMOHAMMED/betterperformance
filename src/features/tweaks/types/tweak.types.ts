@@ -20,6 +20,8 @@ export interface Tweak {
   notes?: string;
   is_visible: boolean;
   tweak_comment?: string;
+  docs?: string;
+  default_tweak_value?: string;
 }
 
 export interface TweakCategory {

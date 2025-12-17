@@ -5,6 +5,8 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
 import { useTweakReports } from "@/features/tweaks/hooks/use-tweak-reports";
+import { useTweakRealtimeCounters } from "@/features/tweaks/hooks/use-tweak-realtime-counters";
+import { AnimatedCounter } from "@/features/tweaks/components/animated-counter";
 import { cn } from "@/shared/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { highlightPowerShell } from "@/features/tweaks/utils/highlight-powershell";
@@ -92,6 +94,19 @@ export function TweakDetailsPanel({
     () => (activeTweak ? selectedTweaks.findIndex((t) => t.id === activeTweak.id) : -1),
     [activeTweak, selectedTweaks]
   );
+
+  // Get real-time counters for all selected tweaks
+  const tweakIds = useMemo(() => selectedTweaks.map((t) => t.id), [selectedTweaks]);
+  const { getCounter } = useTweakRealtimeCounters({
+    tweakIds,
+    enabled: true,
+    pollInterval: 2000, // Poll every 2 seconds for more responsive updates
+  });
+
+  // Get current tweak's real-time counters
+  const realtimeCounters = activeTweak ? getCounter(activeTweak.id) : null;
+  const displayDownloadCount = realtimeCounters?.download_count ?? activeTweak?.download_count ?? 0;
+  const displayFavoriteCount = realtimeCounters?.favorite_count ?? activeTweak?.favorite_count ?? 0;
 
   const handleNext = () => {
     if (activeIndex < selectedTweaks.length - 1) {
@@ -197,12 +212,12 @@ export function TweakDetailsPanel({
               <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <ArrowDownTrayIcon className="h-3 w-3" />
-                  {activeTweak.download_count.toLocaleString()}
+                  <AnimatedCounter value={displayDownloadCount} />
                 </span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
                   <BookmarkIcon className="h-3 w-3" />
-                  {activeTweak.favorite_count.toLocaleString()}
+                  <AnimatedCounter value={displayFavoriteCount} />
                 </span>
               </div>
             </div>

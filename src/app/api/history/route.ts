@@ -74,6 +74,29 @@ export async function POST(request: Request) {
       throw error;
     }
 
+    // If this is a favorite, increment favorite_count for each tweak
+    if (isFavorite && Array.isArray(tweaks) && tweaks.length > 0) {
+      try {
+        const tweakIds = tweaks.map((t: { id: string }) => t.id).filter(Boolean);
+        if (tweakIds.length > 0) {
+          // Iterate sequentially to ensure each increment happens one by one
+          for (const id of tweakIds) {
+            const { error: rpcError } = await supabase.rpc("increment_favorite_count", {
+              tweak_id: id,
+            });
+
+            if (rpcError) {
+              console.error(`Error incrementing favorite count for tweak ${id}:`, rpcError);
+              // Continue with other tweaks even if one fails
+            }
+          }
+        }
+      } catch (favoriteError) {
+        console.error("Error incrementing favorite counts:", favoriteError);
+        // Don't fail the entire request if favorite increment fails
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("Error saving tweak history:", error);
