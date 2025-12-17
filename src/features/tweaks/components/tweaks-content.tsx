@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import VisualTree from "./visual-tree";
-import type { TweakCategory, Tweak } from "@/features/tweaks/types/tweak.types";
+import type { TweakCategory } from "@/features/tweaks/types/tweak.types";
 import { useUser } from "@/shared/hooks/use-user";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";

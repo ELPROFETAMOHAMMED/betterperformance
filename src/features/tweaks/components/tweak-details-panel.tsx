@@ -35,7 +35,6 @@ import {
   BookmarkIcon,
   ClipboardIcon,
   InformationCircleIcon,
-  SwatchIcon,
   ClockIcon,
   CommandLineIcon,
 } from "@heroicons/react/24/outline";

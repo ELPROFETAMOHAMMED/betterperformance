@@ -142,7 +142,7 @@ export default function HomeContent({ children }: HomeContentProps) {
             </h2>
             <p className="text-xs text-muted-foreground leading-relaxed">
               BetterPerformance is built for people who want a faster Windows PC (Windows 7, 8, 10, 11)
-              without reinstalling the operating system or installing shady "optimizer" tools.
+              without reinstalling the operating system or installing shady &quot;optimizer&quot; tools.
               Our library of tweaks focuses on transparent, reversible performance improvements:
               services you can safely disable, visual effects that impact FPS, scheduled tasks that
               slow down boot time, and more.
