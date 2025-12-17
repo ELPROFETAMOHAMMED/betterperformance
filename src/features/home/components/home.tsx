@@ -98,6 +98,7 @@ export default function HomeContent({ children }: HomeContentProps) {
               alt="BetterPerformance logo"
               width={160}
               height={160}
+              style={{ width: "auto", height: "auto" }}
             />
           </div>
           <div className="flex flex-col items-center gap-1 text-center text-xs text-muted-foreground">

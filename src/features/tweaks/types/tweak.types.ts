@@ -22,6 +22,7 @@ export interface Tweak {
   tweak_comment?: string;
   docs?: string;
   default_tweak_value?: string;
+  report_description?: string; // Description from the most recent report (for reported tab)
 }
 
 export interface TweakCategory {

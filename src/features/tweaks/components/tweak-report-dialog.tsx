@@ -31,12 +31,14 @@ interface TweakReportDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   tweak: Tweak | null;
+  onReportSubmitted?: () => Promise<void>;
 }
 
 export function TweakReportDialog({
   open,
   onOpenChange,
   tweak,
+  onReportSubmitted,
 }: TweakReportDialogProps) {
   const [reportTitle, setReportTitle] = useState("");
   const [reportDescription, setReportDescription] = useState("");
@@ -72,10 +74,20 @@ export function TweakReportDialog({
 
       if (!response.ok) {
         const error = await response.json();
+        if (response.status === 409) {
+          toast.error("You have already reported this tweak");
+          return;
+        }
         throw new Error(error.error || "Failed to submit report");
       }
 
       toast.success("Report submitted successfully");
+      
+      // Refresh reports data
+      if (onReportSubmitted) {
+        await onReportSubmitted();
+      }
+      
       handleOpenChange(false);
     } catch (error) {
       toast.error(

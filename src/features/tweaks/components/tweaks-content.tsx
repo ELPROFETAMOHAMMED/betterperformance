@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import VisualTree from "./visual-tree";
-import type { TweakCategory } from "@/features/tweaks/types/tweak.types";
+import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
 import { useUser } from "@/shared/hooks/use-user";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
@@ -21,6 +21,7 @@ import { TweakReportDialog } from "./tweak-report-dialog";
 import { TweakDetailsPanel } from "./tweak-details-panel";
 import { useSelectedTweaks } from "@/features/tweaks/hooks/use-selected-tweaks";
 import { useTweakHistoryFilters } from "@/features/tweaks/hooks/use-tweak-history-filters";
+import { useTweakReportsFilters } from "@/features/tweaks/hooks/use-tweak-reports-filters";
 import { useTweakDownload } from "@/features/tweaks/hooks/use-tweak-download";
 import { useFavoriteDialog } from "@/features/tweaks/hooks/use-favorite-dialog";
 import { useHistoryDialogs } from "@/features/tweaks/hooks/use-history-dialogs";
@@ -41,6 +42,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     handleTweakToggle,
     handleClearAll,
     handleSelectAllTweaks,
+    updateTweakCounters,
   } = useSelectedTweaks({ categories });
 
   const {
@@ -53,6 +55,14 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   } = useTweakHistoryFilters(!!user);
 
   const {
+    reportedTweakIds,
+    userReportDescriptions,
+    allReportDescriptions,
+    isLoading: isReportsLoading,
+    refreshReports,
+  } = useTweakReportsFilters(!!user);
+
+  const {
     isLoading,
     isCopying,
     handleCopy,
@@ -62,6 +72,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     selectedTweaks,
     user,
     userLoading,
+    onCountersUpdated: updateTweakCounters,
   });
 
   const {
@@ -75,7 +86,12 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     openQuickSaveDialog,
     openSaveAsFavoriteDialog,
     handleConfirmSaveFavorite,
-  } = useFavoriteDialog({ selectedTweaks, user });
+  } = useFavoriteDialog({ 
+    selectedTweaks, 
+    user,
+    favoriteTweakIds,
+    onCountersUpdated: updateTweakCounters,
+  });
 
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
   const {
@@ -109,11 +125,14 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
             onTweakToggle={handleTweakToggle}
             historyTweakIds={historyTweakIds}
             favoriteTweakIds={favoriteTweakIds}
+            reportedTweakIds={reportedTweakIds}
+            userReportDescriptions={userReportDescriptions}
+            allReportDescriptions={allReportDescriptions}
             userFavoriteSelections={userFavoriteSelections}
             userHistorySelections={userHistorySelections}
             onSelectAll={handleSelectAllTweaks}
             onClearSelection={handleClearAll}
-            isLoading={isHistoryLoading}
+            isLoading={isHistoryLoading || isReportsLoading}
             onRenameSelection={openRenameDialog}
             onDeleteSelection={openDeleteDialog}
             onSaveAsFavorite={openSaveAsFavoriteDialog}
@@ -132,7 +151,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
             onDownload={handleDownloadWithSettings}
             onCopy={() => handleCopy(activeTweakId)}
             onSaveFavorite={openQuickSaveDialog}
-            onSaveSingleFavorite={(tweak) => {
+            onSaveSingleFavorite={(tweak: Tweak): void => {
               openSaveAsFavoriteDialog(
                 [tweak],
                 `Favorite: ${tweak.title}`
@@ -252,6 +271,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
         open={reportDialogOpen}
         onOpenChange={setReportDialogOpen}
         tweak={infoTweak}
+        onReportSubmitted={refreshReports}
       />
 
       <WarningDialog />

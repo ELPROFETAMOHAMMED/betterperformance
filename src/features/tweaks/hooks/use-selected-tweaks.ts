@@ -101,6 +101,23 @@ export function useSelectedTweaks({ categories }: UseSelectedTweaksParams) {
     return selectedTweaksArray[0] || null;
   }, [activeTweakId, selectedTweaks, selectedTweaksArray]);
 
+  const updateTweakCounters = useCallback((tweakIds: string[], type: "download" | "favorite") => {
+    setSelectedTweaks((prev) => {
+      const newMap = new Map(prev);
+      tweakIds.forEach((id) => {
+        const tweak = newMap.get(id);
+        if (tweak) {
+          newMap.set(id, {
+            ...tweak,
+            download_count: type === "download" ? (tweak.download_count ?? 0) + 1 : tweak.download_count,
+            favorite_count: type === "favorite" ? (tweak.favorite_count ?? 0) + 1 : tweak.favorite_count,
+          });
+        }
+      });
+      return newMap;
+    });
+  }, []);
+
   return {
     selectedTweaks,
     selectedTweaksArray,
@@ -111,6 +128,7 @@ export function useSelectedTweaks({ categories }: UseSelectedTweaksParams) {
     handleTweakToggle,
     handleClearAll,
     handleSelectAllTweaks,
+    updateTweakCounters,
   };
 }
 

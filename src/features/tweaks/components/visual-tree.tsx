@@ -54,6 +54,8 @@ interface VisualTreeProps {
   historyTweakIds?: Set<string>;
   favoriteTweakIds?: Set<string>;
   reportedTweakIds?: Set<string>;
+  userReportDescriptions?: Map<string, string>;
+  allReportDescriptions?: Map<string, string>;
   userFavoriteSelections?: TweakHistoryEntry[];
   userHistorySelections?: TweakHistoryEntry[];
   onSelectAll: () => void;
@@ -72,6 +74,8 @@ export default function VisualTree({
   historyTweakIds,
   favoriteTweakIds,
   reportedTweakIds,
+  userReportDescriptions,
+  allReportDescriptions,
   userFavoriteSelections,
   userHistorySelections,
   onSelectAll,
@@ -95,6 +99,9 @@ export default function VisualTree({
   
   const [historyView, setHistoryView] = useState<"list" | "tree">("tree"); // Default to tree for history (groups)
   const [historyShowCategory, setHistoryShowCategory] = useState(true);
+  
+  const [popularView, setPopularView] = useState<"list" | "tree">("list"); // Default to list for popular
+  const [popularShowCategory, setPopularShowCategory] = useState(true);
 
   // Infinite scroll state for flat lists
   const [displayLimit, setDisplayLimit] = useState(20);
@@ -145,7 +152,7 @@ export default function VisualTree({
     let minDownloads = 0;
 
     if (activeTab === "popular") {
-      minDownloads = 1000;
+      minDownloads = 1;
       if (currentSort === "alphabetical") currentSort = "downloads-desc";
     } else if (activeTab === "history") {
       historyOnly = true;
@@ -165,7 +172,19 @@ export default function VisualTree({
       if (currentSort === "alphabetical") currentSort = "favorites-desc";
     }
 
-    return filterAndSortTweaks(categories, {
+    // For "All Reports", we need to filter by tweaks that have reports in allReportDescriptions
+    // instead of relying on report_count which may not be accurate
+    let allReportedTweakIds: Set<string> | undefined;
+    
+    if (activeTab === "reported" && reportedScope === "global" && allReportDescriptions) {
+      // Get all tweak IDs that have reports from the allReportDescriptions map
+      allReportedTweakIds = new Set(allReportDescriptions.keys());
+      // Override reportedOnly to false and use userReportedOnly with the Set of reported tweak IDs
+      reportedOnly = false;
+      userReportedOnly = true; // We'll use this with allReportedTweakIds
+    }
+
+    const result = filterAndSortTweaks(categories, {
       searchQuery,
       selectedOnly: false,
       historyOnly,
@@ -176,15 +195,38 @@ export default function VisualTree({
       minDownloads,
       historyTweakIds,
       favoriteTweakIds,
-      reportedTweakIds,
+      reportedTweakIds: activeTab === "reported" && reportedScope === "global" && allReportedTweakIds
+        ? allReportedTweakIds 
+        : reportedTweakIds,
       sort: activeTab === "library" ? undefined : currentSort, 
     });
-  }, [categories, activeTab, searchQuery, historyTweakIds, favoriteTweakIds, reportedTweakIds, sortOption, favoritesScope, reportedScope]);
+
+    // Apply report descriptions to tweaks when in reported tab
+    if (activeTab === "reported") {
+      const reportDescriptions = reportedScope === "user" ? userReportDescriptions : allReportDescriptions;
+      if (reportDescriptions) {
+        result.flatTweaks = result.flatTweaks.map(tweak => ({
+          ...tweak,
+          report_description: reportDescriptions.get(tweak.id),
+        }));
+        result.filteredCategories = result.filteredCategories.map(cat => ({
+          ...cat,
+          tweaks: cat.tweaks?.map(tweak => ({
+            ...tweak,
+            report_description: reportDescriptions.get(tweak.id),
+          })),
+        }));
+      }
+    }
+
+    return result;
+  }, [categories, activeTab, searchQuery, historyTweakIds, favoriteTweakIds, reportedTweakIds, sortOption, favoritesScope, reportedScope, userReportDescriptions, allReportDescriptions]);
 
   // Determine current view mode
   const isLibraryTree = activeTab === "library" && !searchQuery;
   const isFavoritesTree = activeTab === "favorites" && favoritesScope === "user" && favoritesView === "tree";
   const isHistoryTree = activeTab === "history" && historyView === "tree";
+  const isPopularTree = activeTab === "popular" && popularView === "tree";
 
   // Prepare Groups for Favorites/History Tree Views
   const groupSelections = useMemo(() => {
@@ -248,7 +290,7 @@ export default function VisualTree({
     if (scrollViewportRef.current) {
       scrollViewportRef.current.scrollTop = 0;
     }
-  }, [activeTab, searchQuery, favoritesView, historyView, favoritesScope, reportedScope]);
+  }, [activeTab, searchQuery, favoritesView, historyView, popularView, favoritesScope, reportedScope]);
 
   return (
     <div className="flex h-full flex-col rounded-xl bg-card border border-border/40 shadow-sm overflow-hidden">
@@ -358,7 +400,7 @@ export default function VisualTree({
           )}
 
           {activeTab === "reported" && (
-            <div className="flex items-center justify-between gap-2 px-1">
+            <div className="flex items-center gap-2 px-1">
                <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-md">
                 <Button 
                   variant={reportedScope === "user" ? "secondary" : "ghost"} 
@@ -377,11 +419,6 @@ export default function VisualTree({
                   <GlobeAmericasIcon className="h-3 w-3 mr-1" /> All Reports
                 </Button>
               </div>
-              <VisualTreeSortMenu
-                sortOption={sortOption}
-                onSortChange={(v) => setSortOption(v)}
-                onSelectAllVisible={onSelectAll}
-              />
             </div>
           )}
 
@@ -423,12 +460,39 @@ export default function VisualTree({
           )}
 
           {activeTab === "popular" && (
-            <div className="flex items-center justify-end gap-2 px-1">
-              <VisualTreeSortMenu
-                sortOption={sortOption}
-                onSortChange={(v) => setSortOption(v)}
-                onSelectAllVisible={onSelectAll}
-              />
+            <div className="flex items-center justify-between gap-2 px-1">
+              <div className="flex items-center gap-2">
+                 <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-md">
+                   <Button
+                     variant={popularView === "tree" ? "secondary" : "ghost"}
+                     size="icon"
+                     className="h-6 w-6"
+                     onClick={() => setPopularView("tree")}
+                     title="View with Categories"
+                   >
+                     <QueueListIcon className="h-3.5 w-3.5" />
+                   </Button>
+                   <Button
+                     variant={popularView === "list" ? "secondary" : "ghost"}
+                     size="icon"
+                     className="h-6 w-6"
+                     onClick={() => setPopularView("list")}
+                     title="View as List"
+                   >
+                     <ListBulletIcon className="h-3.5 w-3.5" />
+                   </Button>
+                 </div>
+                 {popularView === "list" && (
+                   <Button 
+                     variant={popularShowCategory ? "secondary" : "outline"}
+                     size="sm"
+                     className="h-6 text-[10px] px-2"
+                     onClick={() => setPopularShowCategory(!popularShowCategory)}
+                   >
+                     {popularShowCategory ? "Show Desc." : "Show Category"}
+                   </Button>
+                 )}
+              </div>
             </div>
           )}
         </div>
@@ -682,7 +746,104 @@ export default function VisualTree({
                 )
               )}
 
-              {(!isLibraryTree && !isFavoritesTree && !isHistoryTree) && (
+              {isPopularTree && (
+                filteredCategories.length > 0 ? (
+                  filteredCategories.map((category) => {
+                    const isExpanded = expandedCategories.has(category.id);
+                    const tweaks = category.tweaks || [];
+                    const selectedCount = tweaks.filter(t => selectedTweaks.has(t.id)).length;
+                    const allSelected = tweaks.length > 0 && selectedCount === tweaks.length;
+                    const someSelected = selectedCount > 0 && !allSelected;
+
+                    return (
+                      <div key={category.id} className="rounded-lg overflow-hidden border border-transparent transition-colors hover:border-border/40">
+                        <div 
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors",
+                            isExpanded ? "bg-muted/40" : "hover:bg-muted/20"
+                          )}
+                          onClick={() => toggleCategory(category.id)}
+                        >
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-5 w-5 shrink-0 text-muted-foreground hover:text-foreground"
+                          >
+                            {isExpanded ? (
+                              <ChevronDownIcon className="h-3.5 w-3.5" />
+                            ) : (
+                              <ChevronRightIcon className="h-3.5 w-3.5" />
+                            )}
+                          </Button>
+                          
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            {isExpanded ? (
+                              <FolderOpenIcon className="h-4 w-4 text-primary/70" />
+                            ) : (
+                              <FolderIcon className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <span className="text-sm font-medium truncate select-none">
+                              {category.name}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] text-muted-foreground font-mono">
+                              {selectedCount}/{tweaks.length}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={cn(
+                                "h-6 w-6 rounded-full",
+                                allSelected ? "text-primary hover:text-primary/80" : 
+                                someSelected ? "text-primary/70 hover:text-primary" : 
+                                "text-muted-foreground hover:text-foreground"
+                              )}
+                              onClick={(e) => handleSelectGroup(tweaks, e)}
+                            >
+                              {allSelected ? (
+                                <CheckCircleIconSolid className="h-4 w-4" />
+                              ) : (
+                                <CheckCircleIcon className="h-4 w-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+
+                        <AnimatePresence initial={false}>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={{ duration: 0.2 }}
+                            >
+                              <div className="pl-9 pr-2 py-1 space-y-0.5 border-t border-border/20 bg-muted/10">
+                                {tweaks.map((tweak) => (
+                                  <TweakItem 
+                                    key={tweak.id} 
+                                    tweak={tweak} 
+                                    selected={selectedTweaks.has(tweak.id)} 
+                                    onToggle={() => onTweakToggle(tweak)} 
+                                  />
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <TweaksEmptyState
+                    title="No popular tweaks found"
+                    description="No tweaks with downloads found"
+                  />
+                )
+              )}
+
+              {(!isLibraryTree && !isFavoritesTree && !isHistoryTree && !isPopularTree) && (
                 flatTweaks.length > 0 ? (
                   <>
                     {flatTweaks.slice(0, displayLimit).map((tweak) => (
@@ -693,7 +854,8 @@ export default function VisualTree({
                         onToggle={() => onTweakToggle(tweak)} 
                         showCategory
                         categoryName={categories.find(c => c.id === tweak.category_id)?.name}
-                        showCategoryAsDescription={activeTab === "history" && historyShowCategory}
+                        showCategoryAsDescription={(activeTab === "history" && historyShowCategory) || (activeTab === "popular" && popularShowCategory)}
+                        showReportDescription={activeTab === "reported"}
                       />
                     ))}
                     {flatTweaks.length > displayLimit && (

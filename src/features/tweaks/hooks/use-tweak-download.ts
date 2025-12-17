@@ -12,12 +12,14 @@ interface UseTweakDownloadParams {
   selectedTweaks: Map<string, Tweak>;
   user: profile | null;
   userLoading: boolean;
+  onCountersUpdated?: (tweakIds: string[], type: "download" | "favorite") => void;
 }
 
 export function useTweakDownload({
   selectedTweaks,
   user,
   userLoading,
+  onCountersUpdated,
 }: UseTweakDownloadParams) {
   const [isLoading, setIsLoading] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
@@ -94,6 +96,9 @@ export function useTweakDownload({
           {
             onDownloadStart: () => {
               clearTimeout(safetyTimeout);
+              // Update counters locally after successful download
+              const tweakIds = tweaksToDownload.map((t) => t.id);
+              onCountersUpdated?.(tweakIds, "download");
               toast.success("Download started", {
                 description: `Downloading ${
                   tweaksToDownload.length
@@ -130,7 +135,7 @@ export function useTweakDownload({
       });
       setIsLoading(false);
     }
-  }, [selectedTweaks, user, userLoading, handleDownloadWithWarning, settings]);
+  }, [selectedTweaks, user, userLoading, handleDownloadWithWarning, settings, onCountersUpdated]);
 
   return {
     isLoading,

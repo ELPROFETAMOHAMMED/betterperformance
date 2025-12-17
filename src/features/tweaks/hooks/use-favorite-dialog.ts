@@ -11,11 +11,15 @@ import type { profile } from "@/features/auth/types/user.types";
 interface UseFavoriteDialogParams {
   selectedTweaks: Map<string, Tweak>;
   user: profile | null;
+  favoriteTweakIds?: Set<string>;
+  onCountersUpdated?: (tweakIds: string[], type: "download" | "favorite") => void;
 }
 
 export function useFavoriteDialog({
   selectedTweaks,
   user,
+  favoriteTweakIds,
+  onCountersUpdated,
 }: UseFavoriteDialogParams) {
   const queryClient = useQueryClient();
   const [favoriteDialogOpen, setFavoriteDialogOpen] = useState(false);
@@ -47,11 +51,23 @@ export function useFavoriteDialog({
 
   const openSaveAsFavoriteDialog = useCallback(
     (tweaks: Tweak[], defaultName: string) => {
+      // If saving a single tweak, check if it's already in favorites
+      if (tweaks.length === 1 && favoriteTweakIds) {
+        const tweakId = tweaks[0]?.id;
+        if (tweakId && favoriteTweakIds.has(tweakId)) {
+          toast.error("Tweak already in favorites", {
+            description: "This tweak is already saved in your favorites.",
+          });
+          return;
+        }
+      }
+      
+      // If multiple tweaks, allow saving (even if some tweaks might be in other favorites)
       setTweaksForFavorite(tweaks);
       setFavoriteName(defaultName);
       setFavoriteDialogOpen(true);
     },
-    []
+    [favoriteTweakIds]
   );
 
   const closeFavoriteDialog = useCallback(() => {
@@ -76,6 +92,9 @@ export function useFavoriteDialog({
         name: favoriteName.trim(),
         isFavorite: true,
       });
+      // Update counters locally after successful save
+      const tweakIds = tweaksToSave.map((t) => t.id);
+      onCountersUpdated?.(tweakIds, "favorite");
       await queryClient.invalidateQueries({ queryKey: ["history-tweaks"] });
       toast.success("Saved as favorite");
       closeFavoriteDialog();
@@ -92,6 +111,7 @@ export function useFavoriteDialog({
     favoriteName,
     queryClient,
     closeFavoriteDialog,
+    onCountersUpdated,
   ]);
 
   return {

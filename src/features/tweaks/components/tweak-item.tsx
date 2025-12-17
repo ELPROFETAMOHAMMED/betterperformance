@@ -10,6 +10,7 @@ interface TweakItemProps {
   showCategory?: boolean;
   categoryName?: string;
   showCategoryAsDescription?: boolean;
+  showReportDescription?: boolean;
 }
 
 export function TweakItem({
@@ -19,6 +20,7 @@ export function TweakItem({
   showCategory = false,
   categoryName,
   showCategoryAsDescription = false,
+  showReportDescription = false,
 }: TweakItemProps) {
   return (
     <div
@@ -52,6 +54,10 @@ export function TweakItem({
            <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed flex items-center gap-1">
              <span className="opacity-70">Category:</span> {categoryName}
            </p>
+        ) : showReportDescription && tweak.report_description ? (
+          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+            {tweak.report_description}
+          </p>
         ) : tweak.description ? (
           <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
             {tweak.description}

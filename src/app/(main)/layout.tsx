@@ -5,6 +5,7 @@ import MainHeader from "@/shared/components/layout/main-header";
 import { AppFooter } from "@/shared/components/layout/app-footer";
 import QueryProvider from "@/shared/providers/query-client-provider";
 import { TooltipProvider } from "@/shared/components/ui/tooltip";
+import { Toaster } from "@/shared/components/ui/sonner";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -33,6 +34,7 @@ export default function MainLayout({
     <QueryProvider>
       <TooltipProvider>
         <LayoutContent>{children}</LayoutContent>
+        <Toaster closeButton position="top-right"/>
       </TooltipProvider>
     </QueryProvider>
   );
