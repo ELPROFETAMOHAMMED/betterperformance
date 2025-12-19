@@ -19,6 +19,8 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { TweakReportDialog } from "./tweak-report-dialog";
 import { TweakDetailsPanel } from "./tweak-details-panel";
+import { TweakFormDialog } from "./tweak-form-dialog";
+import { CategoryFormDialog } from "./category-form-dialog";
 import { useSelectedTweaks } from "@/features/tweaks/hooks/use-selected-tweaks";
 import { useTweakHistoryFilters } from "@/features/tweaks/hooks/use-tweak-history-filters";
 import { useTweakReportsFilters } from "@/features/tweaks/hooks/use-tweak-reports-filters";
@@ -32,6 +34,7 @@ interface TweaksContentProps {
 
 export default function TweaksContent({ categories }: TweaksContentProps) {
   const { user, loading: userLoading } = useUser();
+  const isAdmin = user?.user_metadata?.role === "admin";
   const {
     selectedTweaks,
     selectedTweaksArray,
@@ -43,7 +46,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     handleClearAll,
     handleSelectAllTweaks,
     updateTweakCounters,
-  } = useSelectedTweaks({ categories });
+  } = useSelectedTweaks({ categories, isAdmin });
 
   const {
     historyTweakIds,
@@ -94,6 +97,10 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
   });
 
   const [reportDialogOpen, setReportDialogOpen] = useState(false);
+  const [tweakFormDialogOpen, setTweakFormDialogOpen] = useState(false);
+  const [editingTweak, setEditingTweak] = useState<Tweak | null>(null);
+  const [categoryFormDialogOpen, setCategoryFormDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<TweakCategory | null>(null);
   const {
     renameDialogOpen,
     renameValue,
@@ -108,6 +115,31 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     openDeleteDialog,
     confirmDelete,
   } = useHistoryDialogs();
+
+  const handleCreateTweak = () => {
+    setEditingTweak(null);
+    setTweakFormDialogOpen(true);
+  };
+
+  const handleEditTweak = (tweak: Tweak) => {
+    setEditingTweak(tweak);
+    setTweakFormDialogOpen(true);
+  };
+
+  const handleTweakFormSuccess = () => {
+    // Refresh the page to get updated categories and tweaks
+    window.location.reload();
+  };
+
+  const handleEditCategory = (category: TweakCategory) => {
+    setEditingCategory(category);
+    setCategoryFormDialogOpen(true);
+  };
+
+  const handleCategoryFormSuccess = () => {
+    // Refresh the page to get updated categories and tweaks
+    window.location.reload();
+  };
 
   return (
     <motion.div
@@ -137,6 +169,8 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
             onDeleteSelection={openDeleteDialog}
             onSaveAsFavorite={openSaveAsFavoriteDialog}
             onRefresh={() => handleRefresh(!!user)}
+            onCreateTweak={handleCreateTweak}
+            onEditCategory={isAdmin ? handleEditCategory : undefined}
           />
         </div>
 
@@ -160,6 +194,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
             isDownloading={isLoading}
             isCopying={isCopying}
             isSavingFavorite={isSavingFavorite}
+            onEditTweak={handleEditTweak}
           />
         </div>
       </div>
@@ -275,6 +310,21 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
       />
 
       <WarningDialog />
+
+      <TweakFormDialog
+        open={tweakFormDialogOpen}
+        onOpenChange={setTweakFormDialogOpen}
+        categories={categories}
+        tweak={editingTweak}
+        onSuccess={handleTweakFormSuccess}
+      />
+
+      <CategoryFormDialog
+        open={categoryFormDialogOpen}
+        onOpenChange={setCategoryFormDialogOpen}
+        category={editingCategory}
+        onSuccess={handleCategoryFormSuccess}
+      />
     </motion.div>
   );
 }

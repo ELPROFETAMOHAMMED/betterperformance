@@ -21,7 +21,7 @@ export interface Tweak {
   is_visible: boolean;
   tweak_comment?: string;
   docs?: string;
-  report_description?: string; // Description from the most recent report (for reported tab)
+  report_description?: string; 
 }
 
 export interface TweakCategory {

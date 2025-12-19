@@ -39,6 +39,7 @@ import {
   PencilIcon,
   EllipsisHorizontalIcon,
   ArrowPathIcon,
+  PlusIcon,
 } from "@heroicons/react/24/outline";
 import { CheckCircleIcon as CheckCircleIconSolid } from "@heroicons/react/24/solid";
 import { motion, AnimatePresence } from "framer-motion";
@@ -46,6 +47,8 @@ import { TweakItem } from "./tweak-item";
 import { VisualTreeTabTrigger } from "./visual-tree-tab-trigger";
 import { VisualTreeSortMenu } from "./visual-tree-sort-menu";
 import { TweaksEmptyState } from "./tweaks-empty-state";
+import { useUser } from "@/shared/hooks/use-user";
+import DynamicIcon from "@/shared/components/common/dynamic-icon";
 
 interface VisualTreeProps {
   categories: TweakCategory[];
@@ -65,6 +68,8 @@ interface VisualTreeProps {
   onDeleteSelection?: (id: string) => void;
   onSaveAsFavorite?: (tweaks: Tweak[], defaultName: string) => void;
   onRefresh?: () => void;
+  onCreateTweak?: () => void;
+  onEditCategory?: (category: TweakCategory) => void;
 }
 
 export default function VisualTree({
@@ -85,7 +90,11 @@ export default function VisualTree({
   onDeleteSelection,
   onSaveAsFavorite,
   onRefresh,
+  onCreateTweak,
+  onEditCategory,
 }: VisualTreeProps) {
+  const { user } = useUser();
+  const isAdmin = user?.user_metadata?.role === "admin";
   const [activeTab, setActiveTab] = useState("library");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
@@ -130,9 +139,15 @@ export default function VisualTree({
 
   const handleSelectGroup = (tweaksToSelect: Tweak[], e: React.MouseEvent) => {
     e.stopPropagation();
-    const allSelected = tweaksToSelect.every(t => selectedTweaks.has(t.id));
+    // Filter out disabled tweaks (unless admin)
+    const selectableTweaks = isAdmin 
+      ? tweaksToSelect 
+      : tweaksToSelect.filter(t => t.is_visible);
+    if (selectableTweaks.length === 0) return;
     
-    tweaksToSelect.forEach(tweak => {
+    const allSelected = selectableTweaks.every(t => selectedTweaks.has(t.id));
+    
+    selectableTweaks.forEach(tweak => {
       if (allSelected) {
         if (selectedTweaks.has(tweak.id)) onTweakToggle(tweak);
       } else {
@@ -317,8 +332,25 @@ export default function VisualTree({
                </Button>
              )}
              {selectedTweaks.size > 0 && (
-               <Button variant="outline" size="icon" className="h-7 w-7" onClick={onClearSelection} title="Clear selection">
+               <Button 
+                 variant="ghost" 
+                 size="icon" 
+                 className="h-7 w-7" 
+                 onClick={onClearSelection} 
+                 title="Clear selection"
+               >
                  <TrashIcon className="h-3.5 w-3.5" />
+               </Button>
+             )}
+             {isAdmin && onCreateTweak && (
+               <Button 
+                 variant="ghost" 
+                 size="icon" 
+                 className="h-7 w-7" 
+                 onClick={onCreateTweak} 
+                 title="Create new tweak"
+               >
+                 <PlusIcon className="h-3.5 w-3.5" />
                </Button>
              )}
           </div>
@@ -522,8 +554,9 @@ export default function VisualTree({
                 filteredCategories.map((category) => {
                   const isExpanded = expandedCategories.has(category.id);
                   const tweaks = category.tweaks || [];
-                  const selectedCount = tweaks.filter(t => selectedTweaks.has(t.id)).length;
-                  const allSelected = tweaks.length > 0 && selectedCount === tweaks.length;
+                  const selectableTweaks = isAdmin ? tweaks : tweaks.filter(t => t.is_visible);
+                  const selectedCount = selectableTweaks.filter(t => selectedTweaks.has(t.id)).length;
+                  const allSelected = selectableTweaks.length > 0 && selectedCount === selectableTweaks.length;
                   const someSelected = selectedCount > 0 && !allSelected;
 
                   return (
@@ -548,20 +581,46 @@ export default function VisualTree({
                         </Button>
                         
                         <div className="flex items-center gap-2 flex-1 min-w-0">
-                          {isExpanded ? (
+                          {category.icon ? (
+                            <DynamicIcon
+                              name={category.icon}
+                              className={isExpanded ? "text-primary/70" : "text-muted-foreground"}
+                            />
+                          ) : isExpanded ? (
                             <FolderOpenIcon className="h-4 w-4 text-primary/70" />
                           ) : (
                             <FolderIcon className="h-4 w-4 text-muted-foreground" />
                           )}
-                          <span className="text-sm font-medium truncate select-none">
-                            {category.name}
-                          </span>
+                          <div className="flex-1 min-w-0">
+                            <span className="text-sm font-medium truncate select-none block">
+                              {category.name}
+                            </span>
+                            {category.description && (
+                              <p className="text-[11px] text-muted-foreground line-clamp-1 leading-relaxed mt-0.5">
+                                {category.description}
+                              </p>
+                            )}
+                          </div>
                         </div>
 
                         <div className="flex items-center gap-2">
                           <span className="text-[10px] text-muted-foreground font-mono">
-                            {selectedCount}/{tweaks.length}
+                            {selectedCount}/{selectableTweaks.length}
                           </span>
+                          {isAdmin && onEditCategory && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onEditCategory(category);
+                              }}
+                              title="Edit category"
+                            >
+                              <PencilIcon className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           <Button
                             variant="ghost"
                             size="icon"
@@ -596,7 +655,8 @@ export default function VisualTree({
                                   key={tweak.id} 
                                   tweak={tweak} 
                                   selected={selectedTweaks.has(tweak.id)} 
-                                  onToggle={() => onTweakToggle(tweak)} 
+                                  onToggle={() => onTweakToggle(tweak)}
+                                  isAdmin={isAdmin}
                                 />
                               ))}
                             </div>
@@ -613,8 +673,9 @@ export default function VisualTree({
                   groupSelections.map((group) => {
                     const isExpanded = expandedCategories.has(group.id);
                     const tweaks = group.tweaks;
-                    const selectedCount = tweaks.filter(t => selectedTweaks.has(t.id)).length;
-                    const allSelected = tweaks.length > 0 && selectedCount === tweaks.length;
+                    const selectableTweaks = isAdmin ? tweaks : tweaks.filter(t => t.is_visible);
+                    const selectedCount = selectableTweaks.filter(t => selectedTweaks.has(t.id)).length;
+                    const allSelected = selectableTweaks.length > 0 && selectedCount === selectableTweaks.length;
                     const someSelected = selectedCount > 0 && !allSelected;
 
                     return (
@@ -647,7 +708,7 @@ export default function VisualTree({
 
                            <div className="flex items-center gap-2">
                              <span className="text-[10px] text-muted-foreground font-mono">
-                               {selectedCount}/{tweaks.length}
+                               {selectedCount}/{selectableTweaks.length}
                              </span>
                              <Button
                                variant="ghost"
@@ -731,7 +792,8 @@ export default function VisualTree({
                                      key={tweak.id} 
                                      tweak={tweak} 
                                      selected={selectedTweaks.has(tweak.id)} 
-                                     onToggle={() => onTweakToggle(tweak)} 
+                                     onToggle={() => onTweakToggle(tweak)}
+                                     isAdmin={isAdmin}
                                    />
                                  ))}
                                </div>
@@ -751,8 +813,9 @@ export default function VisualTree({
                   filteredCategories.map((category) => {
                     const isExpanded = expandedCategories.has(category.id);
                     const tweaks = category.tweaks || [];
-                    const selectedCount = tweaks.filter(t => selectedTweaks.has(t.id)).length;
-                    const allSelected = tweaks.length > 0 && selectedCount === tweaks.length;
+                    const selectableTweaks = isAdmin ? tweaks : tweaks.filter(t => t.is_visible);
+                    const selectedCount = selectableTweaks.filter(t => selectedTweaks.has(t.id)).length;
+                    const allSelected = selectableTweaks.length > 0 && selectedCount === selectableTweaks.length;
                     const someSelected = selectedCount > 0 && !allSelected;
 
                     return (
@@ -777,20 +840,46 @@ export default function VisualTree({
                           </Button>
                           
                           <div className="flex items-center gap-2 flex-1 min-w-0">
-                            {isExpanded ? (
+                            {category.icon ? (
+                              <DynamicIcon
+                                name={category.icon}
+                                className={isExpanded ? "text-primary/70" : "text-muted-foreground"}
+                              />
+                            ) : isExpanded ? (
                               <FolderOpenIcon className="h-4 w-4 text-primary/70" />
                             ) : (
                               <FolderIcon className="h-4 w-4 text-muted-foreground" />
                             )}
-                            <span className="text-sm font-medium truncate select-none">
-                              {category.name}
-                            </span>
+                            <div className="flex-1 min-w-0">
+                              <span className="text-sm font-medium truncate select-none block">
+                                {category.name}
+                              </span>
+                              {category.description && (
+                                <p className="text-[11px] text-muted-foreground line-clamp-1 leading-relaxed mt-0.5">
+                                  {category.description}
+                                </p>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex items-center gap-2">
                             <span className="text-[10px] text-muted-foreground font-mono">
-                              {selectedCount}/{tweaks.length}
+                              {selectedCount}/{selectableTweaks.length}
                             </span>
+                            {isAdmin && onEditCategory && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onEditCategory(category);
+                                }}
+                                title="Edit category"
+                              >
+                                <PencilIcon className="h-3.5 w-3.5" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -825,7 +914,8 @@ export default function VisualTree({
                                     key={tweak.id} 
                                     tweak={tweak} 
                                     selected={selectedTweaks.has(tweak.id)} 
-                                    onToggle={() => onTweakToggle(tweak)} 
+                                    onToggle={() => onTweakToggle(tweak)}
+                                    isAdmin={isAdmin}
                                   />
                                 ))}
                               </div>
@@ -851,7 +941,8 @@ export default function VisualTree({
                         key={tweak.id} 
                         tweak={tweak} 
                         selected={selectedTweaks.has(tweak.id)} 
-                        onToggle={() => onTweakToggle(tweak)} 
+                        onToggle={() => onTweakToggle(tweak)}
+                        isAdmin={isAdmin}
                         showCategory
                         categoryName={categories.find(c => c.id === tweak.category_id)?.name}
                         showCategoryAsDescription={(activeTab === "history" && historyShowCategory) || (activeTab === "popular" && popularShowCategory)}

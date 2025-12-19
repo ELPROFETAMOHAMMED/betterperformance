@@ -1,12 +1,14 @@
 "use client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/shared/components/ui/avatar";
 import { Button } from "@/shared/components/ui/button";
-import { ArrowRightIcon, ArrowPathIcon, ExclamationCircleIcon, TrophyIcon } from "@heroicons/react/24/outline";
+import { ArrowRightIcon, ArrowPathIcon, ExclamationCircleIcon } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { useUser } from "@/shared/hooks/use-user";
 import { useState } from "react";
 import Link from "next/link";
+import { motion } from "framer-motion";
+import { cn } from "@/shared/lib/utils";
 
 export default function UserCard() {
   const { user, loading } = useUser();
@@ -74,44 +76,71 @@ export default function UserCard() {
   }
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleUserSignOut}
-      disabled={isLoading}
-      className="flex items-center gap-3 rounded-sm border-border/70 bg-background/90 px-3 py-6 text-left backdrop-blur hover:border-primary/60 hover:bg-accent/60 focus-visible:ring-offset-background transition-colors"
-    >
-      <div className="relative">
-        <Avatar className="h-9 w-9">
-          <AvatarImage src={avatarUrl} alt={userName} />
-          <AvatarFallback>
-            {userName
-              .split(" ")
-              .map((n: string) => n[0])
-              .join("")
-              .toUpperCase()}
-          </AvatarFallback>
-        </Avatar>
-        {isAdmin && (
-          <span
-            className="absolute -right-1 -bottom-1 rounded-full bg-background/95 p-0.5"
-            title="Admin"
-          >
-            <TrophyIcon className="h-3.5 w-3.5 text-yellow-400" />
-          </span>
-        )}
-      </div>
-      <div className="flex min-w-0 flex-col text-left">
-        <span className="truncate text-xs font-semibold">{userName}</span>
-        <span className="truncate text-[11px] text-muted-foreground">
-          {user?.email || ""}
-        </span>
-      </div>
-      {isLoading ? (
-        <ArrowPathIcon className="ml-auto h-4 w-4 animate-spin" />
-      ) : (
-        <ArrowRightIcon className="ml-auto h-4 w-4" />
+    <div className={cn("relative rounded-sm", isAdmin && "p-[2px]")}>
+      {isAdmin && (
+        <motion.div
+          className="absolute inset-0 rounded-sm"
+          style={{
+            background: `conic-gradient(
+              from 0deg,
+              hsl(var(--primary)),
+              hsl(var(--primary)) 12.5%,
+              transparent 12.5%,
+              transparent 37.5%,
+              hsl(var(--primary)) 37.5%,
+              hsl(var(--primary)) 50%,
+              transparent 50%,
+              transparent 62.5%,
+              hsl(var(--primary)) 62.5%,
+              hsl(var(--primary)) 87.5%,
+              transparent 87.5%,
+              transparent 100%
+            )`,
+          }}
+          animate={{
+            rotate: [0, 360],
+          }}
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            ease: "linear",
+          }}
+        />
       )}
-    </Button>
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleUserSignOut}
+        disabled={isLoading}
+        className={cn(
+          "relative z-10 flex w-full items-center gap-3 rounded-sm bg-background/90 px-3 py-6 text-left backdrop-blur hover:bg-accent/60 focus-visible:ring-offset-background transition-colors",
+          isAdmin ? "border-0" : "border border-border/70 hover:border-primary/60"
+        )}
+      >
+        <div className="relative">
+          <Avatar className="h-9 w-9">
+            <AvatarImage src={avatarUrl} alt={userName} />
+            <AvatarFallback>
+              {userName
+                .split(" ")
+                .map((n: string) => n[0])
+                .join("")
+                .toUpperCase()}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+        <div className="flex min-w-0 flex-col text-left">
+          <span className="truncate text-xs font-semibold">{userName}</span>
+          <span className="truncate text-[11px] text-muted-foreground">
+            {user?.email || ""}
+          </span>
+        </div>
+        {isLoading ? (
+          <ArrowPathIcon className="ml-auto h-4 w-4 animate-spin" />
+        ) : (
+          <ArrowRightIcon className="ml-auto h-4 w-4" />
+        )}
+      </Button>
+    </div>
   );
 }

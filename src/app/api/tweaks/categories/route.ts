@@ -13,7 +13,7 @@ export async function GET() {
   try {
     const supabase = await createClient();
 
-    // Fetch tweaks with report counts
+    // Fetch tweaks with report counts (include all tweaks, not just visible ones)
     const { data: tweaks, error: tweaksError } = await supabase
       .from("tweaks")
       .select(
@@ -32,8 +32,7 @@ export async function GET() {
         docs,
         tweak_reports(id)
       `
-      )
-      .eq("is_visible", true);
+      );
 
     if (tweaksError) throw tweaksError;
 

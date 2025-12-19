@@ -9,6 +9,7 @@ import { AnimatedCounter } from "@/features/tweaks/components/animated-counter";
 import { cn } from "@/shared/lib/utils";
 import { formatDistanceToNow } from "date-fns";
 import { highlightPowerShell } from "@/features/tweaks/utils/highlight-powershell";
+import { useUser } from "@/shared/hooks/use-user";
 
 // UI Components
 import { Button } from "@/shared/components/ui/button";
@@ -38,6 +39,7 @@ import {
   InformationCircleIcon,
   ClockIcon,
   CommandLineIcon,
+  PencilIcon,
 } from "@heroicons/react/24/outline";
 import { 
   CheckCircleIcon as CheckCircleIconSolid, 
@@ -58,6 +60,7 @@ interface TweakDetailsPanelProps {
   isDownloading: boolean;
   isCopying: boolean;
   isSavingFavorite: boolean;
+  onEditTweak?: (tweak: Tweak) => void;
 }
 
 export function TweakDetailsPanel({
@@ -73,7 +76,10 @@ export function TweakDetailsPanel({
   isDownloading,
   isCopying,
   isSavingFavorite,
+  onEditTweak,
 }: TweakDetailsPanelProps) {
+  const { user } = useUser();
+  const isAdmin = user?.user_metadata?.role === "admin";
   const [activeTab, setActiveTab] = useState("details");
 
   const activeTweak = useMemo(
@@ -195,10 +201,17 @@ export function TweakDetailsPanel({
       <div className="flex-1 overflow-hidden flex flex-col">
         <div className="px-5 pt-5 pb-2">
           <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-xl font-semibold tracking-tight text-foreground">
-                {activeTweak.title}
-              </h2>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                  {activeTweak.title}
+                </h2>
+                {!activeTweak.is_visible && !isAdmin && (
+                  <Badge variant="outline" className="text-[10px] h-5 px-1.5 font-normal text-muted-foreground">
+                    Disabled
+                  </Badge>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-1.5 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <ArrowDownTrayIcon className="h-3 w-3" />
@@ -211,21 +224,40 @@ export function TweakDetailsPanel({
                 </span>
               </div>
             </div>
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                    onClick={onReport}
-                  >
-                    <FlagIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Report issue</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
+            <div className="flex items-center gap-1">
+              {isAdmin && onEditTweak && activeTweak && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="text-muted-foreground hover:text-primary hover:bg-primary/10"
+                        onClick={() => onEditTweak(activeTweak)}
+                      >
+                        <PencilIcon className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Edit tweak</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      onClick={onReport}
+                    >
+                      <FlagIcon className="h-4 w-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Report issue</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
           </div>
         </div>
 

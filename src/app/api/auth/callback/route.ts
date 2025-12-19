@@ -78,14 +78,25 @@ export async function GET(request: NextRequest) {
             ? (userMetadata["avatar_url"] as string)
             : null;
 
+        // Check if profile already exists to preserve role
+        const { data: existingProfile } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+
+        // Preserve existing role or default to "user" for new profiles
+        const role = existingProfile?.role || "user";
+
         // Ensure there is a corresponding profile row for this user
+        // Only update name, email, and avatar_url to preserve role
         await supabase
           .from("profiles")
           .upsert(
             {
               id: user.id,
               email: user.email,
-              role: "user",
+              role,
               name: fullName,
               avatar_url: avatarUrl,
             },

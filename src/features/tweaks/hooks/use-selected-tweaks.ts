@@ -5,9 +5,10 @@ import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
 
 interface UseSelectedTweaksParams {
   categories: TweakCategory[];
+  isAdmin?: boolean;
 }
 
-export function useSelectedTweaks({ categories }: UseSelectedTweaksParams) {
+export function useSelectedTweaks({ categories, isAdmin = false }: UseSelectedTweaksParams) {
   const [selectedTweaks, setSelectedTweaks] = useState<Map<string, Tweak>>(
     () => new Map()
   );
@@ -50,6 +51,9 @@ export function useSelectedTweaks({ categories }: UseSelectedTweaksParams) {
   }, [categories]);
 
   const handleTweakToggle = useCallback((tweak: Tweak) => {
+    // Don't allow selecting disabled tweaks (unless admin)
+    if (!tweak.is_visible && !isAdmin) return;
+    
     setSelectedTweaks((prev) => {
       const newMap = new Map(prev);
       if (newMap.has(tweak.id)) {
@@ -65,7 +69,7 @@ export function useSelectedTweaks({ categories }: UseSelectedTweaksParams) {
       );
       return newMap;
     });
-  }, []);
+  }, [isAdmin]);
 
   const handleClearAll = useCallback(() => {
     setSelectedTweaks(new Map());
@@ -75,14 +79,19 @@ export function useSelectedTweaks({ categories }: UseSelectedTweaksParams) {
   const handleSelectAllTweaks = useCallback(() => {
     const newMap = new Map<string, Tweak>();
     categories.forEach((cat) => {
-      cat.tweaks?.forEach((t) => newMap.set(t.id, t));
+      cat.tweaks?.forEach((t) => {
+        // Select all tweaks if admin, otherwise only enabled tweaks
+        if (isAdmin || t.is_visible) {
+          newMap.set(t.id, t);
+        }
+      });
     });
     setSelectedTweaks(newMap);
     if (newMap.size > 0) {
       const last = Array.from(newMap.values()).pop();
       if (last) setActiveTweakId(last.id);
     }
-  }, [categories]);
+  }, [categories, isAdmin]);
 
   const selectedTweaksArray = useMemo(
     () => Array.from(selectedTweaks.values()),

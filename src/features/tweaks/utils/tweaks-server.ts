@@ -11,11 +11,10 @@ interface CategoryRow {
 export async function fetchTweakCategories(): Promise<TweakCategory[]> {
   const supabase = await createClient();
   
-  // Fetch tweaks with all necessary fields including code
+  // Fetch tweaks with all necessary fields including code (include all tweaks, not just visible ones)
   const { data: tweaks, error: tweaksError } = await supabase
     .from("tweaks")
-    .select("id, title, description, category_id, code, download_count, favorite_count, image, notes, is_visible, tweak_comment, docs")
-    .eq("is_visible", true);
+    .select("id, title, description, category_id, code, download_count, favorite_count, image, notes, is_visible, tweak_comment, docs");
   if (tweaksError) throw tweaksError;
 
   // Fetch categories with all fields
