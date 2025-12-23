@@ -40,6 +40,8 @@ import {
   EllipsisHorizontalIcon,
   ArrowPathIcon,
   PlusIcon,
+  ArrowsPointingOutIcon,
+  ArrowsPointingInIcon,
 } from "@heroicons/react/24/outline";
 import { CheckCircleIcon as CheckCircleIconSolid } from "@heroicons/react/24/solid";
 import { motion, AnimatePresence } from "framer-motion";
@@ -135,6 +137,15 @@ export default function VisualTree({
       }
       return next;
     });
+  };
+
+  const expandAllCategories = () => {
+    const allCategoryIds = new Set(filteredCategories.map(cat => cat.id));
+    setExpandedCategories(allCategoryIds);
+  };
+
+  const collapseAllCategories = () => {
+    setExpandedCategories(new Set());
   };
 
   const handleSelectGroup = (tweaksToSelect: Tweak[], e: React.MouseEvent) => {
@@ -379,6 +390,33 @@ export default function VisualTree({
           </div>
 
           {/* Contextual Toolbar */}
+          {activeTab === "library" && isLibraryTree && (
+            <div className="flex items-center justify-end gap-2 px-1">
+              <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-md">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] px-2"
+                  onClick={expandAllCategories}
+                  title="Expand all categories"
+                >
+                  <ArrowsPointingOutIcon className="h-3 w-3 mr-1" />
+                  Expand All
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-6 text-[10px] px-2"
+                  onClick={collapseAllCategories}
+                  title="Collapse all categories"
+                >
+                  <ArrowsPointingInIcon className="h-3 w-3 mr-1" />
+                  Collapse All
+                </Button>
+              </div>
+            </div>
+          )}
+
           {activeTab === "favorites" && (
             <div className="flex items-center justify-between gap-2 px-1">
               <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-md">
