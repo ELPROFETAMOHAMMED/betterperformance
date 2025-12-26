@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { RocketLaunchIcon, UsersIcon, CodeBracketIcon } from "@heroicons/react/24/outline";
+import { RocketLaunchIcon, UsersIcon, CodeBracketIcon, LinkIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -186,6 +186,36 @@ export default function HomeContent({ children }: HomeContentProps) {
               <strong>safe tweaks for Windows</strong> are built into our help content so you
               can easily rediscover the app when you need it again.
             </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Contributors Section */}
+      <section className="w-full max-w-7xl space-y-4">
+        <div className="rounded-xl border border-border/40 bg-card/70 p-4 shadow-sm">
+          <h3 className="mb-3 text-sm font-semibold">Contributors</h3>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Special thanks to these creators who have contributed to BetterPerformance through their tweaks and insights.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <Link
+              href="https://www.youtube.com/@FR33THY"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-md border border-border/40 bg-background/80 px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/50"
+            >
+              <LinkIcon className="h-3.5 w-3.5" />
+              <span>fr33thy</span>
+            </Link>
+            <Link
+              href="https://www.youtube.com/@ChrisTitusTech"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-md border border-border/40 bg-background/80 px-3 py-2 text-xs text-muted-foreground transition-colors hover:text-foreground hover:bg-muted/50"
+            >
+              <LinkIcon className="h-3.5 w-3.5" />
+              <span>Chris Titus Tech</span>
+            </Link>
           </div>
         </div>
       </section>
