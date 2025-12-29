@@ -44,7 +44,7 @@ if (-not $isAdmin) {
     
     # Relaunch with elevated privileges
     try {
-        $arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`""
+        $arguments = "-NoProfile -ExecutionPolicy Bypass -File " + '"' + $scriptPath + '"'
         Start-Process powershell.exe -Verb RunAs -ArgumentList $arguments -Wait
         exit $LASTEXITCODE
     } catch {
