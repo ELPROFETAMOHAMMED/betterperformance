@@ -2,6 +2,166 @@
  * Service for generating PowerShell code snippets
  */
 
+/**
+ * Generates the atomic tweak execution function that wraps each tweak
+ * This function ensures each tweak executes independently and continues on error
+ */
+export function generateAtomicTweakFunction(): string {
+  return `# Function to execute tweaks atomically with error handling
+function Invoke-AtomicTweak {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory=$true)]
+        [string]$TweakName,
+        
+        [Parameter(Mandatory=$true)]
+        [scriptblock]$TweakScript
+    )
+    
+    Write-Host "Executing: $TweakName" -ForegroundColor Cyan
+    
+    $tweakResult = @{
+        Name = $TweakName
+        Status = "FAILED"
+        ErrorMessage = ""
+    }
+    
+    # Capture error state before execution
+    $errorCountBefore = $Error.Count
+    $lastExitCodeBefore = $LASTEXITCODE
+    
+    try {
+        # Reset error tracking for this tweak
+        $ErrorActionPreference = "Continue"
+        $LASTEXITCODE = $null
+        
+        # Execute the tweak script block
+        & $TweakScript
+        
+        # Check for errors after execution
+        $hasNewError = $false
+        $errorMessage = ""
+        
+        # Check if LASTEXITCODE indicates failure
+        if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
+            $hasNewError = $true
+            $errorMessage = "Script exited with error code: $LASTEXITCODE"
+        }
+        # Check if new errors were added to $Error collection
+        elseif ($Error.Count -gt $errorCountBefore) {
+            $hasNewError = $true
+            # Get the most recent error (first in the collection)
+            $newError = $Error[0]
+            if ($newError) {
+                $errorMessage = $newError.ToString()
+            } else {
+                $errorMessage = "An error occurred during execution"
+            }
+        }
+        
+        if ($hasNewError) {
+            $tweakResult.Status = "FAILED"
+            $tweakResult.ErrorMessage = $errorMessage
+            Write-Host "  Status: FAILED - $errorMessage" -ForegroundColor Red
+        } else {
+            $tweakResult.Status = "OK"
+            Write-Host "  Status: OK" -ForegroundColor Green
+        }
+    } catch {
+        $tweakResult.Status = "FAILED"
+        $tweakResult.ErrorMessage = $_.Exception.Message
+        Write-Host "  Status: FAILED - $($tweakResult.ErrorMessage)" -ForegroundColor Red
+    } finally {
+        # Clear errors from this tweak to prevent affecting next tweak
+        # Only clear errors that were added during this tweak's execution
+        $errorsToRemove = $Error.Count - $errorCountBefore
+        if ($errorsToRemove -gt 0) {
+            for ($i = 0; $i -lt $errorsToRemove; $i++) {
+                if ($Error.Count -gt 0) {
+                    $Error.RemoveAt(0)
+                }
+            }
+        }
+        # Reset LASTEXITCODE for next tweak
+        $LASTEXITCODE = $null
+    }
+    
+    # Add result to global array
+    $script:TweakResults += $tweakResult
+    
+    Write-Host ""
+}
+
+# Initialize global tweak results array
+$script:TweakResults = @()
+
+`;
+}
+
+/**
+ * Wraps a single tweak code with atomic execution
+ */
+export function wrapTweakWithAtomicExecution(
+  tweakName: string,
+  tweakCode: string
+): string {
+  // Escape double quotes and backticks for PowerShell double-quoted strings
+  // Double quotes are escaped with backticks, backticks are escaped by doubling
+  const escapedName = tweakName
+    .replace(/`/g, "``") // Escape backticks first
+    .replace(/"/g, '`"'); // Escape double quotes
+  
+  // Wrap the tweak code in a scriptblock
+  return `Invoke-AtomicTweak "${escapedName}" {
+${tweakCode}
+}`;
+}
+
+/**
+ * Generates the tweak execution summary table
+ */
+export function generateTweakSummary(): string {
+  return `
+# Display tweak execution summary
+Write-Host ""
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Tweak Execution Summary" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host ""
+
+if ($script:TweakResults -and $script:TweakResults.Count -gt 0) {
+    $totalTweaks = $script:TweakResults.Count
+    $successfulTweaks = ($script:TweakResults | Where-Object { $_.Status -eq "OK" }).Count
+    $failedTweaks = ($script:TweakResults | Where-Object { $_.Status -eq "FAILED" }).Count
+    
+    Write-Host "Total Tweaks: $totalTweaks" -ForegroundColor White
+    Write-Host "Successful: $successfulTweaks" -ForegroundColor Green
+    Write-Host "Failed: $failedTweaks" -ForegroundColor $(if ($failedTweaks -gt 0) { "Red" } else { "Gray" })
+    Write-Host ""
+    
+    # Display detailed results
+    Write-Host "Detailed Results:" -ForegroundColor White
+    Write-Host "----------------" -ForegroundColor Gray
+    Write-Host ""
+    
+    foreach ($result in $script:TweakResults) {
+        $statusColor = if ($result.Status -eq "OK") { "Green" } else { "Red" }
+        Write-Host "  [$($result.Status)] " -NoNewline -ForegroundColor $statusColor
+        Write-Host "$($result.Name)" -ForegroundColor White
+        
+        if ($result.Status -eq "FAILED" -and $result.ErrorMessage) {
+            Write-Host "      Error: $($result.ErrorMessage)" -ForegroundColor Yellow
+        }
+    }
+    
+    Write-Host ""
+} else {
+    Write-Host "No tweak execution results available." -ForegroundColor Yellow
+    Write-Host ""
+}
+`;
+}
+
 export function generateRestorePointFunction(): string {
   return `# Function to create a system restore point
 function Create-BetterPerformanceRestorePoint {
@@ -111,6 +271,37 @@ function Create-BetterPerformanceRestorePoint {
 `;
 }
 
+/**
+ * Wraps multiple tweaks with atomic execution
+ * Each tweak is executed independently and continues on error
+ */
+export function wrapTweaksWithAtomicExecution(
+  tweaks: Array<{ title: string; code: string }>
+): string {
+  if (tweaks.length === 0) {
+    return "";
+  }
+
+  // Generate the atomic function at the top
+  const atomicFunction = generateAtomicTweakFunction();
+
+  // Wrap each tweak with atomic execution
+  const wrappedTweaks = tweaks.map((tweak, index) => {
+    const cleanedCode = tweak.code.trim();
+    if (!cleanedCode) {
+      return "";
+    }
+    // Use title or fallback to a generic name
+    const tweakName = tweak.title.trim() || `Tweak ${index + 1}`;
+    return wrapTweakWithAtomicExecution(tweakName, cleanedCode);
+  }).filter(Boolean);
+
+  // Combine all wrapped tweaks
+  const combinedTweaks = wrappedTweaks.join("\n\n");
+
+  return `${atomicFunction}${combinedTweaks}`;
+}
+
 export function prependRestorePointCode(code: string, enabled: boolean): string {
   if (!enabled) {
     // Even if restore point is disabled, show that we're applying tweaks
@@ -136,23 +327,39 @@ ${code}`;
 /**
  * Wraps code with error handling and completion notification
  * Always shows a success or error message at the end
+ * Includes tweak summary if atomic execution was used
  */
 export function wrapWithCompletionNotification(code: string): string {
+  const summaryCode = generateTweakSummary();
+  
   // Use string concatenation to avoid template string issues with quotes in code
   const notificationCode = `
+${summaryCode}
 # Error handling and completion notification
 $ErrorActionPreference = "Continue"
 $scriptSuccess = $false
 $errorMessage = ""
 $errorOccurred = $false
 
-# Check if any errors occurred (capture $LASTEXITCODE before it's overwritten)
-if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
-    $errorOccurred = $true
-    $errorMessage = "Script exited with error code: $LASTEXITCODE"
-    $scriptSuccess = $false
+# Determine script success based on tweak results if available
+if ($script:TweakResults -and $script:TweakResults.Count -gt 0) {
+    $failedTweaks = ($script:TweakResults | Where-Object { $_.Status -eq "FAILED" }).Count
+    if ($failedTweaks -eq 0) {
+        $scriptSuccess = $true
+    } else {
+        $scriptSuccess = $false
+        $errorOccurred = $true
+        $errorMessage = "$failedTweaks tweak(s) failed during execution. See summary above for details."
+    }
 } else {
-    $scriptSuccess = $true
+    # Fallback to original error checking if no tweak results available
+    if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
+        $errorOccurred = $true
+        $errorMessage = "Script exited with error code: $LASTEXITCODE"
+        $scriptSuccess = $false
+    } else {
+        $scriptSuccess = $true
+    }
 }
 
 # Display completion notification (always shown)

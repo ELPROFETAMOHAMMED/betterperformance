@@ -7,6 +7,7 @@ import { cleanTweakCode, combineTweakBlocks } from "@/features/tweaks/utils/code
 import {
   prependRestorePointCode,
   wrapWithCompletionNotification,
+  wrapTweaksWithAtomicExecution,
 } from "@/features/tweaks/services/powershell-generator";
 import { downloadFile } from "@/features/tweaks/utils/file-downloader";
 
@@ -70,9 +71,12 @@ export function downloadTweaks({
     return;
   }
 
-  // Combine all tweaks into a single file
-  const cleanedBlocks = tweaks.map((t) => cleanTweakCode(t.code || ""));
-  const combinedCode = combineTweakBlocks(cleanedBlocks);
+  // Combine all tweaks into a single file with atomic execution
+  const tweaksWithCleanedCode = tweaks.map((t) => ({
+    title: t.title,
+    code: cleanTweakCode(t.code || ""),
+  }));
+  const combinedCode = wrapTweaksWithAtomicExecution(tweaksWithCleanedCode);
   const finalCode = processTweakCode(combinedCode, shouldCreateRestorePoint);
   downloadFile(
     finalCode,
