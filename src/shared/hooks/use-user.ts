@@ -77,6 +77,30 @@ export function useUser() {
         }
       }
 
+      // Helper function to normalize and validate role
+      const normalizeRole = (role: unknown): Role | null => {
+        if (!role) return null;
+        // Convert to string and trim, handle both string and non-string values
+        const roleStr = String(role).trim().toLowerCase();
+        if (roleStr === "admin") return "admin";
+        if (roleStr === "user") return "user";
+        return null;
+      };
+
+      // Priority: profileData.role > user_metadata.role > "user"
+      // The profiles table is the source of truth for roles
+      // This ensures that if role is set in profiles, it's always preserved
+      const profileRole = profileData && !profileError && profileData.role
+        ? normalizeRole(profileData.role)
+        : null;
+      
+      const metadataRole = authUser.user_metadata?.role
+        ? normalizeRole(authUser.user_metadata.role)
+        : null;
+      
+      // Use profile role first (source of truth), then metadata, then default
+      const finalRole = profileRole || metadataRole || "user";
+
       const userData: profile = {
         ...authUser,
         user_metadata: {
@@ -88,8 +112,7 @@ export function useUser() {
                 profileData.avatar_url || authUser.user_metadata?.avatar_url,
               bio: profileData.bio || authUser.user_metadata?.bio,
             }),
-          role: ((profileData && !profileError && profileData.role) ??
-            "user") as Role,
+          role: finalRole as Role,
         },
       };
 

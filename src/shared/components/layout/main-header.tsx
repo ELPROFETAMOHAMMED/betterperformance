@@ -7,6 +7,12 @@ import { cn } from "@/shared/lib/utils";
 import { HomeIcon, WrenchScrewdriverIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
 import { HomeIcon as HomeIconSolid, WrenchScrewdriverIcon as WrenchScrewdriverIconSolid, Cog6ToothIcon as Cog6ToothIconSolid } from "@heroicons/react/24/solid";
 import { useEffect, useRef, useState } from "react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
 
 const NAV_ITEMS = [
   { 
@@ -71,9 +77,26 @@ export default function MainHeader() {
             className="rounded-[var(--radius-sm)]"
           />
           <div className="flex flex-col leading-tight">
-            <span className="text-sm font-semibold tracking-tight">
-              BetterPerformance
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-semibold tracking-tight">
+                BetterPerformance
+              </span>
+              <TooltipProvider>
+                <Tooltip delayDuration={300}>
+                  <TooltipTrigger asChild>
+                    <span className="inline-flex items-center rounded bg-primary/5 px-2 py-0.5 text-[10px] font-semibold text-primary border border-primary/5">
+                      BETA
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p className="text-xs">
+                      This application is in beta. Some features may not work as expected. 
+                      Please report any bugs or issues you encounter.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <span className="text-[11px] text-muted-foreground">
               Windows Performance Tweaks
             </span>

@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
-import { RocketLaunchIcon, ShieldCheckIcon, CodeBracketIcon, SquaresPlusIcon } from "@heroicons/react/24/outline";
+import { RocketLaunchIcon, ShieldCheckIcon, CodeBracketIcon, SquaresPlusIcon, InformationCircleIcon, ClipboardIcon, CheckIcon } from "@heroicons/react/24/outline";
 import Image from "next/image";
 import { Button } from "@/shared/components/ui/button";
 import {
@@ -10,6 +11,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/shared/components/ui/tooltip";
+import { toast } from "sonner";
 import AnimatedHero from "@/shared/components/layout/animated-hero";
 import { OnboardingHints } from "@/shared/components/layout/onboarding-hints";
 import { HeroBadge } from "@/shared/components/layout/hero-badge";
@@ -19,8 +21,42 @@ interface HomeContentProps {
 }
 
 export default function HomeContent({ children }: HomeContentProps) {
+  const [copied, setCopied] = useState(false);
+  const command = "Set-ExecutionPolicy Unrestricted";
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(command);
+      setCopied(true);
+      toast.success("Command copied to clipboard");
+      
+      // Clear any existing timeout before setting a new one
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
+      // Set new timeout and store its ID
+      timeoutRef.current = setTimeout(() => {
+        setCopied(false);
+        timeoutRef.current = null;
+      }, 2000);
+    } catch (err) {
+      toast.error("Failed to copy command");
+    }
+  };
+
   return (
-    <main className="flex min-h-[calc(100vh-5rem)] w-full flex-col items-center gap-16 px-4 py-12">
+    <main className="flex min-h-[calc(100vh-5rem)] w-full flex-col items-center gap-8 px-4 py-8">
       {/* Hero Section */}
       <div className="grid w-full max-w-6xl items-center gap-12 md:grid-cols-[1.3fr_1fr]">
         {/* Left: Hero Content */}
@@ -98,6 +134,59 @@ export default function HomeContent({ children }: HomeContentProps) {
           </div>
         </section>
       </div>
+
+      {/* PowerShell Execution Policy Info - Informational Dialog Style */}
+      <section className="w-full max-w-6xl">
+        <div className="flex items-start gap-4 rounded-lg border border-border/60 bg-card/50 p-4 shadow-sm">
+          <InformationCircleIcon className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+          <div className="flex-1 space-y-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-1">PowerShell Execution Policy Required</h3>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                To run PowerShell scripts, execute this command in PowerShell (as Administrator):
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <code className="flex-1 px-4 py-2 bg-background/80 border border-border/40 rounded-md text-sm font-mono text-foreground">
+                {command}
+              </code>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCopy}
+                      className="shrink-0 h-9 px-3"
+                    >
+                      {copied ? (
+                        <CheckIcon className="h-4 w-4 text-primary" />
+                      ) : (
+                        <ClipboardIcon className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{copied ? "Copied!" : "Copy command"}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <p className="text-xs leading-relaxed text-muted-foreground/80">
+              Windows restricts script execution by default for security. This enables local scripts.{" "}
+              <Link
+                href="https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.security/set-executionpolicy?view=powershell-7.5"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary hover:underline font-medium"
+              >
+                Learn more
+              </Link>
+            </p>
+          </div>
+        </div>
+      </section>
 
       {/* Features Section - Flat Design */}
       <section className="w-full max-w-6xl">

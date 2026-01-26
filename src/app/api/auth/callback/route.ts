@@ -81,27 +81,69 @@ export async function GET(request: NextRequest) {
         // Check if profile already exists to preserve role
         const { data: existingProfile } = await supabase
           .from("profiles")
-          .select("role")
+          .select("role, email, name, avatar_url")
           .eq("id", user.id)
           .maybeSingle();
 
-        // Preserve existing role or default to "user" for new profiles
-        const role = existingProfile?.role || "user";
+        // Helper function to normalize and validate role
+        const normalizeRole = (role: unknown): "user" | "admin" | null => {
+          if (!role) return null;
+          // Convert to string and trim, handle both string and non-string values
+          const roleStr = String(role).trim().toLowerCase();
+          if (roleStr === "admin") return "admin";
+          if (roleStr === "user") return "user";
+          return null;
+        };
 
-        // Ensure there is a corresponding profile row for this user
-        // Only update name, email, and avatar_url to preserve role
-        await supabase
-          .from("profiles")
-          .upsert(
-            {
-              id: user.id,
+        // Extract role from profiles table (source of truth)
+        // The profiles table is the authoritative source for roles
+        const profileRole = existingProfile?.role ? normalizeRole(existingProfile.role) : null;
+        
+        // Extract role from user_metadata for syncing (if it exists and differs)
+        const metadataRole = userMetadata?.role ? normalizeRole(userMetadata.role) : null;
+        
+        // Determine the role to use:
+        // Priority: profiles.role > user_metadata.role > "user"
+        // This ensures profiles table is the source of truth
+        // If role exists in profiles, ALWAYS preserve it (critical for admin users)
+        let roleToUse: "user" | "admin";
+        
+        if (profileRole !== null) {
+          // Profile exists with a valid role - ALWAYS preserve it (CRITICAL: don't overwrite admin)
+          roleToUse = profileRole;
+        } else if (metadataRole !== null) {
+          // No profile role, but role exists in user_metadata - use it and sync to profiles
+          roleToUse = metadataRole;
+        } else {
+          // New profile or invalid role - default to "user"
+          roleToUse = "user";
+        }
+        
+        // Update or create profile with the determined role
+        if (existingProfile) {
+          // Profile exists: update all fields including role
+          // This will sync role from user_metadata to profiles if needed
+          await supabase
+            .from("profiles")
+            .update({
               email: user.email,
-              role,
+              role: roleToUse,
               name: fullName,
               avatar_url: avatarUrl,
-            },
-            { onConflict: "id" }
-          );
+            })
+            .eq("id", user.id);
+        } else {
+          // New profile: create with determined role
+          await supabase
+            .from("profiles")
+            .insert({
+              id: user.id,
+              email: user.email,
+              role: roleToUse,
+              name: fullName,
+              avatar_url: avatarUrl,
+            });
+        }
       } catch (profileError) {
         // Log but don't break the login flow if profile sync fails
         console.error("Error upserting profile:", profileError);
