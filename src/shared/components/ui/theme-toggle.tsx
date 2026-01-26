@@ -62,13 +62,13 @@ export function ThemeToggle({ className }: ThemeToggleProps) {
           <Button
             key={opt.value}
             type="button"
-            variant={active ? "default" : "ghost"}
+            variant="ghost"
             size="sm"
             onClick={() => setTheme(opt.value)}
             className={cn(
-              "h-7 gap-1 rounded-[calc(var(--radius-md)-2px)] px-2 text-[11px]",
-              !active && "text-muted-foreground hover:text-foreground hover:bg-accent/50",
-              active && "bg-primary/10 text-foreground ring-1 ring-primary/40"
+              "h-7 gap-1 rounded-[calc(var(--radius-md)-2px)] px-2 text-[11px] transition-all",
+              !active && "text-muted-foreground hover:text-foreground hover:bg-muted/60",
+              active && "bg-muted text-foreground hover:bg-muted/80"
             )}
           >
             {opt.icon}

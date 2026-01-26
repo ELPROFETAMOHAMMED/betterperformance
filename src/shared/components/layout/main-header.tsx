@@ -4,16 +4,59 @@ import { usePathname } from "next/navigation";
 import UserCard from "@/features/home/components/user-card";
 import Image from "next/image";
 import { cn } from "@/shared/lib/utils";
+import { HomeIcon, WrenchScrewdriverIcon, Cog6ToothIcon } from "@heroicons/react/24/outline";
+import { HomeIcon as HomeIconSolid, WrenchScrewdriverIcon as WrenchScrewdriverIconSolid, Cog6ToothIcon as Cog6ToothIconSolid } from "@heroicons/react/24/solid";
+import { useEffect, useRef, useState } from "react";
 
 const NAV_ITEMS = [
-  { href: "/home", label: "Home" },
-  { href: "/tweaks", label: "Tweaks" },
-// History link removed
-  { href: "/settings", label: "Settings" },
+  { 
+    href: "/home", 
+    label: "Home",
+    icon: HomeIcon,
+    iconSolid: HomeIconSolid,
+  },
+  { 
+    href: "/tweaks", 
+    label: "Tweaks",
+    icon: WrenchScrewdriverIcon,
+    iconSolid: WrenchScrewdriverIconSolid,
+  },
+  { 
+    href: "/settings", 
+    label: "Settings",
+    icon: Cog6ToothIcon,
+    iconSolid: Cog6ToothIconSolid,
+  },
 ];
 
 export default function MainHeader() {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
+  const indicatorRef = useRef<HTMLDivElement>(null);
+  const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({ left: 0, width: 0 });
+
+  const activeIndex = NAV_ITEMS.findIndex(
+    (item) =>
+      pathname === item.href ||
+      (item.href !== "/home" && pathname.startsWith(item.href) && item.href !== "/")
+  );
+
+  useEffect(() => {
+    if (navRef.current && indicatorRef.current && activeIndex >= 0) {
+      const navItems = navRef.current.querySelectorAll("a");
+      const activeItem = navItems[activeIndex] as HTMLElement;
+      
+      if (activeItem) {
+        const navRect = navRef.current.getBoundingClientRect();
+        const itemRect = activeItem.getBoundingClientRect();
+        
+        setIndicatorStyle({
+          left: itemRect.left - navRect.left,
+          width: itemRect.width,
+        });
+      }
+    }
+  }, [pathname, activeIndex]);
 
   return (
     <header className="sticky top-0 z-30 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl">
@@ -38,7 +81,20 @@ export default function MainHeader() {
         </div>
 
         {/* Nav */}
-        <nav className="ml-6 hidden flex-1 items-center gap-1 text-sm font-medium md:flex">
+        <nav 
+          ref={navRef}
+          className="relative ml-6 hidden flex-1 items-center gap-0.5 text-sm font-medium md:flex"
+        >
+          {/* Animated indicator */}
+          <div
+            ref={indicatorRef}
+            className="absolute bottom-0 h-0.5 bg-primary transition-all duration-300 ease-out rounded-full"
+            style={{
+              left: `${indicatorStyle.left}px`,
+              width: `${indicatorStyle.width}px`,
+            }}
+          />
+          
           {NAV_ITEMS.map((item) => {
             const active =
               pathname === item.href ||
@@ -46,17 +102,34 @@ export default function MainHeader() {
                 pathname.startsWith(item.href) &&
                 item.href !== "/");
 
+            const IconComponent = active ? item.iconSolid : item.icon;
+
             return (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "relative rounded-full px-3 py-1.5 text-xs transition-colors",
-                  "text-muted-foreground hover:text-foreground hover:bg-muted/60",
-                  active && "text-foreground bg-muted/80"
+                  "group relative flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200",
+                  "hover:bg-muted/50",
+                  active 
+                    ? "text-foreground" 
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
-                {item.label}
+                <IconComponent 
+                  className={cn(
+                    "h-4 w-4 transition-all duration-200",
+                    active 
+                      ? "text-primary scale-110" 
+                      : "group-hover:scale-105"
+                  )} 
+                />
+                <span className="relative z-10">{item.label}</span>
+                
+                {/* Hover glow effect */}
+                {!active && (
+                  <span className="absolute inset-0 rounded-lg bg-primary/0 group-hover:bg-primary/5 transition-colors duration-200" />
+                )}
               </Link>
             );
           })}

@@ -6,7 +6,6 @@ import LandingErrorHandler from "./landing-error-handler";
 import AnimatedHero from "@/shared/components/layout/animated-hero";
 import { OnboardingHints } from "@/shared/components/layout/onboarding-hints";
 import { HeroBadge } from "@/shared/components/layout/hero-badge";
-import { AppFooter } from "@/shared/components/layout/app-footer";
 
 const features = [
   {
@@ -166,9 +165,6 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
-        
-        {/* Footer */}
-        <AppFooter />
       </div>
     </>
   );

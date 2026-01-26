@@ -30,7 +30,7 @@ export const SETTINGS_GROUPS: SettingGroup[] = [
     type: "theme",
     customContent: (
       <SettingCard>
-        <div>
+        <div >
           <p className="text-sm font-medium">Theme</p>
           <p className="text-xs text-muted-foreground">
             Toggle between system, light and dark modes. System is used by

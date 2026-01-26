@@ -9,16 +9,25 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        // Make Roboto the default sans font for Tailwind utilities like `font-sans`.
+        // Inter is the default sans font for Tailwind utilities like `font-sans`.
         sans: [
-          "Roboto",
+          "Inter",
           "var(--font-sans)",
-          "ui-sans-serif",
-          "system-ui",
           "-apple-system",
+          "BlinkMacSystemFont",
           "Segoe UI",
-          "Helvetica",
+          "Roboto",
+          "Helvetica Neue",
           "Arial",
+          "sans-serif",
+        ],
+        mono: [
+          "JetBrains Mono",
+          "var(--font-mono)",
+          "Fira Code",
+          "Consolas",
+          "Monaco",
+          "monospace",
         ],
       },
     },
