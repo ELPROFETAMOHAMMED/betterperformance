@@ -9,7 +9,6 @@
 export function generateAdminCheckCode(): string {
   return `# Check if running as administrator, if not relaunch with elevated privileges
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-
 if (-not $isAdmin) {
     Write-Host "========================================" -ForegroundColor Yellow
     Write-Host "Administrator Privileges Required" -ForegroundColor Yellow
@@ -18,7 +17,7 @@ if (-not $isAdmin) {
     Write-Host "This script requires administrator privileges to apply system tweaks." -ForegroundColor White
     Write-Host "Relaunching script with elevated privileges..." -ForegroundColor Cyan
     Write-Host ""
-    
+
     # Get the script path - try multiple methods to ensure we get the correct path
     $scriptPath = $null
     if ($MyInvocation.MyCommand.Path) {
@@ -33,7 +32,7 @@ if (-not $isAdmin) {
         # Fallback: use the script that's currently executing
         $scriptPath = $MyInvocation.InvocationName
     }
-    
+
     # Resolve to full path
     if ($scriptPath) {
         $scriptPath = (Resolve-Path $scriptPath -ErrorAction SilentlyContinue).Path
@@ -41,7 +40,7 @@ if (-not $isAdmin) {
             $scriptPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($MyInvocation.InvocationName)
         }
     }
-    
+
     # Relaunch with elevated privileges
     try {
         $arguments = "-NoProfile -ExecutionPolicy Bypass -File " + '"' + $scriptPath + '"'
@@ -56,127 +55,138 @@ if (-not $isAdmin) {
         exit 1
     }
 }
-
 Write-Host "Running with administrator privileges..." -ForegroundColor Green
 Write-Host ""
-
 `;
-
 }
 
 /**
- * Generates the atomic tweak execution function that wraps each tweak
- * This function ensures each tweak executes independently and continues on error
+ * Generates the progress bar helper and the atomic tweak execution function.
+ *
+ * Progress display strategy (dual-mode):
+ *   1. Write-Progress  — native PowerShell progress bar shown in the PS window header area.
+ *   2. ASCII bar       — printed inline with Write-Host so it works in any console/terminal.
+ *
+ * The function receives the total tweak count up-front so both bars can show
+ * an accurate percentage from the very first tweak.
+ *
+ * FIX (false-positive errors): non-terminating errors (e.g. registry path
+ * auto-creation warnings) are captured via stream redirection and shown as
+ * [warn] lines. Only a terminating exception reaches the catch block and
+ * marks the tweak as FAILED.
  */
 export function generateAtomicTweakFunction(): string {
-  return `# Function to execute tweaks atomically with error handling
+  return `# ---------------------------------------------------------------------------
+# Progress bar helper
+# ---------------------------------------------------------------------------
+function Show-TweakProgress {
+    param (
+        [int]$Current,
+        [int]$Total,
+        [string]$TweakName
+    )
+
+    $percent     = [math]::Round(($Current / $Total) * 100)
+    $barWidth    = 40
+    $filled      = [math]::Round($barWidth * $Current / $Total)
+    $empty       = $barWidth - $filled
+    $bar         = ([string][char]0x2588 * $filled) + ([string][char]0x2591 * $empty)
+    $statusText  = "Tweak $Current/$Total"
+
+    # ── ASCII bar (always visible, printed inline) ──────────────────────────
+    Write-Host ""
+    Write-Host "  [$bar] $percent%  $statusText" -ForegroundColor Cyan
+    Write-Host ""
+
+    # ── Native Write-Progress bar (shown in PS window header area) ──────────
+    Write-Progress \`
+        -Activity      "BetterPerformance - Applying Tweaks" \`
+        -Status        "$statusText  |  $TweakName" \`
+        -PercentComplete $percent
+}
+
+# ---------------------------------------------------------------------------
+# Atomic tweak executor
+# ---------------------------------------------------------------------------
 function Invoke-AtomicTweak {
     [CmdletBinding()]
     param (
         [Parameter(Mandatory=$true)]
         [string]$TweakName,
-        
+
         [Parameter(Mandatory=$true)]
-        [scriptblock]$TweakScript
+        [scriptblock]$TweakScript,
+
+        [Parameter(Mandatory=$true)]
+        [int]$TotalTweaks
     )
-    
-    Write-Host "Executing: $TweakName" -ForegroundColor Cyan
-    
+
+    # Increment the global counter and show progress BEFORE running the tweak
+    $script:TweakCurrentIndex++
+    Show-TweakProgress -Current $script:TweakCurrentIndex -Total $TotalTweaks -TweakName $TweakName
+
+    Write-Host "  Executing: $TweakName" -ForegroundColor Cyan
+
     $tweakResult = @{
-        Name = $TweakName
-        Status = "FAILED"
+        Name         = $TweakName
+        Status       = "FAILED"
         ErrorMessage = ""
     }
-    
-    # Capture error state before execution
-    $errorCountBefore = $Error.Count
-    $lastExitCodeBefore = $LASTEXITCODE
-    
+
     try {
-        # Reset error tracking for this tweak
-        $ErrorActionPreference = "Continue"
-        $LASTEXITCODE = $null
-        
-        # Execute the tweak script block
-        & $TweakScript
-        
-        # Check for errors after execution
-        $hasNewError = $false
-        $errorMessage = ""
-        
-        # Check if LASTEXITCODE indicates failure
-        if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
-            $hasNewError = $true
-            $errorMessage = "Script exited with error code: $LASTEXITCODE"
-        }
-        # Check if new errors were added to $Error collection
-        elseif ($Error.Count -gt $errorCountBefore) {
-            $hasNewError = $true
-            # Get the most recent error (first in the collection)
-            $newError = $Error[0]
-            if ($newError) {
-                $errorMessage = $newError.ToString()
+        # SilentlyContinue prevents non-terminating errors (e.g. registry
+        # path auto-creation warnings) from being counted as real failures.
+        # Terminating errors still reach the catch block below.
+        $ErrorActionPreference = "SilentlyContinue"
+
+        # Redirect the error stream locally so non-terminating messages are
+        # captured here and do NOT pollute the global \$Error collection.
+        & $TweakScript 2>&1 | ForEach-Object {
+            if ($_ -is [System.Management.Automation.ErrorRecord]) {
+                Write-Host "    [warn] $($_.ToString())" -ForegroundColor DarkYellow
             } else {
-                $errorMessage = "An error occurred during execution"
+                Write-Host "    $_"
             }
         }
-        
-        if ($hasNewError) {
-            $tweakResult.Status = "FAILED"
-            $tweakResult.ErrorMessage = $errorMessage
-            Write-Host "  Status: FAILED - $errorMessage" -ForegroundColor Red
-        } else {
-            $tweakResult.Status = "OK"
-            Write-Host "  Status: OK" -ForegroundColor Green
-        }
+
+        $tweakResult.Status = "OK"
+        Write-Host "  Status: OK" -ForegroundColor Green
+
     } catch {
-        $tweakResult.Status = "FAILED"
+        # Genuine terminating failure
+        $tweakResult.Status       = "FAILED"
         $tweakResult.ErrorMessage = $_.Exception.Message
         Write-Host "  Status: FAILED - $($tweakResult.ErrorMessage)" -ForegroundColor Red
     } finally {
-        # Clear errors from this tweak to prevent affecting next tweak
-        # Only clear errors that were added during this tweak's execution
-        $errorsToRemove = $Error.Count - $errorCountBefore
-        if ($errorsToRemove -gt 0) {
-            for ($i = 0; $i -lt $errorsToRemove; $i++) {
-                if ($Error.Count -gt 0) {
-                    $Error.RemoveAt(0)
-                }
-            }
-        }
-        # Reset LASTEXITCODE for next tweak
-        $LASTEXITCODE = $null
+        $ErrorActionPreference = "Continue"
     }
-    
-    # Add result to global array
+
     $script:TweakResults += $tweakResult
-    
-    Write-Host ""
 }
 
-# Initialize global tweak results array
-$script:TweakResults = @()
-
+# ---------------------------------------------------------------------------
+# Global state
+# ---------------------------------------------------------------------------
+$script:TweakResults      = @()
+$script:TweakCurrentIndex = 0
 `;
 }
 
 /**
- * Wraps a single tweak code with atomic execution
+ * Wraps a single tweak code with atomic execution.
+ * @param totalTweaks - The total number of tweaks in the script, used so the
+ *                      progress bar can show an accurate percentage from the start.
  */
 export function wrapTweakWithAtomicExecution(
   tweakName: string,
-  tweakCode: string
+  tweakCode: string,
+  totalTweaks: number,
 ): string {
-  // Escape double quotes and backticks for PowerShell double-quoted strings
-  // Double quotes are escaped with backticks, backticks are escaped by doubling
-  const escapedName = tweakName
-    .replace(/`/g, "``") // Escape backticks first
-    .replace(/"/g, '`"'); // Escape double quotes
-  
-  // Wrap the tweak code in a scriptblock
+  const escapedName = tweakName.replace(/`/g, "``").replace(/"/g, '`"');
+
   return `Invoke-AtomicTweak "${escapedName}" {
 ${tweakCode}
-}`;
+} -TotalTweaks ${totalTweaks}`;
 }
 
 /**
@@ -192,30 +202,28 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 if ($script:TweakResults -and $script:TweakResults.Count -gt 0) {
-    $totalTweaks = $script:TweakResults.Count
+    $totalTweaks      = $script:TweakResults.Count
     $successfulTweaks = ($script:TweakResults | Where-Object { $_.Status -eq "OK" }).Count
-    $failedTweaks = ($script:TweakResults | Where-Object { $_.Status -eq "FAILED" }).Count
-    
-    Write-Host "Total Tweaks: $totalTweaks" -ForegroundColor White
-    Write-Host "Successful: $successfulTweaks" -ForegroundColor Green
-    Write-Host "Failed: $failedTweaks" -ForegroundColor $(if ($failedTweaks -gt 0) { "Red" } else { "Gray" })
+    $failedTweaks     = ($script:TweakResults | Where-Object { $_.Status -eq "FAILED" }).Count
+
+    Write-Host "Total Tweaks: $totalTweaks"  -ForegroundColor White
+    Write-Host "Successful:   $successfulTweaks" -ForegroundColor Green
+    Write-Host "Failed:       $failedTweaks" -ForegroundColor $(if ($failedTweaks -gt 0) { "Red" } else { "Gray" })
     Write-Host ""
-    
+
     # Display detailed results
     Write-Host "Detailed Results:" -ForegroundColor White
     Write-Host "----------------" -ForegroundColor Gray
     Write-Host ""
-    
+
     foreach ($result in $script:TweakResults) {
         $statusColor = if ($result.Status -eq "OK") { "Green" } else { "Red" }
         Write-Host "  [$($result.Status)] " -NoNewline -ForegroundColor $statusColor
         Write-Host "$($result.Name)" -ForegroundColor White
-        
         if ($result.Status -eq "FAILED" -and $result.ErrorMessage) {
-            Write-Host "      Error: $($result.ErrorMessage)" -ForegroundColor Yellow
+            Write-Host "    Error: $($result.ErrorMessage)" -ForegroundColor Yellow
         }
     }
-    
     Write-Host ""
 } else {
     Write-Host "No tweak execution results available." -ForegroundColor Yellow
@@ -235,11 +243,10 @@ function Create-BetterPerformanceRestorePoint {
     Write-Host "Creating system restore point..." -ForegroundColor Yellow
     Write-Host "Please wait, this may take a few moments..." -ForegroundColor Gray
     Write-Host ""
-    
+
     try {
         # Check if running as administrator
         $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-        
         if (-not $isAdmin) {
             Write-Host "ERROR: Administrator privileges are required to create a restore point." -ForegroundColor Red
             Write-Host "Please run this script as Administrator." -ForegroundColor Red
@@ -251,22 +258,21 @@ function Create-BetterPerformanceRestorePoint {
             }
             return $false
         }
-        
+
         # Create restore point using PowerShell
         $restorePointName = "Better Performance Restore Point"
-        
         Write-Host "Creating restore point: $restorePointName" -ForegroundColor Cyan
         Write-Host "This may take 1-2 minutes, please be patient..." -ForegroundColor Gray
-        
+
         # Use Checkpoint-Computer (Windows 10+ PowerShell cmdlet)
         # This cmdlet will fail gracefully if System Restore is disabled
         try {
             Checkpoint-Computer -Description $restorePointName -RestorePointType "MODIFY_SETTINGS" -ErrorAction Stop
-            
+
             # Verify the restore point was created
             Start-Sleep -Seconds 2
             $restorePoint = Get-ComputerRestorePoint | Sort-Object -Property CreationTime -Descending | Select-Object -First 1
-            
+
             if ($restorePoint) {
                 Write-Host ""
                 Write-Host "========================================" -ForegroundColor Green
@@ -287,8 +293,7 @@ function Create-BetterPerformanceRestorePoint {
         } catch {
             Write-Host ""
             $errorMessage = $_.Exception.Message
-            $errorCategory = $_.CategoryInfo.Category
-            
+
             # Check if System Restore is not available (common on Windows Server)
             if ($errorMessage -match "not recognized" -or $errorMessage -match "not available" -or $errorMessage -match "not supported") {
                 Write-Host "WARNING: System Restore is not available on this system." -ForegroundColor Yellow
@@ -305,28 +310,28 @@ function Create-BetterPerformanceRestorePoint {
                 Write-Host "  - Insufficient permissions" -ForegroundColor Yellow
                 Write-Host ""
             }
-            
+
             $response = Read-Host "Do you want to continue applying tweaks without a restore point? (Y/N)"
             if ($response -ne "Y" -and $response -ne "y") {
                 Write-Host "Operation cancelled by user." -ForegroundColor Yellow
                 throw "User cancelled restore point creation"
             }
-            
             return $false
         }
     } catch {
         Write-Host ""
         $errorMessage = $_.Exception.Message
-        
+
         # Check if this is a user cancellation
         if ($errorMessage -match "User cancelled") {
             throw $_
         }
-        
+
         Write-Host "ERROR: An exception occurred while creating restore point: $errorMessage" -ForegroundColor Red
         Write-Host ""
         Write-Host "This may indicate that System Restore is not available on this system." -ForegroundColor Yellow
         Write-Host ""
+
         $response = Read-Host "Do you want to continue applying tweaks without a restore point? (Y/N)"
         if ($response -ne "Y" -and $response -ne "y") {
             Write-Host "Operation cancelled by user." -ForegroundColor Yellow
@@ -335,60 +340,70 @@ function Create-BetterPerformanceRestorePoint {
         return $false
     }
 }
-
 `;
 }
 
 /**
- * Wraps multiple tweaks with atomic execution
- * Each tweak is executed independently and continues on error
+ * Wraps multiple tweaks with atomic execution.
+ * Passes the total tweak count to every call so both the ASCII bar and
+ * Write-Progress can show accurate percentages from the very first tweak.
+ * Closes Write-Progress cleanly once all tweaks have finished.
  */
 export function wrapTweaksWithAtomicExecution(
-  tweaks: Array<{ title: string; code: string }>
+  tweaks: Array<{ title: string; code: string }>,
 ): string {
   if (tweaks.length === 0) {
     return "";
   }
 
-  // Generate the atomic function at the top
   const atomicFunction = generateAtomicTweakFunction();
 
-  // Wrap each tweak with atomic execution
-  const wrappedTweaks = tweaks.map((tweak, index) => {
-    const cleanedCode = tweak.code.trim();
-    if (!cleanedCode) {
-      return "";
-    }
-    // Use title or fallback to a generic name
-    const tweakName = tweak.title.trim() || `Tweak ${index + 1}`;
-    return wrapTweakWithAtomicExecution(tweakName, cleanedCode);
-  }).filter(Boolean);
+  const validTweaks = tweaks.filter((t) => t.code.trim());
+  const totalTweaks = validTweaks.length;
 
-  // Combine all wrapped tweaks
+  const wrappedTweaks = validTweaks.map((tweak, index) => {
+    const tweakName = tweak.title.trim() || `Tweak ${index + 1}`;
+    return wrapTweakWithAtomicExecution(
+      tweakName,
+      tweak.code.trim(),
+      totalTweaks,
+    );
+  });
+
   const combinedTweaks = wrappedTweaks.join("\n\n");
 
-  return `${atomicFunction}${combinedTweaks}`;
+  // Close the native Write-Progress bar after all tweaks complete
+  const closeProgress = `
+# Close the native Write-Progress bar
+Write-Progress -Activity "BetterPerformance - Applying Tweaks" -Completed
+Write-Host ""
+`;
+
+  return `${atomicFunction}${combinedTweaks}${closeProgress}`;
 }
 
-export function prependRestorePointCode(code: string, enabled: boolean): string {
+export function prependRestorePointCode(
+  code: string,
+  enabled: boolean,
+): string {
   if (!enabled) {
     // Even if restore point is disabled, show that we're applying tweaks
     return `Write-Host "Applying tweaks..." -ForegroundColor Cyan
 Write-Host ""
-
 ${code}`;
   }
 
   const restorePointFunction = generateRestorePointFunction();
+
   return `${restorePointFunction}# Create restore point before applying tweaks
 $restorePointCreated = Create-BetterPerformanceRestorePoint
 if (-not $restorePointCreated) {
     Write-Host "Continuing without restore point as requested by user." -ForegroundColor Yellow
     Write-Host ""
 }
+
 Write-Host "Applying tweaks..." -ForegroundColor Cyan
 Write-Host ""
-
 ${code}`;
 }
 
@@ -400,15 +415,16 @@ ${code}`;
 export function wrapWithCompletionNotification(code: string): string {
   const adminCheckCode = generateAdminCheckCode();
   const summaryCode = generateTweakSummary();
-  
+
   // Use string concatenation to avoid template string issues with quotes in code
   const notificationCode = `
 ${summaryCode}
+
 # Error handling and completion notification
 $ErrorActionPreference = "Continue"
-$scriptSuccess = $false
-$errorMessage = ""
-$errorOccurred = $false
+$scriptSuccess  = $false
+$errorMessage   = ""
+$errorOccurred  = $false
 
 # Determine script success based on tweak results if available
 if ($script:TweakResults -and $script:TweakResults.Count -gt 0) {
@@ -416,15 +432,15 @@ if ($script:TweakResults -and $script:TweakResults.Count -gt 0) {
     if ($failedTweaks -eq 0) {
         $scriptSuccess = $true
     } else {
-        $scriptSuccess = $false
-        $errorOccurred = $true
-        $errorMessage = "$failedTweaks tweak(s) failed during execution. See summary above for details."
+        $scriptSuccess  = $false
+        $errorOccurred  = $true
+        $errorMessage   = "$failedTweaks tweak(s) failed during execution. See summary above for details."
     }
 } else {
     # Fallback to original error checking if no tweak results available
     if ($LASTEXITCODE -ne 0 -and $LASTEXITCODE -ne $null) {
         $errorOccurred = $true
-        $errorMessage = "Script exited with error code: $LASTEXITCODE"
+        $errorMessage  = "Script exited with error code: $LASTEXITCODE"
         $scriptSuccess = $false
     } else {
         $scriptSuccess = $true
@@ -443,7 +459,7 @@ if ($scriptSuccess -and -not $errorOccurred) {
     Write-Host ""
     Write-Host "Note: Some changes may require a system restart to take full effect." -ForegroundColor Yellow
     Write-Host ""
-    
+
     # Ask user about system restart
     Write-Host "========================================" -ForegroundColor Cyan
     Write-Host "System Restart Required" -ForegroundColor Cyan
@@ -457,12 +473,12 @@ if ($scriptSuccess -and -not $errorOccurred) {
     Write-Host ""
     Write-Host "If no option is selected within 30 seconds, the system will restart automatically." -ForegroundColor Gray
     Write-Host ""
-    
-    $restartChoice = $null
-    $timeoutSeconds = 30
-    $startTime = Get-Date
-    $inputReceived = $false
-    
+
+    $restartChoice   = $null
+    $timeoutSeconds  = 30
+    $startTime       = Get-Date
+    $inputReceived   = $false
+
     # Check if KeyAvailable is supported
     $keyAvailableSupported = $false
     try {
@@ -471,12 +487,12 @@ if ($scriptSuccess -and -not $errorOccurred) {
     } catch {
         $keyAvailableSupported = $false
     }
-    
+
     # Show countdown and wait for user input
     while (-not $inputReceived) {
-        $elapsed = (Get-Date) - $startTime
+        $elapsed   = (Get-Date) - $startTime
         $remaining = [math]::Max(0, $timeoutSeconds - [math]::Floor($elapsed.TotalSeconds))
-        
+
         # Check if timeout
         if ($remaining -le 0) {
             Write-Host ""
@@ -485,14 +501,14 @@ if ($scriptSuccess -and -not $errorOccurred) {
             $inputReceived = $true
             break
         }
-        
+
         # Check if a key is available (only if supported)
         if ($keyAvailableSupported) {
             try {
                 if ($Host.UI.RawUI.KeyAvailable) {
-                    $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+                    $key  = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
                     $char = $key.Character.ToString().ToUpper()
-                    
+
                     if ($char -eq "Y") {
                         Write-Host ""
                         Write-Host "Restarting system now..." -ForegroundColor Green
@@ -513,14 +529,14 @@ if ($scriptSuccess -and -not $errorOccurred) {
                 $keyAvailableSupported = $false
             }
         }
-        
+
         # Show countdown
-        $countdownMsg = "Time remaining: $remaining seconds (Press Y to restart now, N to restart later)     "
+        $countdownMsg = "Time remaining: $remaining seconds (Press Y to restart now, N to restart later) "
         $cr = [char]13
         Write-Host "$($cr)$countdownMsg" -NoNewline -ForegroundColor Cyan
         Start-Sleep -Milliseconds 200
     }
-    
+
     # If KeyAvailable is not supported, use Read-Host as fallback
     if (-not $inputReceived -and -not $keyAvailableSupported) {
         Write-Host ""
@@ -536,15 +552,14 @@ if ($scriptSuccess -and -not $errorOccurred) {
         }
         $inputReceived = $true
     }
-    
+
     Write-Host ""
-    
+
     # Restart system if user chose Y or timeout occurred
     if ($restartChoice -eq "Y") {
         Write-Host "Preparing to restart system in 5 seconds..." -ForegroundColor Yellow
         Write-Host "Press Ctrl+C to cancel" -ForegroundColor Gray
         Start-Sleep -Seconds 5
-        
         try {
             Restart-Computer -Force -ErrorAction Stop
             Write-Host "System restart initiated." -ForegroundColor Green
