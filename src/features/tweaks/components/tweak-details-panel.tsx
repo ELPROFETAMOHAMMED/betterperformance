@@ -8,8 +8,10 @@ import { useTweakReports } from "@/features/tweaks/hooks/use-tweak-reports";
 import { AnimatedCounter } from "@/features/tweaks/components/animated-counter";
 import { cn } from "@/shared/lib/utils";
 import { formatDistanceToNow } from "date-fns";
-import { highlightPowerShell } from "@/features/tweaks/utils/highlight-powershell";
 import { useUser } from "@/shared/hooks/use-user";
+import { useTheme } from "next-themes";
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 // UI Components
 import { Button } from "@/shared/components/ui/button";
@@ -81,6 +83,7 @@ export function TweakDetailsPanel({
   const { user } = useUser();
   const isAdmin = user?.user_metadata?.role === "admin";
   const [activeTab, setActiveTab] = useState("details");
+  const { resolvedTheme } = useTheme();
 
   const activeTweak = useMemo(
     () => selectedTweaks.find((t) => t.id === activeTweakId) || selectedTweaks[0] || null,
@@ -95,36 +98,13 @@ export function TweakDetailsPanel({
     [activeTweak, categories]
   );
 
-  const activeIndex = useMemo(
-    () => (activeTweak ? selectedTweaks.findIndex((t) => t.id === activeTweak.id) : -1),
-    [activeTweak, selectedTweaks]
-  );
-
-  // Use tweak counts directly (no real-time updates to save resources)
   const displayDownloadCount = activeTweak?.download_count ?? 0;
   const displayFavoriteCount = activeTweak?.favorite_count ?? 0;
-
-  const handleNext = () => {
-    if (activeIndex < selectedTweaks.length - 1) {
-      onTweakChange(selectedTweaks[activeIndex + 1].id);
-    }
-  };
-
-  const handlePrev = () => {
-    if (activeIndex > 0) {
-      onTweakChange(selectedTweaks[activeIndex - 1].id);
-    }
-  };
-
-  const codeLines = useMemo(() => {
-    if (!activeTweak?.code) return [];
-    return highlightPowerShell(activeTweak.code);
-  }, [activeTweak?.code]);
 
   if (!selectedTweaks.length) {
     return (
       <motion.div
-        className="flex h-full flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border/40 bg-card/30 p-8 text-center"
+        className="flex h-full flex-col items-center justify-center gap-5 border border-dashed border-border/40 bg-background/30 p-8 text-center"
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.25 }}
@@ -163,47 +143,14 @@ export function TweakDetailsPanel({
   if (!activeTweak) return null;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden rounded-xl bg-card border border-border/40 shadow-sm">
-      {/* Header */}
-      <div className="flex items-center justify-between border-b border-border/40 px-4 py-3 bg-muted/30">
-        <div className="flex items-center gap-3">
-          <Badge variant="outline" className="bg-background/50 font-normal">
-            {activeIndex + 1} / {selectedTweaks.length}
-          </Badge>
-          <div className="h-4 w-px bg-border/60" />
-          <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-            {activeCategory?.name || "Uncategorized"}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={handlePrev}
-            disabled={activeIndex <= 0}
-          >
-            <ChevronLeftIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7"
-            onClick={handleNext}
-            disabled={activeIndex >= selectedTweaks.length - 1}
-          >
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
+    <div className="flex h-full flex-col overflow-hidden bg-transparent">
       {/* Main Content */}
       <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="px-5 pt-5 pb-2">
+        <div className="px-6 xl:px-8 pt-8 pb-4">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <h2 className="text-xl font-semibold tracking-tight text-foreground">
+                <h2 className="text-3xl font-semibold tracking-tight text-foreground">
                   {activeTweak.title}
                 </h2>
                 {!activeTweak.is_visible && !isAdmin && (
@@ -262,8 +209,8 @@ export function TweakDetailsPanel({
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-5">
-            <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b border-border/40 rounded-none gap-6">
+          <div className="px-6 xl:px-8">
+            <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b border-border/20 rounded-none gap-8">
               <TabTrigger value="details" icon={<InformationCircleIcon className="h-4 w-4" />}>
                 Details
               </TabTrigger>
@@ -279,7 +226,7 @@ export function TweakDetailsPanel({
           <div className="flex-1 overflow-hidden bg-background/50">
             <TabsContent value="details" className="h-full m-0">
               <ScrollArea className="h-full">
-                <div className="p-5 space-y-6">
+                <div className="px-6 xl:px-8 py-6 max-w-4xl mx-auto space-y-10">
                   <div className="space-y-2">
                     <h4 className="text-sm font-medium text-foreground">Description</h4>
                     <p className="text-sm text-muted-foreground leading-relaxed">
@@ -287,49 +234,55 @@ export function TweakDetailsPanel({
                     </p>
                   </div>
 
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
-                      <CommandLineIcon className="h-4 w-4" />
+                  <div className="space-y-3">
+                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border/40 pb-2">
+                      <CommandLineIcon className="h-4 w-4 text-muted-foreground" />
                       PowerShell Script
                     </h4>
-                    <div className="rounded-lg border border-border/50 bg-muted/30 p-4 font-mono text-xs">
+                    <div className="rounded-md overflow-hidden bg-black/5 dark:bg-black/40 border border-border/20 text-xs">
                       {activeTweak.code ? (
-                         <div className="whitespace-pre-wrap break-all">
-                           {codeLines.map((line, i) => (
-                             <div key={i} className={cn(
-                               "leading-relaxed",
-                               line.type === "comment" ? "text-emerald-600/80 dark:text-emerald-400/80" : "text-foreground"
-                             )}>
-                               {line.content || "\u00A0"}
-                             </div>
-                           ))}
-                         </div>
+                        <SyntaxHighlighter
+                          language="powershell"
+                          style={resolvedTheme === "dark" ? vscDarkPlus : vs}
+                          customStyle={{
+                            margin: 0,
+                            padding: "1rem",
+                            background: "transparent",
+                            fontSize: "0.85rem",
+                            lineHeight: "1.5",
+                          }}
+                          wrapLongLines={true}
+                        >
+                          {activeTweak.code}
+                        </SyntaxHighlighter>
                       ) : (
-                        <p className="text-muted-foreground italic"># No code provided for this tweak.</p>
+                        <p className="text-muted-foreground italic p-4"># No code provided for this tweak.</p>
                       )}
                     </div>
                   </div>
 
                   {activeTweak.tweak_comment && (
-                    <div className="rounded-lg border border-border/50 bg-card p-4">
-                      <h4 className="text-xs font-medium text-foreground mb-2 flex items-center gap-2">
-                        <DocumentTextIcon className="h-3.5 w-3.5 text-primary" />
+                    <div className="space-y-2 mt-6">
+                      <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border/40 pb-2">
+                        <DocumentTextIcon className="h-4 w-4 text-primary" />
                         Author Notes
                       </h4>
-                      <p className="text-xs text-muted-foreground font-mono bg-muted/30 p-2 rounded">
-                        {activeTweak.tweak_comment}
-                      </p>
+                      <div className="pl-3 border-l-2 border-primary/30 py-1">
+                        <p className="text-xs text-muted-foreground leading-relaxed italic">
+                          {activeTweak.tweak_comment}
+                        </p>
+                      </div>
                     </div>
                   )}
 
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="rounded-lg bg-muted/30 p-3 space-y-1">
-                      <span className="text-[10px] uppercase text-muted-foreground font-semibold">Tweak ID</span>
-                      <p className="text-xs font-mono text-foreground break-all">{activeTweak.id}</p>
+                  <div className="mt-8 flex items-center gap-6 border-t border-border/40 pt-4">
+                    <div className="space-y-1">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Tweak ID</span>
+                      <p className="text-[11px] font-mono text-muted-foreground break-all">{activeTweak.id}</p>
                     </div>
-                    <div className="rounded-lg bg-muted/30 p-3 space-y-1">
-                      <span className="text-[10px] uppercase text-muted-foreground font-semibold">Category ID</span>
-                      <p className="text-xs font-mono text-foreground break-all">{activeTweak.category_id}</p>
+                    <div className="space-y-1">
+                      <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Category ID</span>
+                      <p className="text-[11px] font-mono text-muted-foreground break-all">{activeTweak.category_id}</p>
                     </div>
                   </div>
                 </div>
@@ -356,7 +309,7 @@ export function TweakDetailsPanel({
       </div>
 
       {/* Footer Actions */}
-      <div className="p-4 border-t border-border/40 bg-card/50 backdrop-blur-sm">
+      <div className="p-4 border-t border-border/40 bg-transparent">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <TooltipProvider>
@@ -432,7 +385,7 @@ function TabTrigger({ value, icon, children }: { value: string; icon: React.Reac
   return (
     <TabsTrigger
       value={value}
-      className="relative h-9 rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 pt-2 font-medium text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
+      className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-1 pb-3 pt-2 font-medium text-muted-foreground shadow-none transition-none data-[state=active]:border-primary data-[state=active]:text-foreground data-[state=active]:shadow-none hover:text-foreground"
     >
       <div className="flex items-center gap-2">
         {icon}

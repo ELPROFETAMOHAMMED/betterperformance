@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 Tweaks AI Rules — Windows Tweaks Bulk Generator (SQL Output)
 Assistant Role
 

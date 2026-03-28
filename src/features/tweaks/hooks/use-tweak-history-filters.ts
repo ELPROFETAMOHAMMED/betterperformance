@@ -1,4 +1,4 @@
- "use client";
+"use client";
 
 import { useMemo, useCallback } from "react";
 import { useHistoryTweaks } from "@/features/history-tweaks/hooks/use-history-tweaks";
@@ -16,7 +16,7 @@ interface UseTweakHistoryFiltersResult {
 }
 
 export function useTweakHistoryFilters(
-  enabled: boolean
+  enabled: boolean,
 ): UseTweakHistoryFiltersResult {
   const {
     data: historyEntries,
@@ -42,14 +42,14 @@ export function useTweakHistoryFilters(
           favSelections.push(entry);
           if (Array.isArray(entry.tweaks)) {
             (entry.tweaks as { id: string }[]).forEach((t) =>
-              favoriteIds.add(t.id)
+              favoriteIds.add(t.id),
             );
           }
         } else {
           histSelections.push(entry);
           if (Array.isArray(entry.tweaks)) {
             (entry.tweaks as { id: string }[]).forEach((t) =>
-              historyIds.add(t.id)
+              historyIds.add(t.id),
             );
           }
         }
@@ -69,13 +69,11 @@ export function useTweakHistoryFilters(
       if (!hasUser) return;
       try {
         await refetchHistory();
-        toast.success("History refreshed");
       } catch (error) {
-        console.error(error);
-        toast.error("Failed to refresh");
+        toast.error("Failed to refresh explorer");
       }
     },
-    [refetchHistory]
+    [refetchHistory],
   );
 
   return {
@@ -88,5 +86,3 @@ export function useTweakHistoryFilters(
     handleRefresh,
   };
 }
-
-

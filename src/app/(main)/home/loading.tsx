@@ -5,7 +5,7 @@ export default function HomeLoading() {
   return (
     <ScrollArea className="h-full w-full">
       <main className="flex min-h-[calc(100vh-5rem)] w-full items-center justify-center px-4">
-        <div className="grid w-full max-w-6xl items-center gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <div className="grid w-full items-center gap-10 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
           {/* Left: hero content skeleton */}
           <section className="space-y-6">
             <div className="inline-flex items-center gap-2">

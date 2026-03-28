@@ -8,7 +8,7 @@ import { Toaster } from "@/shared/components/ui/sonner";
 function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <div
-      className={"flex flex-col w-full h-screen"}
+      className={"flex flex-col w-full h-screen overflow-hidden"}
       suppressHydrationWarning={true}
     >
       <MainHeader />

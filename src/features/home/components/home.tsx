@@ -58,7 +58,7 @@ export default function HomeContent({ children }: HomeContentProps) {
   return (
     <main className="flex min-h-[calc(100vh-5rem)] w-full flex-col items-center gap-8 px-4 py-8">
       {/* Hero Section */}
-      <div className="grid w-full max-w-6xl items-center gap-12 md:grid-cols-[1.3fr_1fr]">
+      <div className="grid w-full items-center gap-12 md:grid-cols-[1.3fr_1fr]">
         {/* Left: Hero Content */}
         <section className="space-y-6">
           <HeroBadge />
@@ -136,7 +136,7 @@ export default function HomeContent({ children }: HomeContentProps) {
       </div>
 
       {/* PowerShell Execution Policy Info - Informational Dialog Style */}
-      <section className="w-full max-w-6xl">
+      <section className="w-full">
         <div className="flex items-start gap-4 rounded-lg border border-border/60 bg-card/50 p-4 shadow-sm">
           <InformationCircleIcon className="h-5 w-5 text-primary mt-0.5 shrink-0" />
           <div className="flex-1 space-y-3">
@@ -189,7 +189,7 @@ export default function HomeContent({ children }: HomeContentProps) {
       </section>
 
       {/* Features Section - Flat Design */}
-      <section className="w-full max-w-6xl">
+      <section className="w-full">
         <div className="grid gap-12 md:grid-cols-3">
           <div className="space-y-3">
             <div className="inline-flex items-center gap-2 text-primary">
@@ -227,7 +227,7 @@ export default function HomeContent({ children }: HomeContentProps) {
       </section>
 
       {/* Main Content Section - Flat Design */}
-      <section className="w-full max-w-6xl">
+      <section className="w-full">
         <div className="space-y-8">
           <div className="space-y-6">
             <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">

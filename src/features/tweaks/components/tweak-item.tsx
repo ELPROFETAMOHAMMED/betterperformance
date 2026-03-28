@@ -35,21 +35,23 @@ export function TweakItem({
   return (
     <div
       className={cn(
-        "group flex items-start gap-3 p-2 rounded-md transition-all duration-200",
+        "group relative flex items-start gap-3 px-3 py-2 mx-2 my-0.5 rounded-md transition-all duration-150",
         isDisabled
           ? "opacity-50 cursor-not-allowed"
           : "cursor-pointer",
-        selected && !isDisabled ? "bg-primary/5" : !isDisabled && "hover:bg-muted/40"
+        selected && !isDisabled 
+          ? "bg-secondary hover:bg-secondary/80" 
+          : !isDisabled && "hover:bg-secondary/40"
       )}
       onClick={handleClick}
     >
       <div className={cn(
-        "mt-0.5 h-4 w-4 rounded border flex items-center justify-center transition-colors",
+        "mt-0.5 h-4 w-4 shrink-0 rounded-[3px] border flex items-center justify-center transition-colors bg-background",
         isDisabled
-          ? "border-muted-foreground/20 bg-muted/30"
+          ? "border-muted-foreground/20 bg-muted/20"
           : selected
             ? "bg-primary border-primary text-primary-foreground"
-            : "border-muted-foreground/40 group-hover:border-primary/50"
+            : "border-muted-foreground/40 group-hover:border-muted-foreground/60"
       )}>
         {selected && !isDisabled && <CheckCircleIcon className="h-3 w-3" />}
       </div>

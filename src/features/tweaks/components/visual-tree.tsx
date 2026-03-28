@@ -72,6 +72,9 @@ interface VisualTreeProps {
   onRefresh?: () => void;
   onCreateTweak?: () => void;
   onEditCategory?: (category: TweakCategory) => void;
+  searchQuery?: string;
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
 }
 
 export default function VisualTree({
@@ -94,13 +97,18 @@ export default function VisualTree({
   onRefresh,
   onCreateTweak,
   onEditCategory,
+  searchQuery = "",
+  activeTab = "library",
+  onTabChange,
 }: VisualTreeProps) {
   const { user } = useUser();
   const isAdmin = user?.user_metadata?.role === "admin";
-  const [activeTab, setActiveTab] = useState("library");
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
-  const [searchQuery, setSearchQuery] = useState("");
   const [sortOption, setSortOption] = useState<SortOption>("alphabetical");
+
+  const handleTabChange = (val: string) => {
+    if (onTabChange) onTabChange(val);
+  };
   
   // View States
   const [favoritesScope, setFavoritesScope] = useState<"user" | "global">("user");
@@ -319,55 +327,10 @@ export default function VisualTree({
   }, [activeTab, searchQuery, favoritesView, historyView, popularView, favoritesScope, reportedScope]);
 
   return (
-    <div className="flex h-full flex-col rounded-xl bg-card border border-border/40 shadow-sm overflow-hidden">
-      {/* Header & Tabs */}
-      <div className="flex flex-col border-b border-border/40 bg-muted/30">
-        <div className="flex items-center justify-between px-4 py-2 border-b border-border/20">
-          <div className="flex items-center gap-2">
-            <Square2StackIcon className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs font-medium text-foreground uppercase tracking-wider">
-              Explorer
-            </span>
-          </div>
-          <div className="flex items-center gap-1">
-             {onRefresh && (
-               <Button 
-                 variant="ghost" 
-                 size="icon" 
-                 className={cn("h-7 w-7", isLoading && "animate-spin")}
-                 onClick={onRefresh}
-                 title="Refresh"
-                 disabled={isLoading}
-               >
-                 <ArrowPathIcon className="h-3.5 w-3.5" />
-               </Button>
-             )}
-             {selectedTweaks.size > 0 && (
-               <Button 
-                 variant="ghost" 
-                 size="icon" 
-                 className="h-7 w-7" 
-                 onClick={onClearSelection} 
-                 title="Clear selection"
-               >
-                 <TrashIcon className="h-3.5 w-3.5" />
-               </Button>
-             )}
-             {isAdmin && onCreateTweak && (
-               <Button 
-                 variant="ghost" 
-                 size="icon" 
-                 className="h-7 w-7" 
-                 onClick={onCreateTweak} 
-                 title="Create new tweak"
-               >
-                 <PlusIcon className="h-3.5 w-3.5" />
-               </Button>
-             )}
-          </div>
-        </div>
-        
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+    <div className="flex h-full flex-col overflow-y-auto bg-transparent">
+      {/* Header Tabs */}
+      <div className="flex-none p-3 pb-2 border-b border-border/10  sticky top-0 z-10 bg-background">
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
           <TabsList className="w-full justify-start h-9 p-0 bg-transparent rounded-none px-4 gap-4 overflow-x-auto no-scrollbar">
             <VisualTreeTabTrigger value="library" icon={<FolderIcon className="h-3.5 w-3.5" />}>Library</VisualTreeTabTrigger>
             <VisualTreeTabTrigger value="popular" icon={<FireIcon className="h-3.5 w-3.5" />}>Popular</VisualTreeTabTrigger>
@@ -377,19 +340,7 @@ export default function VisualTree({
           </TabsList>
         </Tabs>
 
-        {/* Search Bar */}
-        <div className="px-3 py-2 space-y-2">
-          <div className="relative">
-            <MagnifyingGlassIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-            <Input 
-              placeholder="Search tweaks..." 
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="h-8 pl-8 text-xs bg-background/50 border-border/40"
-            />
-          </div>
-
-          {/* Contextual Toolbar */}
+        {/* Contextual Toolbar */}
           {activeTab === "library" && isLibraryTree && (
             <div className="flex items-center justify-end gap-2 px-1">
               <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-md">
@@ -564,15 +515,14 @@ export default function VisualTree({
                  )}
               </div>
             </div>
-          )}
-        </div>
-      </div>
+          )}      </div>
 
-      <ScrollArea 
-        className="flex-1" 
-        onScrollCapture={handleScroll}
-        ref={scrollViewportRef}
-      >
+      <div className="flex-1 relative">
+        <ScrollArea 
+          className="absolute inset-0" 
+          onScrollCapture={handleScroll}
+          ref={scrollViewportRef}
+        >
         <div className="p-3 space-y-1 pb-10">
           {isLoading ? (
              <div className="space-y-3">
@@ -598,11 +548,11 @@ export default function VisualTree({
                   const someSelected = selectedCount > 0 && !allSelected;
 
                   return (
-                    <div key={category.id} className="rounded-lg overflow-hidden border border-transparent transition-colors hover:border-border/40">
+                    <div key={category.id} className="mb-2 last:mb-0">
                       <div 
                         className={cn(
-                          "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors",
-                          isExpanded ? "bg-muted/40" : "hover:bg-muted/20"
+                          "flex items-center gap-2 px-3 py-2 mx-2 rounded-md cursor-pointer transition-colors",
+                          isExpanded ? "bg-secondary/20 text-foreground font-medium" : "hover:bg-secondary/40 text-muted-foreground"
                         )}
                         onClick={() => toggleCategory(category.id)}
                       >
@@ -687,7 +637,7 @@ export default function VisualTree({
                             exit={{ height: 0, opacity: 0 }}
                             transition={{ duration: 0.2 }}
                           >
-                            <div className="pl-9 pr-2 py-1 space-y-0.5 border-t border-border/20 bg-muted/10">
+                            <div className="flex flex-col mt-1">
                               {tweaks.map((tweak) => (
                                 <TweakItem 
                                   key={tweak.id} 
@@ -717,11 +667,11 @@ export default function VisualTree({
                     const someSelected = selectedCount > 0 && !allSelected;
 
                     return (
-                      <div key={group.id} className="rounded-lg overflow-hidden border border-transparent transition-colors hover:border-border/40">
+                      <div key={group.id} className="mb-2 last:mb-0">
                          <div 
                            className={cn(
-                             "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors",
-                             isExpanded ? "bg-muted/40" : "hover:bg-muted/20"
+                             "flex items-center gap-2 px-3 py-2 mx-2 rounded-md cursor-pointer transition-colors",
+                             isExpanded ? "bg-secondary/20 text-foreground font-medium" : "hover:bg-secondary/40 text-muted-foreground"
                            )}
                            onClick={() => toggleCategory(group.id)}
                          >
@@ -857,11 +807,11 @@ export default function VisualTree({
                     const someSelected = selectedCount > 0 && !allSelected;
 
                     return (
-                      <div key={category.id} className="rounded-lg overflow-hidden border border-transparent transition-colors hover:border-border/40">
+                      <div key={category.id} className="overflow-hidden border-b border-border/10 last:border-0 transition-colors">
                         <div 
                           className={cn(
                             "flex items-center gap-2 px-3 py-2 cursor-pointer transition-colors",
-                            isExpanded ? "bg-muted/40" : "hover:bg-muted/20"
+                            isExpanded ? "bg-black/5 dark:bg-white/5" : "hover:bg-black/5 dark:hover:bg-white/5"
                           )}
                           onClick={() => toggleCategory(category.id)}
                         >
@@ -946,7 +896,7 @@ export default function VisualTree({
                               exit={{ height: 0, opacity: 0 }}
                               transition={{ duration: 0.2 }}
                             >
-                              <div className="pl-9 pr-2 py-1 space-y-0.5 border-t border-border/20 bg-muted/10">
+                              <div className="flex flex-col border-t border-border/10">
                                 {tweaks.map((tweak) => (
                                   <TweakItem 
                                     key={tweak.id} 
@@ -1004,6 +954,7 @@ export default function VisualTree({
           )}
         </div>
       </ScrollArea>
+      </div>
     </div>
   );
 }

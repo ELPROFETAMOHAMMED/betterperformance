@@ -39,7 +39,7 @@ export default function SettingsPageClient() {
   return (
     <ScrollArea className="h-full w-full">
       <main className="flex min-h-[calc(100vh-4rem)] w-full items-start justify-center px-4 py-8">
-        <div className="grid w-full max-w-4xl gap-6 md:grid-cols-[1.4fr_minmax(0,1fr)]">
+        <div className="grid w-full gap-6 md:grid-cols-[1.4fr_minmax(0,1fr)]">
           <section className="space-y-4">
             <div>
               <h1 className="text-lg font-semibold tracking-tight">

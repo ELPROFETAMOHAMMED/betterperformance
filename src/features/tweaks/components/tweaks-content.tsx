@@ -7,6 +7,15 @@ import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
 import { useUser } from "@/shared/hooks/use-user";
 import { Input } from "@/shared/components/ui/input";
 import { Button } from "@/shared/components/ui/button";
+import { cn } from "@/lib/utils";
+import {
+  MagnifyingGlassIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  PlusIcon,
+  ArrowPathIcon,
+} from "@heroicons/react/24/outline";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -141,17 +150,121 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
     window.location.reload();
   };
 
+  const [activeTab, setActiveTab] = useState("library");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const activeIndex = activeTweakId ? selectedTweaksArray.findIndex(t => t.id === activeTweakId) : 0;
+  const activeTweak = selectedTweaksArray[activeIndex] || selectedTweaksArray[0] || null;
+  const activeCategory = activeTweak ? categories.find(c => c.id === activeTweak.category_id) : null;
+
+  const handleNextTweak = () => {
+    if (activeIndex < selectedTweaksArray.length - 1) {
+      setActiveTweakId(selectedTweaksArray[activeIndex + 1].id);
+    }
+  };
+
+  const handlePrevTweak = () => {
+    if (activeIndex > 0) {
+      setActiveTweakId(selectedTweaksArray[activeIndex - 1].id);
+    }
+  };
+
+  const globalIsLoading = isHistoryLoading || isReportsLoading;
+
   return (
     <motion.div
-      className="w-full px-4 py-6"
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.25 }}
+     className="w-full h-full "
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.3 }}
     >
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 h-[calc(100vh-8rem)] lg:flex-row overflow-hidden">
+      {/* UNIFIED HEADER */}
+      <div className="flex items-center justify-between border-b border-border/20 py-2 w-full bg-background/50 backdrop-blur-xl shrink-0">
+        {/* Left: Search Bar (spanning Explorer width) */}
+        <div className="flex items-center lg:w-[32%] px-4 border-r border-border/20">
+          <div className="relative w-full">
+            <MagnifyingGlassIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input 
+              type="text" 
+              placeholder="Search tweaks..." 
+              className="pl-9 h-9 bg-muted/50 border-border/40 shadow-sm focus-visible:ring-1 w-full"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* Right: Actions and Navigation */}
+        <div className="flex-1 flex items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            {activeTweak ? (
+              <>
+                <Badge variant="outline" className="bg-background/50 font-normal shadow-sm">
+                  {activeIndex + 1} / {selectedTweaksArray.length}
+                </Badge>
+                <div className="h-4 w-px bg-border/60 mx-1" />
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                  {activeCategory?.name || "Uncategorized"}
+                </span>
+              </>
+            ) : (
+              <span className="text-xs text-muted-foreground italic pl-2">No tweaks selected</span>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5">
+              {activeTab === "library" && isAdmin && (
+                 <Button variant="outline" size="sm" className="h-8 gap-1.5" onClick={handleCreateTweak}>
+                   <PlusIcon className="h-3.5 w-3.5" /> 
+                   <span className="hidden sm:inline">Add Tweak</span>
+                 </Button>
+              )}
+
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className={cn("h-8 gap-1.5",)}
+                onClick={() => handleRefresh(!!user)}
+                disabled={globalIsLoading}
+              >
+                <ArrowPathIcon className={cn("h-3.5 w-3.5",  globalIsLoading && "animate-spin")} />
+                <span>Refresh</span>
+              </Button>
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex items-center gap-1 border-l border-border/40 pl-3">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handlePrevTweak}
+                disabled={!activeTweak || activeIndex <= 0}
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={handleNextTweak}
+                disabled={!activeTweak || activeIndex >= selectedTweaksArray.length - 1}
+              >
+                <ChevronRightIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex w-full  flex-1 flex-col lg:flex-row h-[calc(100vh-8rem)] mx-auto bg-background/20 backdrop-blur-xl">
         {/* Left: Library Panel (VisualTree) */}
-        <div className="flex w-full flex-col lg:w-1/2 h-full overflow-hidden">
+        <div className="flex w-full flex-col lg:w-[32%] shrink-0 h-full border-b lg:border-b-0 lg:border-r border-border/20 bg-muted/5">
           <VisualTree
+            activeTab={activeTab}
+            onTabChange={setActiveTab}
+            searchQuery={searchQuery}
             categories={categories}
             selectedTweaks={selectedTweaksSet}
             onTweakToggle={handleTweakToggle}
@@ -175,7 +288,7 @@ export default function TweaksContent({ categories }: TweaksContentProps) {
         </div>
 
         {/* Right: Details Panel */}
-        <div className="flex h-full w-full flex-1 flex-col gap-4 lg:w-1/2 overflow-hidden">
+        <div className="flex h-full w-full flex-1 flex-col bg-background/50 backdrop-blur-xl">
           <TweakDetailsPanel
             selectedTweaks={selectedTweaksArray}
             activeTweakId={activeTweakId}

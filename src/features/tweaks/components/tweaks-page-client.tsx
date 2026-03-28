@@ -35,9 +35,7 @@ export default function TweaksPageClient({ categories }: TweaksPageClientProps) 
   }
 
   return (
-    <ScrollArea className="h-full w-full">
       <TweaksContent categories={categories} />
-    </ScrollArea>
   );
 }
 

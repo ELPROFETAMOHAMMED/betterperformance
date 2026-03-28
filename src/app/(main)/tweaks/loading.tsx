@@ -5,7 +5,7 @@ export default function TweaksLoading() {
   return (
     <ScrollArea className="h-full w-full">
       <div className="w-full px-4 py-6">
-        <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 lg:min-h-[calc(100vh-8rem)] lg:flex-row">
+        <div className="mx-auto flex w-full flex-col gap-6 lg:min-h-[calc(100vh-8rem)] lg:flex-row">
           {/* Left: tree with filters skeleton */}
           <div className="flex w-full flex-col gap-4 lg:w-[600px]">
             <div className="flex flex-col gap-3 rounded-[var(--radius-md)] border border-border/40 bg-background/60 p-3">
