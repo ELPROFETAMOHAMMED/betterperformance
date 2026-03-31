@@ -12,20 +12,19 @@ import {
 } from "@/shared/components/ui/sheet";
 import { Button } from "@/shared/components/ui/button";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
-import { Badge } from "@/shared/components/ui/badge";
+// Badge removed
 import { 
   QueueListIcon, 
   TrashIcon, 
   XMarkIcon,
   ArrowDownTrayIcon,
-  StarIcon,
-  CommandLineIcon
+  StarIcon
 } from "@heroicons/react/24/outline";
 import { useSelection } from "@/features/tweaks/context/selection-context";
 import { useTweakDownload } from "@/features/tweaks/hooks/use-tweak-download";
 import { useFavoriteDialog } from "@/features/tweaks/hooks/use-favorite-dialog";
 import { useUser } from "@/shared/hooks/use-user";
-import { cn } from "@/shared/lib/utils";
+// cn removed
 import { motion, AnimatePresence } from "framer-motion";
 
 interface SelectionSheetProps {

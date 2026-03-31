@@ -379,7 +379,7 @@ function ReportsView({
                                 </div>
 
                                 <p className="text-xs text-muted-foreground leading-relaxed italic bg-muted/20 p-3 rounded-lg border border-border/10">
-                                    "{report.description}"
+                                    &quot;{report.description}&quot;
                                 </p>
 
                                 <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">

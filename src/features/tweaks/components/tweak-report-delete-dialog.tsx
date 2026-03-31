@@ -40,7 +40,7 @@ export function TweakReportDeleteDialog({
             <AlertDialogTitle className="text-xl">Retract Report</AlertDialogTitle>
           </div>
           <AlertDialogDescription className="text-sm text-muted-foreground leading-relaxed">
-            Are you sure you want to retract {reportTitle ? <span>your report <strong>"{reportTitle}"</strong></span> : "this report"}? 
+            Are you sure you want to retract {reportTitle ? <span>your report <strong>&quot;{reportTitle}&quot;</strong></span> : "this report"}? 
             <br /><br />
             This action will remove your feedback from the community and cannot be undone.
           </AlertDialogDescription>

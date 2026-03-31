@@ -34,8 +34,8 @@ export async function deleteTweakReport(reportId: string): Promise<{ success: bo
     if (deleteError) throw deleteError;
 
     return { success: true };
-  } catch (error: any) {
+  } catch (error) {
     console.error("Failed to delete report:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }

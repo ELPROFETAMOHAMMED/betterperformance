@@ -50,7 +50,7 @@ export default function HomeContent({ children }: HomeContentProps) {
         setCopied(false);
         timeoutRef.current = null;
       }, 2000);
-    } catch (err) {
+    } catch {
       toast.error("Failed to copy command");
     }
   };

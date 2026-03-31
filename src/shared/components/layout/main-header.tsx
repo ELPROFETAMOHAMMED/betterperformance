@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { SidebarTrigger } from "@/shared/components/ui/sidebar";
 import { BreadcrumbNavigator } from "./breadcrumb-navigator";
 // Input import removed
@@ -13,7 +13,7 @@ import { Badge } from "@/shared/components/ui/badge";
 import { motion, AnimatePresence } from "framer-motion";
 import { TweakSearchOverlay } from "@/features/tweaks/components/search-overlay";
 
-export function MainHeader() {
+function MainHeaderInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
@@ -98,5 +98,13 @@ export function MainHeader() {
         </AnimatePresence>
       </div>
     </header>
+  );
+}
+
+export function MainHeader() {
+  return (
+    <Suspense fallback={<div className="h-14 w-full border-b border-border/40 bg-background/60" />}>
+      <MainHeaderInner />
+    </Suspense>
   );
 }

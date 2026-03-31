@@ -12,15 +12,13 @@ import {
 } from "@/shared/components/ui/command";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { 
-  MagnifyingGlassIcon,
   CommandLineIcon,
-  QueueListIcon,
   SparklesIcon
 } from "@heroicons/react/24/outline";
 import { useSelection } from "@/features/tweaks/context/selection-context";
 import { getSearchSuggestions } from "@/features/tweaks/actions/get-search-tweaks";
 import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
-import { cn } from "@/shared/lib/utils";
+// cn removed
 import { Badge } from "@/shared/components/ui/badge";
 
 export function TweakSearchOverlay({ 
@@ -109,7 +107,7 @@ export function TweakSearchOverlay({
           </div>
         ) : (
           <>
-            <CommandEmpty>No results found for "{search}".</CommandEmpty>
+            <CommandEmpty>No results found for &quot;{search}&quot;.</CommandEmpty>
             
             {topMatches.length > 0 && (
               <CommandGroup heading="Top Matches">

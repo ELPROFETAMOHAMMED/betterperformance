@@ -1,11 +1,9 @@
 "use client";
 
-interface AppFooterProps {
-  className?: string;
-}
+// interface removed
 
 // Footer component removed - returns nothing
-export function AppFooter(_props: AppFooterProps) {
+export function AppFooter() {
   return null;
 }
 

@@ -33,10 +33,7 @@ import {
   PencilIcon,
   EllipsisHorizontalIcon,
 } from "@heroicons/react/24/outline";
-import { 
-  CheckCircleIcon as CheckCircleIconSolid,
-  ExclamationCircleIcon as ExclamationCircleIconSolid,
-} from "@heroicons/react/24/solid";
+import { CheckCircleIcon as CheckCircleIconSolid } from "@heroicons/react/24/solid";
 import { motion, AnimatePresence } from "framer-motion";
 import { TweakItem } from "./tweak-item";
 import { VisualTreeSortMenu } from "./visual-tree-sort-menu";
@@ -85,22 +82,17 @@ export default function VisualTree({
   reportedTweakIds,
   userReports = [],
   allReports = [],
-  userReportDescriptions,
-  allReportDescriptions,
   userFavoriteSelections,
   userHistorySelections,
   onSelectAll,
-  onClearSelection,
   isLoading = false,
   onRenameSelection,
   onDeleteSelection,
   onSaveAsFavorite,
   onRefresh,
-  onCreateTweak,
   onEditCategory,
   searchQuery = "",
   activeTab = "library",
-  onTabChange,
 }: VisualTreeProps) {
   const { user } = useUser();
   const isAdmin = user?.user_metadata?.role === "admin";
@@ -108,13 +100,13 @@ export default function VisualTree({
   const [sortOption, setSortOption] = useState<SortOption>("alphabetical");
   
   // View States
-  const [favoritesScope, setFavoritesScope] = useState<"user" | "global">("user");
-  const [favoritesView, setFavoritesView] = useState<"list" | "tree">("tree"); 
+  const [favoritesScope] = useState<"user" | "global">("user");
+  const [favoritesView] = useState<"list" | "tree">("tree"); 
   const [reportedScope, setReportedScope] = useState<"user" | "global">("global");
-  const [historyView, setHistoryView] = useState<"list" | "tree">("tree");
-  const [historyShowCategory, setHistoryShowCategory] = useState(true);
-  const [popularView, setPopularView] = useState<"list" | "tree">("list");
-  const [popularShowCategory, setPopularShowCategory] = useState(true);
+  const [historyView] = useState<"list" | "tree">("tree");
+  const [historyShowCategory] = useState(true);
+  const [popularView] = useState<"list" | "tree">("list");
+  const [popularShowCategory] = useState(true);
 
   const [displayLimit, setDisplayLimit] = useState(20);
   const scrollViewportRef = useRef<HTMLDivElement>(null);

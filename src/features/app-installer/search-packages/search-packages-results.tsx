@@ -1,9 +1,9 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, type Variants } from "framer-motion";
 import { SearchPackagesResultItem } from "./search-packages-result-item";
 import { Spinner } from "@/shared/components/ui/spinner";
-import { Empty } from "@/shared/components/ui/empty";
+import { Empty, EmptyTitle, EmptyDescription } from "@/shared/components/ui/empty";
 import type { WingetPackage } from "../types/winget-package";
 
 interface SearchPackagesResultsProps {
@@ -14,7 +14,7 @@ interface SearchPackagesResultsProps {
   query: string;
 }
 
-const container = {
+const container: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -24,7 +24,7 @@ const container = {
   },
 };
 
-const item = {
+const item: Variants = {
   hidden: { opacity: 0, y: 20, filter: "blur(4px)" },
   show: { 
     opacity: 1, 
@@ -69,11 +69,10 @@ export function SearchPackagesResults({
   if (query.trim().length >= 2 && packages.length === 0) {
     return (
       <div className="py-20 flex justify-center w-full">
-        <Empty
-          title="No applications found"
-          description={`We couldn't find any packages matching "${query}". Try searching for Chrome, Steam, or VS Code.`}
-          className="max-w-md border-none bg-transparent shadow-none"
-        />
+        <Empty className="max-w-md border-none bg-transparent shadow-none">
+          <EmptyTitle>No applications found</EmptyTitle>
+          <EmptyDescription>We couldn&apos;t find any packages matching &quot;{query}&quot;. Try searching for Chrome, Steam, or VS Code.</EmptyDescription>
+        </Empty>
       </div>
     );
   }
