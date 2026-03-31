@@ -5,7 +5,7 @@ interface AppFooterProps {
 }
 
 // Footer component removed - returns nothing
-export function AppFooter({ className }: AppFooterProps) {
+export function AppFooter(_props: AppFooterProps) {
   return null;
 }
 

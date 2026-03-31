@@ -159,10 +159,10 @@ export default function VisualTree({
   const { filteredCategories, flatTweaks } = useMemo(() => {
     let currentSort = sortOption;
     let historyOnly = false;
-    let reportedOnly = false;
+    const reportedOnly = false;
     let favoritesOnly = false;
     let userFavoritesOnly = false;
-    let userReportedOnly = false;
+    const userReportedOnly = false;
     let minDownloads = 0;
 
     if (activeTab === "popular") {
@@ -850,7 +850,7 @@ function ReportsExplorer({
                                             {report.title}
                                         </h5>
                                         <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed italic">
-                                            "{report.description}"
+                                            &quot;{report.description}&quot;
                                         </p>
                                     </div>
                                     

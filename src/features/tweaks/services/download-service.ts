@@ -3,7 +3,7 @@
  */
 
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
-import { cleanTweakCode, combineTweakBlocks } from "@/features/tweaks/utils/code-cleaner";
+import { cleanTweakCode } from "@/features/tweaks/utils/code-cleaner";
 import {
   prependRestorePointCode,
   wrapWithCompletionNotification,

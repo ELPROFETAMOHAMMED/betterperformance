@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react";
 import { SidebarTrigger } from "@/shared/components/ui/sidebar";
 import { BreadcrumbNavigator } from "./breadcrumb-navigator";
-import { Input } from "@/shared/components/ui/input";
+// Input import removed
 import { MagnifyingGlassIcon, QueueListIcon } from "@heroicons/react/24/outline";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useSelection } from "@/features/tweaks/context/selection-context";
 import { SelectionSheet } from "@/features/tweaks/components/selection-sheet";
 import { Badge } from "@/shared/components/ui/badge";
-import { cn } from "@/shared/lib/utils";
+// cn import removed
 import { motion, AnimatePresence } from "framer-motion";
 import { TweakSearchOverlay } from "@/features/tweaks/components/search-overlay";
 
@@ -18,7 +18,7 @@ export function MainHeader() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
   const { selectedTweaksArray } = useSelection();
-  const [searchValue, setSearchValue] = useState(searchParams.get("q") || "");
+  const [searchValue] = useState(searchParams.get("q") || "");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Update URL search params

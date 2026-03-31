@@ -69,7 +69,7 @@ export function useTweakHistoryFilters(
       if (!hasUser) return;
       try {
         await refetchHistory();
-      } catch (error) {
+      } catch {
         toast.error("Failed to refresh explorer");
       }
     },
