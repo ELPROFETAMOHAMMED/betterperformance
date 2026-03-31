@@ -29,7 +29,7 @@ export function MainHeader() {
     } else {
       params.delete("q");
     }
-    
+
     // Only update if the query changed
     const currentQ = searchParams.get("q") || "";
     if (currentQ !== searchValue) {
@@ -59,9 +59,9 @@ export function MainHeader() {
           <BreadcrumbNavigator />
         </div>
       </div>
-      
+
       <div className="flex items-center gap-4 flex-1 justify-end">
-        <button 
+        <button
           onClick={() => setIsSearchOpen(true)}
           className="relative w-full max-w-[300px] group outline-none"
         >
@@ -74,9 +74,9 @@ export function MainHeader() {
           </div>
         </button>
 
-        <TweakSearchOverlay 
-          open={isSearchOpen} 
-          onOpenChange={setIsSearchOpen} 
+        <TweakSearchOverlay
+          open={isSearchOpen}
+          onOpenChange={setIsSearchOpen}
         />
 
         <AnimatePresence>
