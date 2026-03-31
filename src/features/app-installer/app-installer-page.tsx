@@ -8,11 +8,13 @@ import { useSearchPackages } from "./search-packages/use-search-packages";
 import { generateInstallerScript } from "./generate-installer-script/generate-installer-script";
 import { toast } from "sonner";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
+import { Copy, Check, Sparkles, Terminal, ShoppingCart, Download } from "lucide-react";
 import { Button } from "@/shared/components/ui/button";
-import { Copy, Download, Check, Sparkles, Terminal } from "lucide-react";
 import type { WingetPackage } from "./types/winget-package";
 import { motion } from "framer-motion";
 import { cn } from "@/shared/lib/utils";
+import { useSelection } from "@/features/tweaks/context/selection-context";
+import type { Tweak } from "@/features/tweaks/types/tweak.types";
 
 /**
  * Main feature orchestrator for the App Installer generator.
@@ -26,6 +28,7 @@ export default function AppInstallerPage() {
   const [hasCopied, setHasCopied] = useState(false);
 
   const { packages, isLoading, error } = useSearchPackages(query);
+  const { toggleTweak } = useSelection();
 
   const handleTogglePackage = (id: string) => {
     setSelectedPackages((prev) => {
@@ -67,7 +70,26 @@ export default function AppInstallerPage() {
   };
 
   const downloadScript = () => {
-    const blob = new Blob([generatedScript], { type: "text/plain" });
+    const scriptContent = `function Invoke-BatchAppInstaller {
+    [CmdletBinding()]
+    param ()
+
+    try {
+        Write-Host "Starting batch application installation..." -ForegroundColor Cyan
+        
+${generatedScript.split('\\n').map(line => '        ' + line).join('\\n')}
+
+        Write-Host "Application installation completed successfully." -ForegroundColor Green
+    } catch {
+        Write-Host "An error occurred during installation: $($_.Exception.Message)" -ForegroundColor Red
+        throw
+    }
+}
+
+Invoke-BatchAppInstaller
+`;
+
+    const blob = new Blob([scriptContent], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -75,6 +97,24 @@ export default function AppInstallerPage() {
     a.click();
     URL.revokeObjectURL(url);
     toast.success("Batch file downloaded successfully");
+  };
+
+  const addToGlobalState = () => {
+    if (selectedPackages.length === 0) return;
+    
+    const customTweak: Tweak = {
+      id: `winget-batch-${Date.now()}`,
+      title: `App Installer Batch (${selectedPackages.length})`,
+      description: `Silent install for: ${selectedPackages.map(p => p.Latest.Name).join(", ")}`,
+      code: `\n# App Installer Batch\n${generatedScript}\n`,
+      download_count: 0,
+      favorite_count: 0,
+      is_visible: true,
+    };
+    
+    toggleTweak(customTweak);
+    toast.success("Added to global queue successfully!");
+    setIsDialogOpen(false);
   };
 
   return (
@@ -147,7 +187,7 @@ export default function AppInstallerPage() {
 
       {/* Script Preview Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-3xl overflow-hidden border-border/40 bg-card/95 backdrop-blur-2xl p-0 rounded-3xl shadow-2xl">
+        <DialogContent className="sm:max-w-5xl overflow-hidden border-border/40 bg-card/95 backdrop-blur-2xl p-0 rounded-3xl shadow-2xl">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/20 via-primary to-primary/20" />
           
           <DialogHeader className="p-8 pb-4">
@@ -170,7 +210,7 @@ export default function AppInstallerPage() {
                 <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/40" />
                 <span className="ml-2 text-[10px] font-mono text-muted-foreground/60">install-apps.ps1 — PowerShell</span>
               </div>
-              <pre className="bg-secondary/40 pt-12 pb-8 px-8 font-mono text-sm overflow-x-auto text-foreground/80 whitespace-pre leading-relaxed custom-scrollbar max-h-[300px]">
+              <pre className="bg-secondary/40 pt-12 pb-8 px-8 font-mono text-sm overflow-x-auto whitespace-pre-wrap break-all text-foreground/80 leading-relaxed custom-scrollbar max-h-[400px]">
                 {generatedScript}
               </pre>
               <div className="absolute bottom-4 right-4">
@@ -193,14 +233,22 @@ export default function AppInstallerPage() {
           <div className="p-8 pt-0 flex gap-4">
             <Button 
               className="flex-1 h-14 text-base font-bold rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all duration-300" 
+              onClick={addToGlobalState}
+            >
+              <ShoppingCart className="h-5 w-5 mr-2" />
+              Add to Global Tweak Queue
+            </Button>
+            <Button 
+              variant="secondary"
+              className="flex-1 h-14 text-base font-bold rounded-2xl transition-all duration-300 border border-border/20 shadow-sm" 
               onClick={downloadScript}
             >
               <Download className="h-5 w-5 mr-2" />
-              Download PowerShell Script
+              Download as .ps1
             </Button>
             <Button 
-              variant="outline" 
-              className="h-14 px-8 text-base font-bold rounded-2xl bg-transparent border-border/40 hover:bg-secondary/40" 
+              variant="ghost" 
+              className="h-14 px-6 text-base font-bold rounded-2xl bg-transparent border-border/40 hover:bg-muted" 
               onClick={() => setIsDialogOpen(false)}
             >
               Close
