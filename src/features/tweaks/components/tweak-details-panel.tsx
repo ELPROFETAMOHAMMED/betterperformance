@@ -4,50 +4,37 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
-import { useTweakReports } from "@/features/tweaks/hooks/use-tweak-reports";
 import { AnimatedCounter } from "@/features/tweaks/components/animated-counter";
 import { cn } from "@/shared/lib/utils";
-import { formatDistanceToNow } from "date-fns";
 import { useUser } from "@/shared/hooks/use-user";
 import { useTheme } from "next-themes";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { formatDistanceToNow } from "date-fns";
+import { deleteTweakReport } from "../actions/delete-report";
+import { useQueryClient } from "@tanstack/react-query";
+import type { TweakReport } from "@/features/tweaks/hooks/use-tweak-reports-filters";
 
 // UI Components
 import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
-import { Skeleton } from "@/shared/components/ui/skeleton";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/shared/components/ui/tooltip";
 
 // Icons
 import {
   ChatBubbleLeftRightIcon,
   DocumentTextIcon,
-  ExclamationTriangleIcon,
-  FlagIcon,
-  CheckCircleIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   ArrowDownTrayIcon,
   BookmarkIcon,
-  ClipboardIcon,
   InformationCircleIcon,
-  ClockIcon,
   CommandLineIcon,
-  PencilIcon,
+  FlagIcon,
+  TrashIcon,
+  UsersIcon,
+  UserIcon,
+  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
-import { 
-  CheckCircleIcon as CheckCircleIconSolid, 
-  ExclamationCircleIcon as ExclamationCircleIconSolid,
-  StarIcon as StarIconSolid 
-} from "@heroicons/react/24/solid";
 
 interface TweakDetailsPanelProps {
   selectedTweaks: Tweak[];
@@ -63,39 +50,23 @@ interface TweakDetailsPanelProps {
   isCopying: boolean;
   isSavingFavorite: boolean;
   onEditTweak?: (tweak: Tweak) => void;
+  userReports?: TweakReport[];
+  allReports?: TweakReport[];
 }
 
 export function TweakDetailsPanel({
   selectedTweaks,
   activeTweakId,
-  onTweakChange,
-  categories,
-  onReport,
-  onDownload,
-  onCopy,
-  onSaveFavorite,
-  onSaveSingleFavorite,
-  isDownloading,
-  isCopying,
-  isSavingFavorite,
-  onEditTweak,
-}: TweakDetailsPanelProps) {
-  const { user } = useUser();
-  const isAdmin = user?.user_metadata?.role === "admin";
+  isAdmin,
+  userReports = [],
+  allReports = [],
+}: TweakDetailsPanelProps & { isAdmin?: boolean }) {
   const [activeTab, setActiveTab] = useState("details");
   const { resolvedTheme } = useTheme();
 
   const activeTweak = useMemo(
     () => selectedTweaks.find((t) => t.id === activeTweakId) || selectedTweaks[0] || null,
     [selectedTweaks, activeTweakId]
-  );
-
-  const activeCategory = useMemo(
-    () =>
-      activeTweak
-        ? categories.find((c) => c.id === activeTweak.category_id)
-        : null,
-    [activeTweak, categories]
   );
 
   const displayDownloadCount = activeTweak?.download_count ?? 0;
@@ -145,8 +116,8 @@ export function TweakDetailsPanel({
   return (
     <div className="flex h-full flex-col overflow-hidden bg-transparent">
       {/* Main Content */}
-      <div className="flex-1 overflow-hidden flex flex-col">
-        <div className="px-6 xl:px-8 pt-8 pb-4">
+      <div className="flex-1 overflow-hidden flex flex-col min-h-0">
+        <div className="px-6 xl:px-8 pt-8 pb-4 shrink-0">
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -171,50 +142,16 @@ export function TweakDetailsPanel({
                 </span>
               </div>
             </div>
-            <div className="flex items-center gap-1">
-              {isAdmin && onEditTweak && activeTweak && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="text-muted-foreground hover:text-primary hover:bg-primary/10"
-                        onClick={() => onEditTweak(activeTweak)}
-                      >
-                        <PencilIcon className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Edit tweak</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                      onClick={onReport}
-                    >
-                      <FlagIcon className="h-4 w-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>Report issue</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            </div>
           </div>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
-          <div className="px-6 xl:px-8">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col min-h-0 overflow-hidden">
+          <div className="px-6 xl:px-8 shrink-0">
             <TabsList className="w-full justify-start h-auto p-0 bg-transparent border-b border-border/20 rounded-none gap-8">
               <TabTrigger value="details" icon={<InformationCircleIcon className="h-4 w-4" />}>
                 Details
               </TabTrigger>
-              <TabTrigger value="reports" icon={<ExclamationTriangleIcon className="h-4 w-4" />}>
+              <TabTrigger value="reports" icon={<FlagIcon className="h-4 w-4" />}>
                 Reports
               </TabTrigger>
               <TabTrigger value="comments" icon={<ChatBubbleLeftRightIcon className="h-4 w-4" />}>
@@ -223,19 +160,19 @@ export function TweakDetailsPanel({
             </TabsList>
           </div>
 
-          <div className="flex-1 overflow-hidden bg-background/50">
+          <div className="flex-1 overflow-hidden min-h-0 bg-background/50">
             <TabsContent value="details" className="h-full m-0">
               <ScrollArea className="h-full">
-                <div className="px-6 xl:px-8 py-6 max-w-4xl mx-auto space-y-10">
+                <div className="px-6 xl:px-8 py-6 max-w-4xl mx-auto space-y-10 pb-16">
                   <div className="space-y-2">
-                    <h4 className="text-sm font-medium text-foreground">Description</h4>
+                    <h4 className="text-sm font-medium text-foreground uppercase tracking-wider">Description</h4>
                     <p className="text-sm text-muted-foreground leading-relaxed">
                       {activeTweak.description || "No description provided."}
                     </p>
                   </div>
 
                   <div className="space-y-3">
-                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border/40 pb-2">
+                    <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border/40 pb-2 uppercase tracking-wider">
                       <CommandLineIcon className="h-4 w-4 text-muted-foreground" />
                       PowerShell Script
                     </h4>
@@ -246,10 +183,10 @@ export function TweakDetailsPanel({
                           style={resolvedTheme === "dark" ? vscDarkPlus : vs}
                           customStyle={{
                             margin: 0,
-                            padding: "1rem",
+                            padding: "1.5rem",
                             background: "transparent",
                             fontSize: "0.85rem",
-                            lineHeight: "1.5",
+                            lineHeight: "1.6",
                           }}
                           wrapLongLines={true}
                         >
@@ -263,11 +200,11 @@ export function TweakDetailsPanel({
 
                   {activeTweak.tweak_comment && (
                     <div className="space-y-2 mt-6">
-                      <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border/40 pb-2">
+                      <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 border-b border-border/40 pb-2 uppercase tracking-wider">
                         <DocumentTextIcon className="h-4 w-4 text-primary" />
                         Author Notes
                       </h4>
-                      <div className="pl-3 border-l-2 border-primary/30 py-1">
+                      <div className="pl-4 border-l-2 border-primary/30 py-1">
                         <p className="text-xs text-muted-foreground leading-relaxed italic">
                           {activeTweak.tweak_comment}
                         </p>
@@ -290,15 +227,19 @@ export function TweakDetailsPanel({
             </TabsContent>
 
             <TabsContent value="reports" className="h-full m-0">
-              <ReportsList tweakId={activeTweak.id} />
+               <ReportsView 
+                 activeTweakId={activeTweak.id} 
+                 userReports={userReports} 
+                 allReports={allReports} 
+               />
             </TabsContent>
 
             <TabsContent value="comments" className="h-full m-0">
-              <div className="flex h-full flex-col items-center justify-center p-8 text-center">
-                <div className="rounded-full bg-muted p-4 mb-3">
-                  <ChatBubbleLeftRightIcon className="h-6 w-6 text-muted-foreground" />
+              <div className="flex h-full flex-col items-center justify-center p-8 text-center bg-background/5">
+                <div className="rounded-full bg-muted/30 p-4 mb-3">
+                  <ChatBubbleLeftRightIcon className="h-6 w-6 text-muted-foreground/60" />
                 </div>
-                <h3 className="font-medium">Comments coming soon</h3>
+                <h3 className="font-medium text-foreground">Comments coming soon</h3>
                 <p className="text-sm text-muted-foreground mt-1 max-w-xs">
                   Join the discussion and share your experience with this tweak in a future update.
                 </p>
@@ -307,78 +248,151 @@ export function TweakDetailsPanel({
           </div>
         </Tabs>
       </div>
-
-      {/* Footer Actions */}
-      <div className="p-4 border-t border-border/40 bg-transparent">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <TooltipProvider>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9"
-                    onClick={() => onSaveSingleFavorite(activeTweak)}
-                    disabled={isSavingFavorite}
-                  >
-                    <StarIconSolid className="h-4 w-4 text-yellow-500" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Save this tweak to favorites</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9"
-                    onClick={onSaveFavorite}
-                    disabled={isSavingFavorite}
-                  >
-                    <BookmarkIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Save current selection to history</TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="h-9 w-9"
-                    onClick={onCopy}
-                    disabled={isCopying}
-                  >
-                    <ClipboardIcon className="h-4 w-4" />
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Copy script</TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Button
-              size="sm"
-              onClick={onDownload}
-              disabled={isDownloading}
-              className="min-w-[120px]"
-            >
-              {isDownloading ? (
-                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-              ) : (
-                <>
-                  <ArrowDownTrayIcon className="h-4 w-4 mr-2" />
-                  Download
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-      </div>
     </div>
   );
+}
+
+function ReportsView({ 
+    activeTweakId, 
+    userReports, 
+    allReports 
+}: { 
+    activeTweakId: string; 
+    userReports: TweakReport[]; 
+    allReports: TweakReport[]; 
+}) {
+    const [scope, setScope] = useState<"user" | "global">("global");
+    const { user } = useUser();
+    const queryClient = useQueryClient();
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+    // Filter reports for the active tweak
+    const filteredReports = useMemo(() => {
+        const base = scope === "user" ? userReports : allReports;
+        return base.filter(r => r.tweak_id === activeTweakId);
+    }, [scope, userReports, allReports, activeTweakId]);
+
+    const handleDelete = async (reportId: string) => {
+        if (!window.confirm("Are you sure you want to retract your report?")) return;
+        
+        setIsDeleting(reportId);
+        try {
+          const result = await deleteTweakReport(reportId);
+          if (result.success) {
+            queryClient.invalidateQueries({ queryKey: ["all-reports-with-descriptions"] });
+            queryClient.invalidateQueries({ queryKey: ["user-reports"] });
+          } else {
+            alert(result.error || "Failed to delete report");
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsDeleting(null);
+        }
+    };
+
+    return (
+        <ScrollArea className="h-full">
+            <div className="px-6 xl:px-8 py-6 max-w-4xl mx-auto space-y-6">
+                <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                        <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider">Reports Management</h4>
+                        <p className="text-xs text-muted-foreground">Community feedback for this tweak</p>
+                    </div>
+                    <div className="flex items-center p-1 bg-muted rounded-lg border border-border/20">
+                        <Button
+                            variant={scope === "global" ? "secondary" : "ghost"}
+                            size="sm"
+                            className="h-7 px-3 rounded-md gap-1.5"
+                            onClick={() => setScope("global")}
+                        >
+                            <UsersIcon className="h-3 w-3" />
+                            <span className="text-[11px] font-medium">Global</span>
+                            <Badge variant="outline" className="h-4 px-1 text-[9px]">{allReports.filter(r => r.tweak_id === activeTweakId).length}</Badge>
+                        </Button>
+                        <Button
+                            variant={scope === "user" ? "secondary" : "ghost"}
+                            size="sm"
+                            className="h-7 px-3 rounded-md gap-1.5"
+                            onClick={() => setScope("user")}
+                            disabled={!user}
+                        >
+                            <UserIcon className="h-3 w-3" />
+                            <span className="text-[11px] font-medium">Mine</span>
+                            <Badge variant="outline" className="h-4 px-1 text-[9px]">{userReports.filter(r => r.tweak_id === activeTweakId).length}</Badge>
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="grid gap-3">
+                    {filteredReports.length === 0 ? (
+                        <div className="py-20 text-center border-2 border-dashed border-border/40 rounded-xl bg-muted/5">
+                            <ExclamationTriangleIcon className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
+                            <h5 className="font-medium text-foreground">No reports found</h5>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                {scope === "user" ? "You haven't reported this tweak yet." : "No community reports for this tweak."}
+                            </p>
+                        </div>
+                    ) : (
+                        filteredReports.map((report) => (
+                            <div
+                                key={report.id}
+                                className="group relative flex flex-col gap-3 p-4 rounded-xl bg-card border border-border/40 hover:border-primary/40 transition-all shadow-sm"
+                            >
+                                <div className="flex items-start justify-between">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-1.5">
+                                            <Badge variant="outline" className={cn(
+                                                "text-[10px] h-4 font-bold uppercase tracking-tighter px-1.5",
+                                                report.status === "resolved" ? "text-emerald-500 border-emerald-500/20" : "text-amber-500 border-amber-500/20"
+                                            )}>
+                                                {report.status}
+                                            </Badge>
+                                            <span className={cn(
+                                                "text-[10px] font-bold uppercase tracking-wider",
+                                                report.risk_level === "high" ? "text-red-500" :
+                                                report.risk_level === "medium" ? "text-amber-500" : "text-emerald-500"
+                                            )}>
+                                                {report.risk_level} risk
+                                            </span>
+                                        </div>
+                                        <h5 className="text-sm font-semibold text-foreground line-clamp-1">
+                                            {report.title}
+                                        </h5>
+                                    </div>
+                                    
+                                    {user?.id === report.user_id && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                                            onClick={() => handleDelete(report.id)}
+                                            disabled={isDeleting === report.id}
+                                        >
+                                            {isDeleting === report.id ? (
+                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                            ) : (
+                                                <TrashIcon className="h-4 w-4" />
+                                            )}
+                                        </Button>
+                                    )}
+                                </div>
+
+                                <p className="text-xs text-muted-foreground leading-relaxed italic bg-muted/20 p-3 rounded-lg border border-border/10">
+                                    "{report.description}"
+                                </p>
+
+                                <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
+                                    <span>{report.user_id === user?.id ? "Your report" : "Community report"}</span>
+                                    <span>{formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}</span>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
+            </div>
+        </ScrollArea>
+    );
 }
 
 function TabTrigger({ value, icon, children }: { value: string; icon: React.ReactNode; children: React.ReactNode }) {
@@ -392,90 +406,5 @@ function TabTrigger({ value, icon, children }: { value: string; icon: React.Reac
         {children}
       </div>
     </TabsTrigger>
-  );
-}
-
-function ReportsList({ tweakId }: { tweakId: string }) {
-  const { data: reports, isLoading } = useTweakReports(tweakId);
-
-  if (isLoading) {
-    return (
-      <div className="p-5 space-y-4">
-        {[1, 2, 3].map((i) => (
-          <div key={i} className="flex gap-3">
-            <Skeleton className="h-8 w-8 rounded-full" />
-            <div className="space-y-2 flex-1">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-full" />
-            </div>
-          </div>
-        ))}
-      </div>
-    );
-  }
-
-  if (!reports?.length) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center p-8 text-center text-muted-foreground">
-        <CheckCircleIcon className="h-10 w-10 mb-2 opacity-20" />
-        <p className="text-sm">No reports found.</p>
-        <p className="text-xs opacity-70">This tweak seems to be working well!</p>
-      </div>
-    );
-  }
-
-  return (
-    <ScrollArea className="h-full">
-      <div className="p-5 space-y-4">
-        {reports.map((report) => (
-          <div key={report.id} className="flex gap-3 items-start p-3 rounded-lg bg-card border border-border/40">
-            <div className={cn(
-              "mt-0.5 rounded-full p-1.5",
-              report.status === "resolved" ? "bg-emerald-500/10 text-emerald-500" :
-              report.risk_level === "high" ? "bg-red-500/10 text-red-500" :
-              report.risk_level === "medium" ? "bg-amber-500/10 text-amber-500" :
-              "bg-blue-500/10 text-blue-500"
-            )}>
-              {report.status === "resolved" ? (
-                <CheckCircleIconSolid className="h-4 w-4" />
-              ) : (
-                <ExclamationCircleIconSolid className="h-4 w-4" />
-              )}
-            </div>
-            <div className="flex-1 space-y-1">
-              <div className="flex items-center justify-between">
-                <h5 className="text-sm font-medium text-foreground">{report.title}</h5>
-                <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-                  <ClockIcon className="h-3 w-3" />
-                  {formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {report.description}
-              </p>
-              <div className="flex items-center gap-2 pt-1">
-                <Badge variant="outline" className={cn(
-                  "text-[10px] px-1.5 py-0 h-5 font-normal",
-                  report.status === "resolved" ? "border-emerald-500/30 text-emerald-500" :
-                  report.status === "pending" ? "border-amber-500/30 text-amber-500" :
-                  "border-muted text-muted-foreground"
-                )}>
-                  {report.status}
-                </Badge>
-                {report.risk_level && (
-                   <span className="text-[10px] text-muted-foreground px-1.5 border-l border-border/50">
-                     Risk: <span className={cn(
-                       report.risk_level === "high" ? "text-red-500" :
-                       report.risk_level === "medium" ? "text-amber-500" :
-                       "text-emerald-500"
-                     )}>{report.risk_level}</span>
-                   </span>
-                )}
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </ScrollArea>
   );
 }

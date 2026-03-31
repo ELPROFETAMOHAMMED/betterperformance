@@ -13,7 +13,7 @@ export async function GET() {
     // Fetch reports created by the current user
     const { data, error } = await supabase
       .from("tweak_reports")
-      .select("tweak_id, description, created_at")
+      .select("id, tweak_id, user_id, title, status, risk_level, description, created_at")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
 

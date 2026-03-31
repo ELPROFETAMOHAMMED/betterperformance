@@ -4,19 +4,18 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/shared/hooks/use-user";
 
-interface UserReport {
+export interface TweakReport {
+  id: string;
   tweak_id: string;
+  user_id: string;
+  title: string;
+  status: "pending" | "resolved" | "dismissed";
+  risk_level: "low" | "medium" | "high";
   description: string;
   created_at: string;
 }
 
-interface AllReportWithDescription {
-  tweak_id: string;
-  description: string;
-  created_at: string;
-}
-
-async function fetchUserReports(): Promise<UserReport[]> {
+async function fetchUserReports(): Promise<TweakReport[]> {
   const response = await fetch("/api/tweaks/user-reports");
   if (!response.ok) {
     throw new Error("Failed to fetch user reports");
@@ -24,17 +23,19 @@ async function fetchUserReports(): Promise<UserReport[]> {
   return response.json();
 }
 
-async function fetchAllReportsWithDescriptions(): Promise<AllReportWithDescription[]> {
+async function fetchAllReports(): Promise<TweakReport[]> {
   const response = await fetch("/api/tweaks/all-reports-with-descriptions");
   if (!response.ok) {
-    throw new Error("Failed to fetch all reports with descriptions");
+    throw new Error("Failed to fetch all reports");
   }
   return response.json();
 }
 
 interface UseTweakReportsFiltersResult {
   reportedTweakIds: Set<string>;
-  userReportDescriptions: Map<string, string>;
+  userReports: TweakReport[];
+  allReports: TweakReport[];
+  userReportDescriptions: Map<string, string>; // Legacy support for other parts of the UI
   allReportDescriptions: Map<string, string>;
   isLoading: boolean;
   refreshReports: () => Promise<void>;
@@ -46,7 +47,7 @@ export function useTweakReportsFilters(
   const { user } = useUser();
 
   const {
-    data: userReports,
+    data: userReportsData,
     isLoading: isUserReportsLoading,
     refetch: refetchUserReports,
   } = useQuery({
@@ -57,12 +58,12 @@ export function useTweakReportsFilters(
   });
 
   const {
-    data: allReportsWithDescriptions,
+    data: allReportsData,
     isLoading: isAllReportsLoading,
     refetch: refetchAllReports,
   } = useQuery({
     queryKey: ["all-reports-with-descriptions"],
-    queryFn: fetchAllReportsWithDescriptions,
+    queryFn: fetchAllReports,
     enabled: enabled && !!user,
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
@@ -71,24 +72,25 @@ export function useTweakReportsFilters(
     reportedTweakIds,
     userReportDescriptions,
     allReportDescriptions,
+    userReports,
+    allReports,
   } = useMemo(() => {
     const reportedIds = new Set<string>();
     const userDescriptions = new Map<string, string>();
     const allDescriptions = new Map<string, string>();
+    const uReports = userReportsData || [];
+    const aReports = allReportsData || [];
 
-    if (userReports) {
-      for (const report of userReports) {
-        reportedIds.add(report.tweak_id);
-        // Store the most recent description for each tweak (already sorted by created_at desc)
-        if (!userDescriptions.has(report.tweak_id)) {
-          userDescriptions.set(report.tweak_id, report.description);
-        }
+    for (const report of aReports) {
+      reportedIds.add(report.tweak_id);
+      if (!allDescriptions.has(report.tweak_id)) {
+        allDescriptions.set(report.tweak_id, report.description);
       }
     }
 
-    if (allReportsWithDescriptions) {
-      for (const report of allReportsWithDescriptions) {
-        allDescriptions.set(report.tweak_id, report.description);
+    for (const report of uReports) {
+      if (!userDescriptions.has(report.tweak_id)) {
+        userDescriptions.set(report.tweak_id, report.description);
       }
     }
 
@@ -96,8 +98,10 @@ export function useTweakReportsFilters(
       reportedTweakIds: reportedIds,
       userReportDescriptions: userDescriptions,
       allReportDescriptions: allDescriptions,
+      userReports: uReports,
+      allReports: aReports,
     };
-  }, [userReports, allReportsWithDescriptions]);
+  }, [userReportsData, allReportsData]);
 
   const refreshReports = async () => {
     await Promise.all([
@@ -108,10 +112,11 @@ export function useTweakReportsFilters(
 
   return {
     reportedTweakIds,
+    userReports,
+    allReports,
     userReportDescriptions,
     allReportDescriptions,
     isLoading: (isUserReportsLoading || isAllReportsLoading) && enabled,
     refreshReports,
   };
 }
-

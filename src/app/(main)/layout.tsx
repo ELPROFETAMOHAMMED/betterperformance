@@ -1,21 +1,25 @@
 "use client";
 
-import MainHeader from "@/shared/components/layout/main-header";
+import { MainHeader } from "@/shared/components/layout/main-header";
+import { MainSidebar } from "@/shared/components/layout/main-sidebar";
 import QueryProvider from "@/shared/providers/query-client-provider";
-import { TooltipProvider } from "@/shared/components/ui/tooltip";
+import { SidebarProvider, SidebarInset } from "@/shared/components/ui/sidebar";
 import { Toaster } from "@/shared/components/ui/sonner";
+import { SelectionProvider } from "@/features/tweaks/context/selection-context";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
-    <div
-      className={"flex flex-col w-full h-screen overflow-hidden"}
-      suppressHydrationWarning={true}
-    >
-      <MainHeader />
-      <div className="flex-1 overflow-hidden">
-        {children}
-      </div>
-    </div>
+    <SelectionProvider>
+      <SidebarProvider>
+        <MainSidebar />
+        <SidebarInset className="h-screen flex flex-col overflow-hidden">
+          <MainHeader />
+          <div className="flex-1 min-h-0 container max-w-none p-4 md:p-6 lg:p-8">
+            {children}
+          </div>
+        </SidebarInset>
+      </SidebarProvider>
+    </SelectionProvider>
   );
 }
 
@@ -26,10 +30,8 @@ export default function MainLayout({
 }) {
   return (
     <QueryProvider>
-      <TooltipProvider>
-        <LayoutContent>{children}</LayoutContent>
-        <Toaster closeButton position="top-right"/>
-      </TooltipProvider>
+      <LayoutContent>{children}</LayoutContent>
+      <Toaster closeButton position="top-right"/>
     </QueryProvider>
   );
 }

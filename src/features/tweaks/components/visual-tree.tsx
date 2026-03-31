@@ -9,9 +9,8 @@ import {
 } from "@/features/tweaks/utils/filter-tweaks";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { Button } from "@/shared/components/ui/button";
-import { Input } from "@/shared/components/ui/input";
-import { Tabs, TabsList } from "@/shared/components/ui/tabs";
 import { Skeleton } from "@/shared/components/ui/skeleton";
+import { Badge } from "@/shared/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,37 +19,35 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { 
-  Square2StackIcon,
   FolderIcon,
-  FireIcon,
   ClockIcon,
   ExclamationTriangleIcon,
-  MagnifyingGlassIcon,
   TrashIcon,
   StarIcon,
-  ListBulletIcon,
-  QueueListIcon,
+  UsersIcon,
   UserIcon,
-  GlobeAmericasIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   FolderOpenIcon,
   CheckCircleIcon,
   PencilIcon,
   EllipsisHorizontalIcon,
-  ArrowPathIcon,
-  PlusIcon,
-  ArrowsPointingOutIcon,
-  ArrowsPointingInIcon,
 } from "@heroicons/react/24/outline";
-import { CheckCircleIcon as CheckCircleIconSolid } from "@heroicons/react/24/solid";
+import { 
+  CheckCircleIcon as CheckCircleIconSolid,
+  ExclamationCircleIcon as ExclamationCircleIconSolid,
+} from "@heroicons/react/24/solid";
 import { motion, AnimatePresence } from "framer-motion";
 import { TweakItem } from "./tweak-item";
-import { VisualTreeTabTrigger } from "./visual-tree-tab-trigger";
 import { VisualTreeSortMenu } from "./visual-tree-sort-menu";
 import { TweaksEmptyState } from "./tweaks-empty-state";
 import { useUser } from "@/shared/hooks/use-user";
 import DynamicIcon from "@/shared/components/common/dynamic-icon";
+import type { TweakReport } from "@/features/tweaks/hooks/use-tweak-reports-filters";
+import { formatDistanceToNow } from "date-fns";
+import { deleteTweakReport } from "../actions/delete-report";
+import { useQueryClient } from "@tanstack/react-query";
+import { TweakReportDeleteDialog } from "./tweak-report-delete-dialog";
 
 interface VisualTreeProps {
   categories: TweakCategory[];
@@ -59,6 +56,8 @@ interface VisualTreeProps {
   historyTweakIds?: Set<string>;
   favoriteTweakIds?: Set<string>;
   reportedTweakIds?: Set<string>;
+  userReports?: TweakReport[];
+  allReports?: TweakReport[];
   userReportDescriptions?: Map<string, string>;
   allReportDescriptions?: Map<string, string>;
   userFavoriteSelections?: TweakHistoryEntry[];
@@ -84,6 +83,8 @@ export default function VisualTree({
   historyTweakIds,
   favoriteTweakIds,
   reportedTweakIds,
+  userReports = [],
+  allReports = [],
   userReportDescriptions,
   allReportDescriptions,
   userFavoriteSelections,
@@ -105,28 +106,19 @@ export default function VisualTree({
   const isAdmin = user?.user_metadata?.role === "admin";
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [sortOption, setSortOption] = useState<SortOption>("alphabetical");
-
-  const handleTabChange = (val: string) => {
-    if (onTabChange) onTabChange(val);
-  };
   
   // View States
   const [favoritesScope, setFavoritesScope] = useState<"user" | "global">("user");
-  const [favoritesView, setFavoritesView] = useState<"list" | "tree">("tree"); // Default to tree for favorites (groups)
-  
-  const [reportedScope, setReportedScope] = useState<"user" | "global">("user");
-  
-  const [historyView, setHistoryView] = useState<"list" | "tree">("tree"); // Default to tree for history (groups)
+  const [favoritesView, setFavoritesView] = useState<"list" | "tree">("tree"); 
+  const [reportedScope, setReportedScope] = useState<"user" | "global">("global");
+  const [historyView, setHistoryView] = useState<"list" | "tree">("tree");
   const [historyShowCategory, setHistoryShowCategory] = useState(true);
-  
-  const [popularView, setPopularView] = useState<"list" | "tree">("list"); // Default to list for popular
+  const [popularView, setPopularView] = useState<"list" | "tree">("list");
   const [popularShowCategory, setPopularShowCategory] = useState(true);
 
-  // Infinite scroll state for flat lists
   const [displayLimit, setDisplayLimit] = useState(20);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
 
-  // Helper to get all tweaks map for quick lookup
   const allTweaksMap = useMemo(() => {
     const map = new Map<string, Tweak>();
     categories.forEach(cat => {
@@ -147,21 +139,9 @@ export default function VisualTree({
     });
   };
 
-  const expandAllCategories = () => {
-    const allCategoryIds = new Set(filteredCategories.map(cat => cat.id));
-    setExpandedCategories(allCategoryIds);
-  };
-
-  const collapseAllCategories = () => {
-    setExpandedCategories(new Set());
-  };
-
   const handleSelectGroup = (tweaksToSelect: Tweak[], e: React.MouseEvent) => {
     e.stopPropagation();
-    // Filter out disabled tweaks (unless admin)
-    const selectableTweaks = isAdmin 
-      ? tweaksToSelect 
-      : tweaksToSelect.filter(t => t.is_visible);
+    const selectableTweaks = isAdmin ? tweaksToSelect : tweaksToSelect.filter(t => t.is_visible);
     if (selectableTweaks.length === 0) return;
     
     const allSelected = selectableTweaks.every(t => selectedTweaks.has(t.id));
@@ -179,8 +159,8 @@ export default function VisualTree({
   const { filteredCategories, flatTweaks } = useMemo(() => {
     let currentSort = sortOption;
     let historyOnly = false;
-    let reportedOnly = false; // Global reported > 0
-    let favoritesOnly = false; // Global favorites > 0
+    let reportedOnly = false;
+    let favoritesOnly = false;
     let userFavoritesOnly = false;
     let userReportedOnly = false;
     let minDownloads = 0;
@@ -191,12 +171,8 @@ export default function VisualTree({
     } else if (activeTab === "history") {
       historyOnly = true;
     } else if (activeTab === "reported") {
-      if (reportedScope === "user") {
-        userReportedOnly = true;
-      } else {
-        reportedOnly = true;
-      }
-      if (currentSort === "alphabetical") currentSort = "reports-desc";
+        // Special case for reported handled separately if activeTab === "reported"
+        return { filteredCategories: [], flatTweaks: [] };
     } else if (activeTab === "favorites") {
       if (favoritesScope === "user") {
         userFavoritesOnly = true;
@@ -206,19 +182,7 @@ export default function VisualTree({
       if (currentSort === "alphabetical") currentSort = "favorites-desc";
     }
 
-    // For "All Reports", we need to filter by tweaks that have reports in allReportDescriptions
-    // instead of relying on report_count which may not be accurate
-    let allReportedTweakIds: Set<string> | undefined;
-    
-    if (activeTab === "reported" && reportedScope === "global" && allReportDescriptions) {
-      // Get all tweak IDs that have reports from the allReportDescriptions map
-      allReportedTweakIds = new Set(allReportDescriptions.keys());
-      // Override reportedOnly to false and use userReportedOnly with the Set of reported tweak IDs
-      reportedOnly = false;
-      userReportedOnly = true; // We'll use this with allReportedTweakIds
-    }
-
-    const result = filterAndSortTweaks(categories, {
+    return filterAndSortTweaks(categories, {
       searchQuery,
       selectedOnly: false,
       historyOnly,
@@ -229,40 +193,16 @@ export default function VisualTree({
       minDownloads,
       historyTweakIds,
       favoriteTweakIds,
-      reportedTweakIds: activeTab === "reported" && reportedScope === "global" && allReportedTweakIds
-        ? allReportedTweakIds 
-        : reportedTweakIds,
+      reportedTweakIds,
       sort: activeTab === "library" ? undefined : currentSort, 
     });
+  }, [categories, activeTab, searchQuery, historyTweakIds, favoriteTweakIds, reportedTweakIds, sortOption, favoritesScope]);
 
-    // Apply report descriptions to tweaks when in reported tab
-    if (activeTab === "reported") {
-      const reportDescriptions = reportedScope === "user" ? userReportDescriptions : allReportDescriptions;
-      if (reportDescriptions) {
-        result.flatTweaks = result.flatTweaks.map(tweak => ({
-          ...tweak,
-          report_description: reportDescriptions.get(tweak.id),
-        }));
-        result.filteredCategories = result.filteredCategories.map(cat => ({
-          ...cat,
-          tweaks: cat.tweaks?.map(tweak => ({
-            ...tweak,
-            report_description: reportDescriptions.get(tweak.id),
-          })),
-        }));
-      }
-    }
-
-    return result;
-  }, [categories, activeTab, searchQuery, historyTweakIds, favoriteTweakIds, reportedTweakIds, sortOption, favoritesScope, reportedScope, userReportDescriptions, allReportDescriptions]);
-
-  // Determine current view mode
   const isLibraryTree = activeTab === "library" && !searchQuery;
   const isFavoritesTree = activeTab === "favorites" && favoritesScope === "user" && favoritesView === "tree";
   const isHistoryTree = activeTab === "history" && historyView === "tree";
   const isPopularTree = activeTab === "popular" && popularView === "tree";
 
-  // Prepare Groups for Favorites/History Tree Views
   const groupSelections = useMemo(() => {
     if (isFavoritesTree && userFavoriteSelections) {
       return userFavoriteSelections.map(entry => {
@@ -270,7 +210,6 @@ export default function VisualTree({
           .map((t) => allTweaksMap.get(t.id))
           .filter((t): t is Tweak => !!t);
         
-        // Filter tweaks by search query if exists
         const matchedTweaks = searchQuery 
           ? tweaks.filter(t => t.title.toLowerCase().includes(searchQuery.toLowerCase()))
           : tweaks;
@@ -310,7 +249,6 @@ export default function VisualTree({
     return [];
   }, [isFavoritesTree, isHistoryTree, userFavoriteSelections, userHistorySelections, allTweaksMap, searchQuery]);
 
-  // Handle infinite scroll
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     if (scrollHeight - scrollTop - clientHeight < 200) {
@@ -318,7 +256,6 @@ export default function VisualTree({
     }
   };
 
-  // Reset limit when tab changes
   useEffect(() => {
     setDisplayLimit(20);
     if (scrollViewportRef.current) {
@@ -328,194 +265,23 @@ export default function VisualTree({
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-transparent">
-      {/* Header Tabs */}
-      <div className="flex-none p-3 pb-2 border-b border-border/10  sticky top-0 z-10 bg-background">
-        <Tabs value={activeTab} onValueChange={handleTabChange} className="w-full">
-          <TabsList className="w-full justify-start h-9 p-0 bg-transparent rounded-none px-4 gap-4 overflow-x-auto no-scrollbar">
-            <VisualTreeTabTrigger value="library" icon={<FolderIcon className="h-3.5 w-3.5" />}>Library</VisualTreeTabTrigger>
-            <VisualTreeTabTrigger value="popular" icon={<FireIcon className="h-3.5 w-3.5" />}>Popular</VisualTreeTabTrigger>
-            <VisualTreeTabTrigger value="favorites" icon={<StarIcon className="h-3.5 w-3.5" />}>Favorites</VisualTreeTabTrigger>
-            <VisualTreeTabTrigger value="history" icon={<ClockIcon className="h-3.5 w-3.5" />}>History</VisualTreeTabTrigger>
-            <VisualTreeTabTrigger value="reported" icon={<ExclamationTriangleIcon className="h-3.5 w-3.5" />}>Reported</VisualTreeTabTrigger>
-          </TabsList>
-        </Tabs>
-
-        {/* Contextual Toolbar */}
-          {activeTab === "library" && isLibraryTree && (
-            <div className="flex items-center justify-end gap-2 px-1">
-              <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-md">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-[10px] px-2"
-                  onClick={expandAllCategories}
-                  title="Expand all categories"
-                >
-                  <ArrowsPointingOutIcon className="h-3 w-3 mr-1" />
-                  Expand All
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-[10px] px-2"
-                  onClick={collapseAllCategories}
-                  title="Collapse all categories"
-                >
-                  <ArrowsPointingInIcon className="h-3 w-3 mr-1" />
-                  Collapse All
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "favorites" && (
-            <div className="flex items-center justify-between gap-2 px-1">
-              <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-md">
-                <Button 
-                  variant={favoritesScope === "user" ? "secondary" : "ghost"} 
-                  size="sm" 
-                  className="h-6 text-[10px] px-2"
-                  onClick={() => setFavoritesScope("user")}
-                >
-                  <UserIcon className="h-3 w-3 mr-1" /> My Favorites
-                </Button>
-                <Button 
-                  variant={favoritesScope === "global" ? "secondary" : "ghost"} 
-                  size="sm" 
-                  className="h-6 text-[10px] px-2"
-                  onClick={() => setFavoritesScope("global")}
-                >
-                  <GlobeAmericasIcon className="h-3 w-3 mr-1" /> Global
-                </Button>
-              </div>
-              {favoritesScope === "user" && (
-                <div className="flex items-center gap-1">
-                   <Button
-                     variant={favoritesView === "tree" ? "secondary" : "ghost"}
-                     size="icon"
-                     className="h-6 w-6"
-                     onClick={() => setFavoritesView("tree")}
-                     title="View as Groups"
-                   >
-                     <QueueListIcon className="h-3.5 w-3.5" />
-                   </Button>
-                   <Button
-                     variant={favoritesView === "list" ? "secondary" : "ghost"}
-                     size="icon"
-                     className="h-6 w-6"
-                     onClick={() => setFavoritesView("list")}
-                     title="View as List"
-                   >
-                     <ListBulletIcon className="h-3.5 w-3.5" />
-                   </Button>
-                </div>
-              )}
-              {favoritesScope === "global" && (
+      <div className="flex-none p-2 border-b border-border/10 sticky top-0 z-10 bg-background/80 backdrop-blur-md">
+        <div className="flex items-center justify-between gap-2 px-1">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
+            {activeTab === "library" ? "System Library" : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+          </span>
+          
+          <div className="flex items-center gap-1">
+             {activeTab !== "library" && activeTab !== "reported" && (
                 <VisualTreeSortMenu
                   sortOption={sortOption}
                   onSortChange={(v) => setSortOption(v)}
                   onSelectAllVisible={onSelectAll}
                 />
-              )}
-            </div>
-          )}
-
-          {activeTab === "reported" && (
-            <div className="flex items-center gap-2 px-1">
-               <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-md">
-                <Button 
-                  variant={reportedScope === "user" ? "secondary" : "ghost"} 
-                  size="sm" 
-                  className="h-6 text-[10px] px-2"
-                  onClick={() => setReportedScope("user")}
-                >
-                  <UserIcon className="h-3 w-3 mr-1" /> My Reports
-                </Button>
-                <Button 
-                  variant={reportedScope === "global" ? "secondary" : "ghost"} 
-                  size="sm" 
-                  className="h-6 text-[10px] px-2"
-                  onClick={() => setReportedScope("global")}
-                >
-                  <GlobeAmericasIcon className="h-3 w-3 mr-1" /> All Reports
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {activeTab === "history" && (
-            <div className="flex items-center justify-between gap-2 px-1">
-              <div className="flex items-center gap-2">
-                 <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-md">
-                   <Button
-                     variant={historyView === "tree" ? "secondary" : "ghost"}
-                     size="icon"
-                     className="h-6 w-6"
-                     onClick={() => setHistoryView("tree")}
-                     title="View as Groups"
-                   >
-                     <QueueListIcon className="h-3.5 w-3.5" />
-                   </Button>
-                   <Button
-                     variant={historyView === "list" ? "secondary" : "ghost"}
-                     size="icon"
-                     className="h-6 w-6"
-                     onClick={() => setHistoryView("list")}
-                     title="View as List"
-                   >
-                     <ListBulletIcon className="h-3.5 w-3.5" />
-                   </Button>
-                 </div>
-                 {historyView === "list" && (
-                   <Button 
-                     variant={historyShowCategory ? "secondary" : "outline"}
-                     size="sm"
-                     className="h-6 text-[10px] px-2"
-                     onClick={() => setHistoryShowCategory(!historyShowCategory)}
-                   >
-                     {historyShowCategory ? "Show Desc." : "Show Category"}
-                   </Button>
-                 )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === "popular" && (
-            <div className="flex items-center justify-between gap-2 px-1">
-              <div className="flex items-center gap-2">
-                 <div className="flex items-center gap-1 bg-muted/50 p-0.5 rounded-md">
-                   <Button
-                     variant={popularView === "tree" ? "secondary" : "ghost"}
-                     size="icon"
-                     className="h-6 w-6"
-                     onClick={() => setPopularView("tree")}
-                     title="View with Categories"
-                   >
-                     <QueueListIcon className="h-3.5 w-3.5" />
-                   </Button>
-                   <Button
-                     variant={popularView === "list" ? "secondary" : "ghost"}
-                     size="icon"
-                     className="h-6 w-6"
-                     onClick={() => setPopularView("list")}
-                     title="View as List"
-                   >
-                     <ListBulletIcon className="h-3.5 w-3.5" />
-                   </Button>
-                 </div>
-                 {popularView === "list" && (
-                   <Button 
-                     variant={popularShowCategory ? "secondary" : "outline"}
-                     size="sm"
-                     className="h-6 text-[10px] px-2"
-                     onClick={() => setPopularShowCategory(!popularShowCategory)}
-                   >
-                     {popularShowCategory ? "Show Desc." : "Show Category"}
-                   </Button>
-                 )}
-              </div>
-            </div>
-          )}      </div>
+             )}
+          </div>
+        </div>
+      </div>
 
       <div className="flex-1 relative">
         <ScrollArea 
@@ -536,6 +302,16 @@ export default function VisualTree({
                  </div>
                ))}
              </div>
+          ) : activeTab === "reported" ? (
+             <ReportsExplorer 
+                allReports={allReports} 
+                userReports={userReports} 
+                scope={reportedScope as "user" | "global"}
+                onScopeChange={(s) => setReportedScope(s)}
+                allTweaksMap={allTweaksMap}
+                onTweakToggle={onTweakToggle}
+                onRefresh={onRefresh}
+             />
           ) : (
             <>
               {isLibraryTree && (
@@ -957,4 +733,180 @@ export default function VisualTree({
       </div>
     </div>
   );
+}
+
+function ReportsExplorer({ 
+    allReports, 
+    userReports, 
+    scope, 
+    onScopeChange, 
+    allTweaksMap, 
+    onTweakToggle,
+    onRefresh 
+}: { 
+    allReports: TweakReport[]; 
+    userReports: TweakReport[]; 
+    scope: "user" | "global";
+    onScopeChange: (scope: "user" | "global") => void;
+    allTweaksMap: Map<string, Tweak>;
+    onTweakToggle: (tweak: Tweak) => void;
+    onRefresh?: () => void;
+}) {
+    const { user } = useUser();
+    const queryClient = useQueryClient();
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [selectedReport, setSelectedReport] = useState<TweakReport | null>(null);
+
+    const reports = scope === "user" ? userReports : allReports;
+
+    const handleDeleteClick = (report: TweakReport) => {
+        setSelectedReport(report);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!selectedReport) return;
+        
+        setIsDeleting(selectedReport.id);
+        try {
+          const result = await deleteTweakReport(selectedReport.id);
+          if (result.success) {
+            queryClient.invalidateQueries({ queryKey: ["all-reports-with-descriptions"] });
+            queryClient.invalidateQueries({ queryKey: ["user-reports"] });
+            if (onRefresh) onRefresh();
+            setDeleteDialogOpen(false);
+          } else {
+            alert(result.error || "Failed to delete report");
+          }
+        } catch (e) {
+          console.error(e);
+        } finally {
+          setIsDeleting(null);
+          setSelectedReport(null);
+        }
+    };
+
+    return (
+        <div className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2 p-1">
+                <Button
+                    variant={scope === "global" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="justify-start gap-2 h-9 px-3 rounded-lg"
+                    onClick={() => onScopeChange("global")}
+                >
+                    <UsersIcon className="h-4 w-4" />
+                    <span className="text-sm font-medium">Global Reports</span>
+                    <Badge variant="outline" className="ml-auto text-[10px] h-4 px-1">{allReports.length}</Badge>
+                </Button>
+                <Button
+                    variant={scope === "user" ? "secondary" : "ghost"}
+                    size="sm"
+                    className="justify-start gap-2 h-9 px-3 rounded-lg"
+                    onClick={() => onScopeChange("user")}
+                    disabled={!user}
+                >
+                    <UserIcon className="h-4 w-4" />
+                    <span className="text-sm font-medium">My Reports</span>
+                    <Badge variant="outline" className="ml-auto text-[10px] h-4 px-1">{userReports.length}</Badge>
+                </Button>
+            </div>
+
+            <div className="space-y-3 mt-2">
+                {reports.length === 0 ? (
+                    <div className="py-10 text-center opacity-40 mix-blend-luminosity">
+                        <ExclamationTriangleIcon className="h-8 w-8 mx-auto mb-2" />
+                        <p className="text-xs font-medium">No reports found</p>
+                    </div>
+                ) : (
+                    reports.map((report) => {
+                        const tweak = allTweaksMap.get(report.tweak_id);
+                        if (!tweak) return null;
+                        
+                        return (
+                            <motion.div
+                                key={report.id}
+                                className="group relative flex flex-col gap-2 p-3 rounded-xl bg-card border border-border/40 hover:border-primary/30 transition-all cursor-pointer shadow-sm hover:shadow-md"
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                onClick={() => onTweakToggle(tweak)}
+                            >
+                                <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-1.5 mb-1">
+                                            <div className={cn(
+                                                "h-2 w-2 rounded-full",
+                                                report.status === "resolved" ? "bg-emerald-500" :
+                                                report.risk_level === "high" ? "bg-red-500" :
+                                                report.risk_level === "medium" ? "bg-amber-500" :
+                                                "bg-blue-500"
+                                            )} />
+                                            <span className="text-[10px] font-bold uppercase tracking-tighter text-muted-foreground truncate">
+                                                {tweak.title}
+                                            </span>
+                                        </div>
+                                        <h5 className="text-xs font-semibold text-foreground line-clamp-1 leading-tight mb-0.5">
+                                            {report.title}
+                                        </h5>
+                                        <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed italic">
+                                            "{report.description}"
+                                        </p>
+                                    </div>
+                                    
+                                    {user?.id === report.user_id && (
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-6 w-6 text-muted-foreground hover:text-destructive shrink-0"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleDeleteClick(report);
+                                            }}
+                                            disabled={isDeleting === report.id}
+                                        >
+                                            {isDeleting === report.id ? (
+                                                <div className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                                            ) : (
+                                                <TrashIcon className="h-3.5 w-3.5" />
+                                            )}
+                                        </Button>
+                                    )}
+                                </div>
+
+                                <div className="flex items-center justify-between mt-1 pt-1 border-t border-border/10">
+                                    <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className={cn(
+                                            "text-[9px] h-3.5 px-1 font-normal lowercase",
+                                            report.status === "resolved" ? "text-emerald-500 border-emerald-500/20" : "text-amber-500 border-amber-500/20"
+                                        )}>
+                                            {report.status}
+                                        </Badge>
+                                        <span className={cn(
+                                            "text-[9px] font-medium",
+                                            report.risk_level === "high" ? "text-red-500" :
+                                            report.risk_level === "medium" ? "text-amber-500" : "text-emerald-500"
+                                        )}>
+                                            {report.risk_level} risk
+                                        </span>
+                                    </div>
+                                    <span className="text-[9px] text-muted-foreground opacity-60">
+                                        {formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}
+                                    </span>
+                                </div>
+                            </motion.div>
+                        );
+                    })
+                )}
+            </div>
+
+            <TweakReportDeleteDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+                onConfirm={confirmDelete}
+                isDeleting={!!isDeleting}
+                reportTitle={selectedReport?.title}
+            />
+        </div>
+    );
 }

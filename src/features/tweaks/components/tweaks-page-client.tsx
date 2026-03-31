@@ -7,6 +7,7 @@ import { Skeleton } from "@/shared/components/ui/skeleton";
 
 interface TweaksPageClientProps {
   categories: TweakCategory[];
+  activeTab?: string;
 }
 
 const TweaksContent = dynamic(() => import("./tweaks-content"), {
@@ -21,13 +22,13 @@ const TweaksContent = dynamic(() => import("./tweaks-content"), {
   ),
 });
 
-export default function TweaksPageClient({ categories }: TweaksPageClientProps) {
+export default function TweaksPageClient({ categories, activeTab }: TweaksPageClientProps) {
   if (!categories || categories.length === 0) {
     return (
       <ScrollArea className="h-full w-full">
-        <div className="flex h-full items-center justify-center">
+        <div className="flex flex-col h-full items-center justify-center py-12 gap-4">
           <div className="text-center">
-            <p className="text-muted-foreground">No tweaks available</p>
+            <p className="text-muted-foreground">No tweaks available in this category</p>
           </div>
         </div>
       </ScrollArea>
@@ -35,9 +36,6 @@ export default function TweaksPageClient({ categories }: TweaksPageClientProps) 
   }
 
   return (
-      <TweaksContent categories={categories} />
+    <TweaksContent categories={categories} activeTab={activeTab} />
   );
 }
-
-
-
