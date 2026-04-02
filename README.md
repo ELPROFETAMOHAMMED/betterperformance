@@ -173,13 +173,6 @@ pnpm start
 
 ## 🎨 Features in Detail
 
-### Code Editor
-- **Syntax Highlighting** - PowerShell syntax highlighting for better readability
-- **Line Numbers** - Optional line numbers for code navigation
-- **Edit Mode** - Modify scripts before downloading
-- **Word Wrap** - Toggle word wrapping for long lines
-- **Sensitive Data Hiding** - Option to obfuscate sensitive values
-
 ### Tweak Management
 - **Categories** - Organized tweaks by category (Performance, UI, Security, etc.)
 - **Search** - Quick search across all tweaks and categories
