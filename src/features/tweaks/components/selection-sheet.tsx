@@ -23,6 +23,8 @@ import {
 import { useSelection } from "@/features/tweaks/context/selection-context";
 import { useTweakDownload } from "@/features/tweaks/hooks/use-tweak-download";
 import { useFavoriteDialog } from "@/features/tweaks/hooks/use-favorite-dialog";
+import { DownloadWarningDialog } from "@/features/tweaks/components/download-warning-dialog";
+import { SaveFavoriteDialog } from "@/features/tweaks/components/save-favorite-dialog";
 import { useUser } from "@/shared/hooks/use-user";
 // cn removed
 import { motion, AnimatePresence } from "framer-motion";
@@ -43,7 +45,9 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
   const {
     isLoading: isDownloading,
     handleDownloadWithSettings,
-    WarningDialog,
+    warningDialogOpen,
+    onWarningContinue,
+    onWarningCancel,
   } = useTweakDownload({
     selectedTweaks: new Map(selectedTweaksArray.map(t => [t.id, t])),
     user,
@@ -54,6 +58,12 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
   const {
     openQuickSaveDialog,
     isSavingFavorite,
+    favoriteDialogOpen,
+    favoriteName,
+    setFavoriteDialogOpen,
+    setFavoriteName,
+    handleConfirmSaveFavorite,
+    tweaksForFavorite
   } = useFavoriteDialog({
     selectedTweaks: new Map(selectedTweaksArray.map(t => [t.id, t])),
     user,
@@ -193,7 +203,20 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
           </SheetFooter>
         )}
       </SheetContent>
-      <WarningDialog />
+      <DownloadWarningDialog
+        open={warningDialogOpen}
+        onContinue={onWarningContinue}
+        onCancel={onWarningCancel}
+      />
+      <SaveFavoriteDialog
+        open={favoriteDialogOpen}
+        onOpenChange={setFavoriteDialogOpen}
+        favoriteName={favoriteName}
+        onFavoriteNameChange={setFavoriteName}
+        isSaving={isSavingFavorite}
+        onConfirm={handleConfirmSaveFavorite}
+        tweaksCount={tweaksForFavorite.length || selectedTweaksArray.length}
+      />
     </Sheet>
   );
 }

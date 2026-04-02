@@ -13,7 +13,7 @@ import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism"
 import { formatDistanceToNow } from "date-fns";
 import { deleteTweakReport } from "../actions/delete-report";
 import { useQueryClient } from "@tanstack/react-query";
-import type { TweakReport } from "@/features/tweaks/hooks/use-tweak-reports-filters";
+import type { TweakReport } from "@/features/tweaks/types/tweak-report.types";
 
 // UI Components
 import { Button } from "@/shared/components/ui/button";
@@ -39,17 +39,7 @@ import {
 interface TweakDetailsPanelProps {
   selectedTweaks: Tweak[];
   activeTweakId: string | null;
-  onTweakChange: (tweakId: string) => void;
   categories: TweakCategory[];
-  onReport: () => void;
-  onDownload: () => void;
-  onCopy: () => void;
-  onSaveFavorite: () => void;
-  onSaveSingleFavorite: (tweak: Tweak) => void;
-  isDownloading: boolean;
-  isCopying: boolean;
-  isSavingFavorite: boolean;
-  onEditTweak?: (tweak: Tweak) => void;
   userReports?: TweakReport[];
   allReports?: TweakReport[];
 }

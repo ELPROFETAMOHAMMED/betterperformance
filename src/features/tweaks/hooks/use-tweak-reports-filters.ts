@@ -3,17 +3,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useUser } from "@/shared/hooks/use-user";
-
-export interface TweakReport {
-  id: string;
-  tweak_id: string;
-  user_id: string;
-  title: string;
-  status: "pending" | "resolved" | "dismissed";
-  risk_level: "low" | "medium" | "high";
-  description: string;
-  created_at: string;
-}
+import type { TweakReport } from "@/features/tweaks/types/tweak-report.types";
 
 async function fetchUserReports(): Promise<TweakReport[]> {
   const response = await fetch("/api/tweaks/user-reports");

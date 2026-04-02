@@ -6,6 +6,7 @@ import QueryProvider from "@/shared/providers/query-client-provider";
 import { SidebarProvider, SidebarInset } from "@/shared/components/ui/sidebar";
 import { Toaster } from "@/shared/components/ui/sonner";
 import { SelectionProvider } from "@/features/tweaks/context/selection-context";
+import { UserProvider } from "@/shared/providers/user-provider";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
@@ -30,7 +31,9 @@ export default function MainLayout({
 }) {
   return (
     <QueryProvider>
-      <LayoutContent>{children}</LayoutContent>
+      <UserProvider>
+        <LayoutContent>{children}</LayoutContent>
+      </UserProvider>
       <Toaster closeButton position="top-right"/>
     </QueryProvider>
   );

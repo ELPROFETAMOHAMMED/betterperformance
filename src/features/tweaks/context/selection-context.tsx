@@ -56,14 +56,17 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
       }
       return next;
     });
-    
-    // Set active if selected, or clear if unselected and it was active
-    setSelectedTweaks((prev) => {
-        if (prev.has(tweak.id)) setActiveTweakId(tweak.id);
-        else if (activeTweakId === tweak.id) setActiveTweakId(Array.from(prev.keys())[0] ?? null);
-        return prev;
-    });
-  }, [activeTweakId]);
+  }, []);
+
+  // Derive activeTweakId reactively whenever selectedTweaks changes.
+  // Runs after the state update is committed, so it always reads fresh values.
+  useEffect(() => {
+    if (activeTweakId !== null && !selectedTweaks.has(activeTweakId)) {
+      setActiveTweakId(selectedTweaks.size > 0 ? (Array.from(selectedTweaks.keys())[0] ?? null) : null);
+    } else if (activeTweakId === null && selectedTweaks.size > 0) {
+      setActiveTweakId(Array.from(selectedTweaks.keys())[0] ?? null);
+    }
+  }, [selectedTweaks, activeTweakId]);
 
   const clearSelection = useCallback(() => {
     setSelectedTweaks(new Map());

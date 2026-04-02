@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { useEditorSettings } from "@/features/settings/hooks/use-editor-settings";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
 import { useDownloadTweaks } from "@/features/tweaks/hooks/use-download-tweaks";
-import { prepareDownload } from "@/features/tweaks/services/download-handler-service";
+import { prepareDownload } from "@/features/tweaks/services/prepare-download.service";
 import type { profile } from "@/features/auth/types/user.types";
 
 interface UseTweakDownloadParams {
@@ -24,8 +24,12 @@ export function useTweakDownload({
   const [isLoading, setIsLoading] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
   const { settings } = useEditorSettings();
-  const { handleDownload: handleDownloadWithWarning, WarningDialog } =
-    useDownloadTweaks();
+  const { 
+    handleDownload: handleDownloadWithWarning, 
+    warningDialogOpen, 
+    onWarningContinue, 
+    onWarningCancel 
+  } = useDownloadTweaks();
 
   const handleCopy = useCallback(
     async (activeTweakId: string | null) => {
@@ -142,7 +146,9 @@ export function useTweakDownload({
     isCopying,
     handleCopy,
     handleDownloadWithSettings,
-    WarningDialog,
+    warningDialogOpen,
+    onWarningContinue,
+    onWarningCancel,
   };
 }
 

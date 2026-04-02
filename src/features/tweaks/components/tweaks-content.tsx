@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import VisualTree from "./visual-tree";
 import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
 import { useUser } from "@/shared/hooks/use-user";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useSelection } from "@/features/tweaks/context/selection-context";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
@@ -42,6 +42,8 @@ import { TweakReportDialog } from "./tweak-report-dialog";
 import { TweakDetailsPanel } from "./tweak-details-panel";
 import { TweakFormDialog } from "./tweak-form-dialog";
 import { CategoryFormDialog } from "./category-form-dialog";
+import { DownloadWarningDialog } from "./download-warning-dialog";
+import { SaveFavoriteDialog } from "./save-favorite-dialog";
 import { useTweakHistoryFilters } from "@/features/tweaks/hooks/use-tweak-history-filters";
 import { useTweakReportsFilters } from "@/features/tweaks/hooks/use-tweak-reports-filters";
 import { useTweakDownload } from "@/features/tweaks/hooks/use-tweak-download";
@@ -57,6 +59,7 @@ export default function TweaksContent({ categories, activeTab = "library" }: Twe
   const { user, loading: userLoading } = useUser();
   const isAdmin = user?.user_metadata?.role === "admin";
   const searchParams = useSearchParams();
+  const router = useRouter();
   const searchQuery = searchParams.get("q") || "";
 
   const {
@@ -95,7 +98,9 @@ export default function TweaksContent({ categories, activeTab = "library" }: Twe
     isCopying,
     handleCopy,
     handleDownloadWithSettings,
-    WarningDialog,
+    warningDialogOpen,
+    onWarningContinue,
+    onWarningCancel,
   } = useTweakDownload({
     selectedTweaks,
     user,
@@ -152,7 +157,7 @@ export default function TweaksContent({ categories, activeTab = "library" }: Twe
   };
 
   const handleTweakFormSuccess = () => {
-    window.location.reload();
+    router.refresh();
   };
 
   const handleEditCategory = (category: TweakCategory) => {
@@ -161,7 +166,7 @@ export default function TweaksContent({ categories, activeTab = "library" }: Twe
   };
 
   const handleCategoryFormSuccess = () => {
-    window.location.reload();
+    router.refresh();
   };
 
   const activeIndex = activeTweakId ? selectedTweaksArray.findIndex(t => t.id === activeTweakId) : 0;
@@ -389,63 +394,23 @@ export default function TweaksContent({ categories, activeTab = "library" }: Twe
           <TweakDetailsPanel
             selectedTweaks={selectedTweaksArray}
             activeTweakId={activeTweakId}
-            onTweakChange={setActiveTweakId}
             categories={categories}
-            onReport={() => setReportDialogOpen(true)}
-            onDownload={handleDownloadWithSettings}
-            onCopy={() => handleCopy(activeTweakId)}
-            onSaveFavorite={openQuickSaveDialog}
-            onSaveSingleFavorite={(tweak: Tweak): void => {
-              openSaveAsFavoriteDialog([tweak], `Favorite: ${tweak.title}`);
-            }}
             userReports={userReports}
             allReports={allReports}
-            isDownloading={isLoading}
-            isCopying={isCopying}
-            isSavingFavorite={isSavingFavorite}
-            onEditTweak={handleEditTweak}
             isAdmin={isAdmin}
           />
         </div>
       </div>
 
-      <AlertDialog
+      <SaveFavoriteDialog
         open={favoriteDialogOpen}
-        onOpenChange={(open) => {
-          setFavoriteDialogOpen(open);
-          if (!open) setIsSavingFavorite(false);
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Save selection as favorite</AlertDialogTitle>
-            <AlertDialogDescription>
-              Give this combination of tweaks a descriptive name.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <div className="mt-2 space-y-2">
-            <Input
-              autoFocus
-              value={favoriteName}
-              onChange={(e) => setFavoriteName(e.target.value)}
-              placeholder="e.g. Gaming preset..."
-            />
-            {tweaksForFavorite.length > 0 && (
-              <p className="text-xs text-muted-foreground">
-                Contains {tweaksForFavorite.length} tweak{tweaksForFavorite.length === 1 ? "" : "s"}.
-              </p>
-            )}
-          </div>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isSavingFavorite}>Cancel</AlertDialogCancel>
-            <AlertDialogAction asChild disabled={isSavingFavorite || !favoriteName.trim()}>
-              <Button onClick={handleConfirmSaveFavorite}>
-                {isSavingFavorite ? "Saving…" : "Save favorite"}
-              </Button>
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        onOpenChange={setFavoriteDialogOpen}
+        favoriteName={favoriteName}
+        onFavoriteNameChange={setFavoriteName}
+        isSaving={isSavingFavorite}
+        onConfirm={handleConfirmSaveFavorite}
+        tweaksCount={tweaksForFavorite.length}
+      />
 
       <AlertDialog
         open={renameDialogOpen}
@@ -504,7 +469,11 @@ export default function TweaksContent({ categories, activeTab = "library" }: Twe
         onReportSubmitted={refreshReports}
       />
 
-      <WarningDialog />
+      <DownloadWarningDialog
+        open={warningDialogOpen}
+        onContinue={onWarningContinue}
+        onCancel={onWarningCancel}
+      />
 
       <TweakFormDialog
         open={tweakFormDialogOpen}

@@ -14,16 +14,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Iterate sequentially to ensure each increment happens one by one
-    for (const id of tweakIds) {
-      const { error } = await supabase.rpc("increment_favorite_count", {
-        tweak_id: id,
-      });
+    // NOTE: This requires the PostgreSQL function increment_favorite_count_batch to exist
+    // in Supabase, accepting a uuid[] parameter and updating all rows in a single query.
+    // Create it if it does not exist.
+    const { error: rpcError } = await supabase.rpc("increment_favorite_count_batch", {
+      tweak_ids: tweakIds,
+    });
 
-      if (error) {
-        console.error(`Error incrementing favorite count for tweak ${id}:`, error);
-        // Continue with other tweaks even if one fails
-      }
+    if (rpcError) {
+      console.error("Error batch-incrementing favorite counts:", rpcError);
+      return NextResponse.json(
+        { error: "Failed to increment favorite counts", details: rpcError.message },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true });

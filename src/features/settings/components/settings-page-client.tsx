@@ -10,29 +10,21 @@ import type { EditorSettings } from "@/features/settings/hooks/use-editor-settin
 export default function SettingsPageClient() {
   const {
     settings,
-    setShowLineNumbers,
     setEnableTextColors,
     setEncodingUtf8,
     setHideSensitive,
     setDownloadEachTweak,
     setAlwaysShowWarning,
-    setWrapCode,
-    setShowComments,
-    setEnableCodeEditing,
     setAutoCreateRestorePoint,
   } = useEditorSettings();
 
   // Map setting IDs to their setter functions
   const setters: Record<keyof EditorSettings, (value: boolean) => void> = {
-    showLineNumbers: setShowLineNumbers,
     enableTextColors: setEnableTextColors,
     encodingUtf8: setEncodingUtf8,
     hideSensitive: setHideSensitive,
     downloadEachTweak: setDownloadEachTweak,
     alwaysShowWarning: setAlwaysShowWarning,
-    wrapCode: setWrapCode,
-    showComments: setShowComments,
-    enableCodeEditing: setEnableCodeEditing,
     autoCreateRestorePoint: setAutoCreateRestorePoint,
   };
 
@@ -43,7 +35,7 @@ export default function SettingsPageClient() {
           <section className="space-y-4">
             <div>
               <h1 className="text-lg font-semibold tracking-tight">
-                Editor & theme settings
+                Editor &amp; theme settings
               </h1>
               <p className="text-sm text-muted-foreground">
                 Fine-tune how tweak scripts are displayed and exported. Changes
@@ -66,22 +58,16 @@ export default function SettingsPageClient() {
                     <div className="space-y-4">
                       {group.items.map((item) => {
                         if (item.type === "switch") {
-                          // If enableCodeEditing is enabled, showLineNumbers must be enabled
-                          const isDisabled = item.id === "showLineNumbers" && settings.enableCodeEditing;
-                          const checked = item.id === "showLineNumbers" && settings.enableCodeEditing 
-                            ? true 
-                            : (settings[item.id] as boolean);
-                          
                           return (
                             <SettingSwitch
                               key={item.id}
                               title={item.title}
                               description={item.description}
-                              checked={checked}
+                              checked={settings[item.id] as boolean}
                               onCheckedChange={setters[item.id]}
                               experimental={item.experimental}
                               warning={item.warning}
-                              disabled={isDisabled || item.disabled}
+                              disabled={item.disabled}
                             />
                           );
                         }
@@ -117,7 +103,3 @@ export default function SettingsPageClient() {
     </ScrollArea>
   );
 }
-
-
-
-

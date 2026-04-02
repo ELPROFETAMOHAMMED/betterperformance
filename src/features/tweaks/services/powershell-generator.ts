@@ -7,7 +7,7 @@
  * If not running as admin, the script will relaunch with elevated privileges
  */
 export function generateAdminCheckCode(): string {
-  return `# Check if running as administrator, if not relaunch with elevated privileges
+    return `# Check if running as administrator, if not relaunch with elevated privileges
 $isAdmin = ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 if (-not $isAdmin) {
     Write-Host "========================================" -ForegroundColor Yellow
@@ -18,27 +18,13 @@ if (-not $isAdmin) {
     Write-Host "Relaunching script with elevated privileges..." -ForegroundColor Cyan
     Write-Host ""
 
-    # Get the script path - try multiple methods to ensure we get the correct path
-    $scriptPath = $null
-    if ($MyInvocation.MyCommand.Path) {
-        $scriptPath = $MyInvocation.MyCommand.Path
-    } elseif ($PSCommandPath) {
-        $scriptPath = $PSCommandPath
-    } elseif ($MyInvocation.PSCommandPath) {
-        $scriptPath = $MyInvocation.PSCommandPath
-    } elseif ($PSScriptRoot -and $MyInvocation.MyCommand.Name) {
-        $scriptPath = Join-Path $PSScriptRoot $MyInvocation.MyCommand.Name
-    } else {
-        # Fallback: use the script that's currently executing
-        $scriptPath = $MyInvocation.InvocationName
-    }
-
-    # Resolve to full path
-    if ($scriptPath) {
-        $scriptPath = (Resolve-Path $scriptPath -ErrorAction SilentlyContinue).Path
-        if (-not $scriptPath) {
-            $scriptPath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($MyInvocation.InvocationName)
-        }
+    # Get the script path - $PSCommandPath is always set when invoked with -File
+    $scriptPath = $PSCommandPath
+    if (-not $scriptPath) {
+        Write-Host "ERROR: Could not determine script path." -ForegroundColor Red
+        Write-Host "Please run this script using: powershell -File path\to\script.ps1" \`
+            -ForegroundColor Yellow
+        exit 1
     }
 
     # Relaunch with elevated privileges
@@ -63,11 +49,10 @@ Write-Host ""
 /**
  * Generates the progress bar helper and the atomic tweak execution function.
  *
- * Progress display strategy (dual-mode):
+ * Progress display strategy:
  *   1. Write-Progress  — native PowerShell progress bar shown in the PS window header area.
- *   2. ASCII bar       — printed inline with Write-Host so it works in any console/terminal.
  *
- * The function receives the total tweak count up-front so both bars can show
+ * The function receives the total tweak count up-front so the bar can show
  * an accurate percentage from the very first tweak.
  *
  * FIX (false-positive errors): non-terminating errors (e.g. registry path
@@ -76,7 +61,7 @@ Write-Host ""
  * marks the tweak as FAILED.
  */
 export function generateAtomicTweakFunction(): string {
-  return `# ---------------------------------------------------------------------------
+    return `# ---------------------------------------------------------------------------
 # Progress bar helper
 # ---------------------------------------------------------------------------
 function Show-TweakProgress {
@@ -87,18 +72,8 @@ function Show-TweakProgress {
     )
 
     $percent     = [math]::Round(($Current / $Total) * 100)
-    $barWidth    = 40
-    $filled      = [math]::Round($barWidth * $Current / $Total)
-    $empty       = $barWidth - $filled
-    $bar         = ([string][char]0x2588 * $filled) + ([string][char]0x2591 * $empty)
-    $statusText  = "Tweak $Current/$Total"
 
-    # ── ASCII bar (always visible, printed inline) ──────────────────────────
-    Write-Host ""
-    Write-Host "  [$bar] $percent%  $statusText" -ForegroundColor Cyan
-    Write-Host ""
-
-    # ── Native Write-Progress bar (shown in PS window header area) ──────────
+    # -- Native Write-Progress bar (shown in PS window header area) ----------
     Write-Progress \`
         -Activity      "BetterPerformance - Applying Tweaks" \`
         -Status        "$statusText  |  $TweakName" \`
@@ -134,18 +109,29 @@ function Invoke-AtomicTweak {
     }
 
     try {
-        # SilentlyContinue prevents non-terminating errors (e.g. registry
-        # path auto-creation warnings) from being counted as real failures.
-        # Terminating errors still reach the catch block below.
         $ErrorActionPreference = "SilentlyContinue"
 
-        # Redirect the error stream locally so non-terminating messages are
-        # captured here and do NOT pollute the global \$Error collection.
-        & $TweakScript 2>&1 | ForEach-Object {
-            if ($_ -is [System.Management.Automation.ErrorRecord]) {
-                Write-Host "    [warn] $($_.ToString())" -ForegroundColor DarkYellow
-            } else {
-                Write-Host "    $_"
+        # Check if the tweak script contains winget commands
+        # Winget uses Unicode progress bars and carriage returns that break
+        # when piped through ForEach-Object — run it directly in that case
+        $scriptText = $TweakScript.ToString()
+        $hasWinget  = $scriptText -match '\bwinget\b'
+
+        if ($hasWinget) {
+            # Run directly without piping to preserve winget's interactive output
+            & $TweakScript
+        } else {
+            # Run with pipe to capture and display non-terminating errors as warnings
+            & $TweakScript 2>&1 | ForEach-Object {
+                if ($_ -is [System.Management.Automation.ErrorRecord]) {
+                    Write-Host "    [warn] $($_.ToString())" -ForegroundColor DarkYellow
+                } else {
+                    $line    = $_.ToString()
+                    $trimmed = $line.TrimStart("\`r").Trim()
+                    if ($trimmed -ne "") {
+                        Write-Host "    $trimmed"
+                    }
+                }
             }
         }
 
@@ -153,7 +139,6 @@ function Invoke-AtomicTweak {
         Write-Host "  Status: OK" -ForegroundColor Green
 
     } catch {
-        # Genuine terminating failure
         $tweakResult.Status       = "FAILED"
         $tweakResult.ErrorMessage = $_.Exception.Message
         Write-Host "  Status: FAILED - $($tweakResult.ErrorMessage)" -ForegroundColor Red
@@ -178,13 +163,13 @@ $script:TweakCurrentIndex = 0
  *                      progress bar can show an accurate percentage from the start.
  */
 export function wrapTweakWithAtomicExecution(
-  tweakName: string,
-  tweakCode: string,
-  totalTweaks: number,
+    tweakName: string,
+    tweakCode: string,
+    totalTweaks: number,
 ): string {
-  const escapedName = tweakName.replace(/`/g, "``").replace(/"/g, '`"');
+    const escapedName = tweakName.replace(/`/g, "``").replace(/"/g, '`"');
 
-  return `Invoke-AtomicTweak "${escapedName}" {
+    return `Invoke-AtomicTweak "${escapedName}" {
 ${tweakCode}
 } -TotalTweaks ${totalTweaks}`;
 }
@@ -193,9 +178,9 @@ ${tweakCode}
  * Generates the tweak execution summary table
  */
 export function generateTweakSummary(): string {
-  return `
+    return `
 # Display tweak execution summary
-Write-Host ""
+Write-Host "" 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Tweak Execution Summary" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
@@ -233,7 +218,7 @@ if ($script:TweakResults -and $script:TweakResults.Count -gt 0) {
 }
 
 export function generateRestorePointFunction(): string {
-  return `# Function to create a system restore point
+    return `# Function to create a system restore point
 function Create-BetterPerformanceRestorePoint {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Cyan
@@ -350,52 +335,52 @@ function Create-BetterPerformanceRestorePoint {
  * Closes Write-Progress cleanly once all tweaks have finished.
  */
 export function wrapTweaksWithAtomicExecution(
-  tweaks: Array<{ title: string; code: string }>,
+    tweaks: Array<{ title: string; code: string }>,
 ): string {
-  if (tweaks.length === 0) {
-    return "";
-  }
+    if (tweaks.length === 0) {
+        return "";
+    }
 
-  const atomicFunction = generateAtomicTweakFunction();
+    const atomicFunction = generateAtomicTweakFunction();
 
-  const validTweaks = tweaks.filter((t) => t.code.trim());
-  const totalTweaks = validTweaks.length;
+    const validTweaks = tweaks.filter((t) => t.code.trim());
+    const totalTweaks = validTweaks.length;
 
-  const wrappedTweaks = validTweaks.map((tweak, index) => {
-    const tweakName = tweak.title.trim() || `Tweak ${index + 1}`;
-    return wrapTweakWithAtomicExecution(
-      tweakName,
-      tweak.code.trim(),
-      totalTweaks,
-    );
-  });
+    const wrappedTweaks = validTweaks.map((tweak, index) => {
+        const tweakName = tweak.title.trim() || `Tweak ${index + 1}`;
+        return wrapTweakWithAtomicExecution(
+            tweakName,
+            tweak.code.trim(),
+            totalTweaks,
+        );
+    });
 
-  const combinedTweaks = wrappedTweaks.join("\n\n");
+    const combinedTweaks = wrappedTweaks.join("\n\n");
 
-  // Close the native Write-Progress bar after all tweaks complete
-  const closeProgress = `
+    // Close the native Write-Progress bar after all tweaks complete
+    const closeProgress = `
 # Close the native Write-Progress bar
 Write-Progress -Activity "BetterPerformance - Applying Tweaks" -Completed
 Write-Host ""
 `;
 
-  return `${atomicFunction}${combinedTweaks}${closeProgress}`;
+    return `${atomicFunction}${combinedTweaks}${closeProgress}`;
 }
 
 export function prependRestorePointCode(
-  code: string,
-  enabled: boolean,
+    code: string,
+    enabled: boolean,
 ): string {
-  if (!enabled) {
-    // Even if restore point is disabled, show that we're applying tweaks
-    return `Write-Host "Applying tweaks..." -ForegroundColor Cyan
+    if (!enabled) {
+        // Even if restore point is disabled, show that we're applying tweaks
+        return `Write-Host "Applying tweaks..." -ForegroundColor Cyan
 Write-Host ""
 ${code}`;
-  }
+    }
 
-  const restorePointFunction = generateRestorePointFunction();
+    const restorePointFunction = generateRestorePointFunction();
 
-  return `${restorePointFunction}# Create restore point before applying tweaks
+    return `${restorePointFunction}# Create restore point before applying tweaks
 $restorePointCreated = Create-BetterPerformanceRestorePoint
 if (-not $restorePointCreated) {
     Write-Host "Continuing without restore point as requested by user." -ForegroundColor Yellow
@@ -413,11 +398,13 @@ ${code}`;
  * Includes tweak summary if atomic execution was used
  */
 export function wrapWithCompletionNotification(code: string): string {
-  const adminCheckCode = generateAdminCheckCode();
-  const summaryCode = generateTweakSummary();
+    const adminCheckCode = generateAdminCheckCode();
+    const consoleThemeCode = generateConsoleTheme();
+    const asciiLogoCode = generateAsciiLogo();
+    const summaryCode = generateTweakSummary();
 
-  // Use string concatenation to avoid template string issues with quotes in code
-  const notificationCode = `
+    // Use string concatenation to avoid template string issues with quotes in code
+    const notificationCode = `
 ${summaryCode}
 
 # Error handling and completion notification
@@ -599,5 +586,238 @@ if ($scriptSuccess -and -not $errorOccurred) {
 }
 `;
 
-  return adminCheckCode + code + notificationCode;
+    return adminCheckCode + consoleThemeCode + asciiLogoCode + code + notificationCode;
+}
+
+/**
+ * Generates the PowerShell code to apply a visual theme to the console before executing tweaks.
+ */
+export function generateConsoleTheme(): string {
+    return `try {
+    # Change the console background color to the closest equivalent of pure black (#0D0D0D)
+    $Host.UI.RawUI.BackgroundColor = "Black"
+    
+    # Change the default text color to bright white
+    $Host.UI.RawUI.ForegroundColor = "White"
+    
+    # Change the window title
+    $Host.UI.RawUI.WindowTitle = "BetterPerformance - Applying Tweaks"
+    
+    # Define a set of constant color variables with semantic names
+    # (Using Set-Variable with the Constant option to ensure they are not overwritten)
+    Set-Variable -Name "ColorPrimary" -Value "Cyan" -Option Constant -ErrorAction SilentlyContinue
+    Set-Variable -Name "ColorSuccess" -Value "Green" -Option Constant -ErrorAction SilentlyContinue
+    Set-Variable -Name "ColorError"   -Value "Red" -Option Constant -ErrorAction SilentlyContinue
+    Set-Variable -Name "ColorWarning" -Value "Yellow" -Option Constant -ErrorAction SilentlyContinue
+    Set-Variable -Name "ColorMuted"   -Value "DarkGray" -Option Constant -ErrorAction SilentlyContinue
+    Set-Variable -Name "ColorAccent"  -Value "Magenta" -Option Constant -ErrorAction SilentlyContinue
+    Set-Variable -Name "ColorText"    -Value "White" -Option Constant -ErrorAction SilentlyContinue
+    
+    # Fallback variables in case Set-Variable fails
+    if (-not $ColorPrimary) {
+        $ColorPrimary = "Cyan"
+        $ColorSuccess = "Green"
+        $ColorError   = "Red"
+        $ColorWarning = "Yellow"
+        $ColorMuted   = "DarkGray"
+        $ColorAccent  = "Magenta"
+        $ColorText    = "White"
+    }
+    
+    # Font size adjustment via P/Invoke is not applied in this environment.
+    
+    # Force UTF-8 encoding so winget and other tools display correctly
+    [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
+    [Console]::InputEncoding  = [System.Text.Encoding]::UTF8
+    $OutputEncoding            = [System.Text.Encoding]::UTF8
+
+    # Clear the screen after applying the theme
+    Clear-Host
+} catch {
+    # Silently ignore errors so the script does not break in non-GUI environments
+}
+`;
+}
+
+/**
+ * Generates the PowerShell code to print the BetterPerformance ASCII logo and header.
+ */
+export function generateAsciiLogo(): string {
+    return `# Print ASCII logo and header
+Write-Host " -xxxxxX  ..               " -ForegroundColor $ColorAccent
+Write-Host "  +X+-::++-+x++X           " -ForegroundColor $ColorAccent
+Write-Host " .+x=---=XXx+-::+X         " -ForegroundColor $ColorAccent
+Write-Host "  -X+=-:--X+=--::x+.       " -ForegroundColor $ColorAccent
+Write-Host "   +X==-:-:+==-::-+x       " -ForegroundColor $ColorAccent
+Write-Host "   ++-=-:-::==--:=X.       " -ForegroundColor $ColorAccent
+Write-Host "   :X-==:--:==:-:+X-       " -ForegroundColor $ColorAccent
+Write-Host "   ++==-:-:.-:--=X:        " -ForegroundColor $ColorAccent
+Write-Host "   =+---===--::::+x+++=--: " -ForegroundColor $ColorAccent
+Write-Host "   -X--========+=--::-=+x+x+:    " -ForegroundColor $ColorAccent
+Write-Host "   xx-======-xXXXx-===---=+xx+-.      " -ForegroundColor $ColorAccent
+Write-Host "   ++:-=====-+X-:XX-======:::::-+xx=  " -ForegroundColor $ColorAccent
+Write-Host "   -X::::-===-+Xxxxx-=====::::-:::-++ " -ForegroundColor $ColorAccent
+Write-Host "   ++-:::::-==-+xx+-=====::::==-...-X." -ForegroundColor $ColorAccent
+Write-Host "  -X-===:::::-===-======::.:====:.. +x " -ForegroundColor $ColorAccent
+Write-Host "  xx-=====:.:::-=======::::==---:.:.=O." -ForegroundColor $ColorAccent
+Write-Host "  +x========-::::-====:::.....::::==x+xx:  " -ForegroundColor $ColorAccent
+Write-Host "  X===========-:::::-:..   ...-=---:--:=XX" -ForegroundColor $ColorAccent
+Write-Host "  X=============-......   :+x+++==-:::::-+X=" -ForegroundColor $ColorAccent
+Write-Host "  X==============:------+O:.:-+x++++++x-    " -ForegroundColor $ColorAccent
+Write-Host "  X+=============:-------x+:                " -ForegroundColor $ColorAccent
+Write-Host "  xx-=============:-------+x+:              " -ForegroundColor $ColorAccent
+Write-Host "  :+xxx+XX+xXX+x+xxxxxxxxxx+=               " -ForegroundColor $ColorAccent
+Write-Host ""
+Write-Host "        BetterPerformance v1.0" -ForegroundColor $ColorAccent
+Write-Host "--------------------------------------------------" -ForegroundColor $ColorMuted
+Write-Host "   Windows Performance Optimization Suite" -ForegroundColor $ColorMuted
+Write-Host ""
+Write-Host ""
+`;
+}
+
+/**
+ * Generates the PowerShell function \`Invoke-AsTrustedInstaller\`.
+ *
+ * The function:
+ *  1. Verifies the process is running as SYSTEM or Administrator.
+ *  2. Starts the TrustedInstaller service if not already running.
+ *  3. Obtains the TrustedInstaller process token via NtObjectManager (preferred),
+ *     PsExec (fallback), or throws a clear error if neither is available.
+ *  4. Prints themed console messages using the \$Color* variables defined by
+ *     generateConsoleTheme() — never redefines them.
+ *  5. Executes the caller-supplied [scriptblock]\$Action under the elevated token,
+ *     then reverts impersonation and stops the service.
+ *
+ * The TypeScript function only returns the PS string — it executes nothing.
+ */
+export function generateTrustedInstallerFunction(): string {
+    return `# ---------------------------------------------------------------------------
+# TrustedInstaller privilege escalation helper
+# ---------------------------------------------------------------------------
+function Invoke-AsTrustedInstaller {
+    [CmdletBinding()]
+    param (
+        [Parameter(Mandatory = \$true)]
+        [scriptblock]\$Action
+    )
+
+    try {
+        # -- 1. Verify we are running as SYSTEM or Administrator ---------------
+        \$currentIdentity  = [Security.Principal.WindowsIdentity]::GetCurrent()
+        \$currentPrincipal = [Security.Principal.WindowsPrincipal]\$currentIdentity
+
+        \$isSystem = \$currentIdentity.IsSystem
+        \$isAdmin  = \$currentPrincipal.IsInRole(
+                        [Security.Principal.WindowsBuiltInRole]::Administrator)
+
+        if (-not \$isSystem -and -not \$isAdmin) {
+            throw [System.UnauthorizedAccessException](
+                "Invoke-AsTrustedInstaller requires the process to be running " +
+                "as SYSTEM or as a local Administrator. " +
+                "Please re-launch the script with elevated privileges.")
+        }
+
+        # -- 2. Start TrustedInstaller service if not already running ----------
+        \$tiService = Get-Service -Name TrustedInstaller -ErrorAction SilentlyContinue
+        if (\$tiService -and \$tiService.Status -ne 'Running') {
+            try {
+                Start-Service TrustedInstaller -ErrorAction Stop
+            } catch {
+                Write-Host ("ERROR: Failed to start TrustedInstaller service: " + \$_.Exception.Message) \`
+                    -ForegroundColor \$ColorError
+                throw
+            }
+        }
+
+        # -- 3. Resolve the TrustedInstaller.exe PID ---------------------------
+        \$tiProcess = Get-Process -Name TrustedInstaller -ErrorAction Stop
+
+        # -- 4. Print escalation banner ----------------------------------------
+        \$separator = "-" * 60
+        Write-Host \$separator -ForegroundColor \$ColorWarning
+        Write-Host "=  Escalating privileges to TrustedInstaller..." \`
+            -ForegroundColor \$ColorWarning
+        Write-Host "   This access level allows modifying protected system components." \`
+            -ForegroundColor \$ColorMuted
+        Write-Host "   The process will revert automatically when finished." \`
+            -ForegroundColor \$ColorMuted
+        Write-Host \$separator -ForegroundColor \$ColorWarning
+
+        # -- 5. Impersonation: NtObjectManager preferred, PsExec fallback ------
+        \$ntomAvailable = \$false
+        try {
+            Import-Module NtObjectManager -ErrorAction Stop
+            \$ntomAvailable = \$true
+        } catch {
+            # Module not installed -- will try fallbacks below
+        }
+
+        if (\$ntomAvailable) {
+            # -- NtObjectManager path ------------------------------------------
+            \$tiToken = Get-NtToken \`
+                -ProcessId \$tiProcess.Id \`
+                -Duplicate \`
+                -Access 'Query,Impersonate,AssignPrimary' \`
+                -ImpersonationLevel Impersonation \`
+                -ErrorAction Stop
+
+            try {
+                Use-NtToken -Token \$tiToken -ErrorAction Stop -Script {
+                    Write-Host "OK  TrustedInstaller privileges active." \`
+                        -ForegroundColor \$ColorSuccess
+
+                    & \$Action
+                }
+            } finally {
+                \$tiToken.Dispose()
+            }
+        } else {
+            # -- PsExec fallback -----------------------------------------------
+            \$psExecPath = Get-Command psexec.exe -ErrorAction SilentlyContinue |
+                              Select-Object -ExpandProperty Source
+
+            if (-not \$psExecPath) {
+                throw [System.NotSupportedException](
+                    "Neither the NtObjectManager module nor PsExec was found. " +
+                    "Install NtObjectManager: Install-Module NtObjectManager -Scope CurrentUser " +
+                    "or place psexec.exe in a directory on PATH.")
+            }
+
+            # Serialise the scriptblock to a temp file and invoke via PsExec
+            \$tempScript = [System.IO.Path]::GetTempFileName() + ".ps1"
+            try {
+                \$Action.ToString() | Set-Content -Path \$tempScript -Encoding UTF8
+
+                Write-Host "OK  TrustedInstaller privileges active." \`
+                    -ForegroundColor \$ColorSuccess
+
+                \$psExecArgs = @(
+                    "-i", "-s", "-accepteula",
+                    "powershell.exe",
+                    "-NoProfile", "-ExecutionPolicy", "Bypass",
+                    "-File", ("\`"" + \$tempScript + "\`"")
+                )
+                & \$psExecPath @\$psExecArgs
+
+                if (\$LASTEXITCODE -ne 0) {
+                    throw ("PsExec exited with code " + \$LASTEXITCODE + " while running TrustedInstaller action.")
+                }
+            } finally {
+                if (Test-Path \$tempScript) {
+                    Remove-Item \$tempScript -Force -ErrorAction SilentlyContinue
+                }
+            }
+        }
+
+    } finally {
+        # -- 6. Revert impersonation and stop the service ----------------------
+        try {
+            Stop-Service TrustedInstaller -ErrorAction SilentlyContinue
+        } catch {
+            # Non-fatal -- best-effort cleanup only
+        }
+    }
+}
+`;
 }

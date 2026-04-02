@@ -14,36 +14,35 @@ export async function POST(request: Request) {
       );
     }
 
-    // Iterate sequentially to ensure each increment happens one by one
-    const errors: string[] = [];
-    for (const id of tweakIds) {
-      if (!id || typeof id !== "string") {
-        errors.push(`Invalid tweak ID: ${id}`);
-        continue;
-      }
+    // Validate all IDs before calling the DB
+    const validIds = tweakIds.filter((id: unknown): id is string => !!id && typeof id === "string");
+    const invalidCount = tweakIds.length - validIds.length;
 
-      const { error } = await supabase.rpc("increment_download_count", {
-        tweak_id: id,
-      });
-
-      if (error) {
-        console.error(`Error incrementing download count for tweak ${id}:`, error);
-        errors.push(`Failed to increment tweak ${id}: ${error.message}`);
-        // Continue with other tweaks even if one fails
-      }
+    if (validIds.length === 0) {
+      return NextResponse.json(
+        { error: "No valid tweak IDs provided" },
+        { status: 400 }
+      );
     }
 
-    if (errors.length > 0 && errors.length === tweakIds.length) {
-      // All failed
+    // NOTE: This requires the PostgreSQL function increment_download_count_batch to exist
+    // in Supabase, accepting a uuid[] parameter and updating all rows in a single query.
+    // Create it if it does not exist.
+    const { error: rpcError } = await supabase.rpc("increment_download_count_batch", {
+      tweak_ids: validIds,
+    });
+
+    if (rpcError) {
+      console.error("Error batch-incrementing download counts:", rpcError);
       return NextResponse.json(
-        { error: "Failed to increment download counts", details: errors },
+        { error: "Failed to increment download counts", details: rpcError.message },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      ...(errors.length > 0 && { warnings: errors })
+      ...(invalidCount > 0 && { warnings: [`${invalidCount} invalid ID(s) were skipped`] }),
     });
   } catch (error) {
     console.error("Error incrementing download counts:", error);
