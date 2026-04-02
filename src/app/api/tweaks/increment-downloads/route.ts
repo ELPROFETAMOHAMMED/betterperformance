@@ -1,8 +1,26 @@
 import { createClient } from "@/shared/utils/supabase/server";
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/shared/utils/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    const ip = request.headers.get("x-real-ip")
+      ?? request.headers.get("x-forwarded-for")?.split(",")[0].trim()
+      ?? "anonymous";
+
+    const { allowed } = await rateLimit(
+      `downloads:${ip}`,
+      5,           // 5 requests
+      60 * 1000    // por minuto
+    );
+
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Try again later." },
+        { status: 429 }
+      );
+    }
+
     const supabase = await createClient();
     const body = await request.json();
     const { tweakIds } = body;

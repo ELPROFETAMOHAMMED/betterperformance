@@ -20,7 +20,13 @@ export async function deleteTweakReport(reportId: string): Promise<{ success: bo
     if (fetchError || !report) throw new Error("Report not found");
     
     // Allow deletion if owner or admin
-    const isAdmin = user.user_metadata?.role === "admin";
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    const isAdmin = profile?.role === "admin";
     if (report.user_id !== user.id && !isAdmin) {
       throw new Error("You are not authorized to delete this report");
     }

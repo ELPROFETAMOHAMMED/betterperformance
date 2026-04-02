@@ -42,12 +42,17 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
   // Sync with LocalStorage
   useEffect(() => {
     if (!isInitialized) return;
-    const array = Array.from(selectedTweaks.values());
-    localStorage.setItem("bp:selected_tweaks", JSON.stringify(array));
+    
+    const timeoutId = setTimeout(() => {
+      const array = Array.from(selectedTweaks.values());
+      localStorage.setItem("bp:selected_tweaks", JSON.stringify(array));
+    }, 500);
+
+    return () => clearTimeout(timeoutId);
   }, [selectedTweaks, isInitialized]);
 
   const toggleTweak = useCallback((tweak: Tweak) => {
-    setSelectedTweaks((prev) => {
+    setSelectedTweaks((prev: Map<string, Tweak>) => {
       const next = new Map(prev);
       if (next.has(tweak.id)) {
         next.delete(tweak.id);
@@ -89,7 +94,7 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const updateTweakCounters = useCallback((tweakIds: string[], type: "download" | "favorite") => {
-    setSelectedTweaks((prev) => {
+    setSelectedTweaks((prev: Map<string, Tweak>) => {
       const newMap = new Map(prev);
       tweakIds.forEach((id) => {
         const tweak = newMap.get(id);

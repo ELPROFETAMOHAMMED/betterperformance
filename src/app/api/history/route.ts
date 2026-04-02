@@ -1,6 +1,7 @@
 import { createClient } from "@/shared/utils/supabase/server";
 import type { TweakHistoryEntry } from "@/features/tweaks/types/tweak.types";
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/shared/utils/rate-limit";
 
 interface TweakHistoryRow {
   id: string;
@@ -55,6 +56,18 @@ export async function POST(request: Request) {
     
     if (!user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed } = await rateLimit(
+      `history:${user.id}`,
+      20,          // 20 requests
+      60 * 1000    // por minuto
+    );
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Try again later." },
+        { status: 429 }
+      );
     }
 
     const body = await request.json();

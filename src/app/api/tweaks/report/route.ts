@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createTweakReport } from "@/features/tweaks/services/create-tweak-report";
+import { createClient } from "@/shared/utils/supabase/server";
+import { rateLimit } from "@/shared/utils/rate-limit";
 
 const reportSchema = z.object({
   tweakId: z.string().uuid(),
@@ -11,6 +13,25 @@ const reportSchema = z.object({
 
 export async function POST(request: Request) {
   try {
+    const supabase = await createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const { allowed } = await rateLimit(
+      `report:${user.id}`,
+      3,          // 3 requests
+      60 * 60 * 1000  // por hora
+    );
+    if (!allowed) {
+      return NextResponse.json(
+        { error: "Too many requests. Try again later." },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const validatedData = reportSchema.parse(body);
 

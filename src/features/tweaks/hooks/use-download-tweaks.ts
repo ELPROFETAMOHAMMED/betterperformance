@@ -76,17 +76,17 @@ export function useDownloadTweaks() {
     }
   }, [pendingDownload]);
 
-  // Cleanup effect to ensure callbacks are called if component unmounts or dialog is closed unexpectedly
-  // Only call if cancellation wasn't already explicitly handled
+  const pendingDownloadRef = useRef(pendingDownload);
+  pendingDownloadRef.current = pendingDownload;
+
+  // Cleanup effect en el desmontaje final para evitar memory leak o doble invocación de callbacks.
   useEffect(() => {
     return () => {
-      if (pendingDownload && showWarningDialog && !cancelHandledRef.current) {
-        pendingDownload.callbacks?.onDownloadCancel?.();
+      if (pendingDownloadRef.current && !cancelHandledRef.current) {
+        pendingDownloadRef.current.callbacks?.onDownloadCancel?.();
       }
-      // Reset flag when effect dependencies change (new pending download)
-      cancelHandledRef.current = false;
     };
-  }, [pendingDownload, showWarningDialog]);
+  }, []);
 
   return {
     handleDownload,
