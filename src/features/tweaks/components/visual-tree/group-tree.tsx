@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
-import { CategoryRow } from "./category-row";
-import { TweakItem } from "../tweak-item";
+import { CategoryRow } from "@/features/tweaks/components/visual-tree/category-row";
+import { TweakItem } from "@/features/tweaks/components/tweak-item";
 import { Button } from "@/shared/components/ui/button";
 import {
   DropdownMenu,
@@ -11,8 +11,8 @@ import {
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
 import { EllipsisHorizontalIcon, PencilIcon, StarIcon, TrashIcon } from "@heroicons/react/24/outline";
-import { GroupSelectionItem } from "./hooks/use-group-selections";
-import { TweaksEmptyState } from "../tweaks-empty-state";
+import { GroupSelectionItem } from "@/features/tweaks/components/visual-tree/hooks/use-group-selections";
+import { TweaksEmptyState } from "@/features/tweaks/components/tweaks-empty-state";
 
 interface GroupTreeProps {
   groups: GroupSelectionItem[];

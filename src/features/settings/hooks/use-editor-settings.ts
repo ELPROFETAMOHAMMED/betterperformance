@@ -1,4 +1,15 @@
-import { useState, useEffect, useCallback } from "react";
+"use client";
+
+import {
+  createElement,
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
+import type { ReactNode } from "react";
 
 export type EditorSettings = {
   enableTextColors: boolean;
@@ -20,6 +31,10 @@ const DEFAULT_SETTINGS: EditorSettings = {
 };
 
 function loadSettings(): EditorSettings {
+  if (typeof window === "undefined") {
+    return DEFAULT_SETTINGS;
+  }
+
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
@@ -30,15 +45,62 @@ function loadSettings(): EditorSettings {
 }
 
 function saveSettings(settings: EditorSettings) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
   localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
 }
 
-export function useEditorSettings() {
+type EditorSettingsContextValue = {
+  settings: EditorSettings;
+  setEnableTextColors: (value: boolean) => void;
+  setEncodingUtf8: (value: boolean) => void;
+  setHideSensitive: (value: boolean) => void;
+  setDownloadEachTweak: (value: boolean) => void;
+  setAlwaysShowWarning: (value: boolean) => void;
+  setAutoCreateRestorePoint: (value: boolean) => void;
+};
+
+const EditorSettingsContext = createContext<EditorSettingsContextValue | undefined>(
+  undefined
+);
+
+export function EditorSettingsProvider({
+  children,
+}: {
+  children: ReactNode;
+}) {
   const [settings, setSettings] = useState<EditorSettings>(() => loadSettings());
 
   useEffect(() => {
     saveSettings(settings);
   }, [settings]);
+
+  useEffect(() => {
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key !== STORAGE_KEY || !event.newValue) {
+        return;
+      }
+
+      try {
+        const nextSettings = {
+          ...DEFAULT_SETTINGS,
+          ...JSON.parse(event.newValue),
+        } as EditorSettings;
+
+        setSettings(nextSettings);
+      } catch {
+        setSettings(DEFAULT_SETTINGS);
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+    };
+  }, []);
 
   const setEnableTextColors = useCallback((v: boolean) => {
     setSettings((prev) => ({ ...prev, enableTextColors: v }));
@@ -64,13 +126,38 @@ export function useEditorSettings() {
     setSettings((prev) => ({ ...prev, autoCreateRestorePoint: v }));
   }, []);
 
-  return {
-    settings,
-    setEnableTextColors,
-    setEncodingUtf8,
-    setHideSensitive,
-    setDownloadEachTweak,
-    setAlwaysShowWarning,
-    setAutoCreateRestorePoint,
-  };
+  const value = useMemo<EditorSettingsContextValue>(
+    () => ({
+      settings,
+      setEnableTextColors,
+      setEncodingUtf8,
+      setHideSensitive,
+      setDownloadEachTweak,
+      setAlwaysShowWarning,
+      setAutoCreateRestorePoint,
+    }),
+    [
+      settings,
+      setEnableTextColors,
+      setEncodingUtf8,
+      setHideSensitive,
+      setDownloadEachTweak,
+      setAlwaysShowWarning,
+      setAutoCreateRestorePoint,
+    ]
+  );
+
+  return createElement(EditorSettingsContext.Provider, { value }, children);
+}
+
+export function useEditorSettings() {
+  const context = useContext(EditorSettingsContext);
+
+  if (!context) {
+    throw new Error(
+      "useEditorSettings must be used within an EditorSettingsProvider"
+    );
+  }
+
+  return context;
 }

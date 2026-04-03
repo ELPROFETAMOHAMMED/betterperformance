@@ -7,6 +7,7 @@ import { SidebarProvider, SidebarInset } from "@/shared/components/ui/sidebar";
 import { Toaster } from "@/shared/components/ui/sonner";
 import { SelectionProvider } from "@/features/tweaks/context/selection-context";
 import { UserProvider } from "@/shared/providers/user-provider";
+import { EditorSettingsProvider } from "@/features/settings/hooks/use-editor-settings";
 
 function LayoutContent({ children }: { children: React.ReactNode }) {
   return (
@@ -32,7 +33,9 @@ export default function MainLayout({
   return (
     <QueryProvider>
       <UserProvider>
-        <LayoutContent>{children}</LayoutContent>
+        <EditorSettingsProvider>
+          <LayoutContent>{children}</LayoutContent>
+        </EditorSettingsProvider>
       </UserProvider>
       <Toaster closeButton position="top-right"/>
     </QueryProvider>

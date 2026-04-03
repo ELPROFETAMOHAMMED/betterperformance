@@ -1,7 +1,7 @@
 import { motion, AnimatePresence } from "framer-motion";
 import type { TweakCategory, Tweak } from "@/features/tweaks/types/tweak.types";
-import { CategoryRow } from "./category-row";
-import { TweakItem } from "../tweak-item";
+import { CategoryRow } from "@/features/tweaks/components/visual-tree/category-row";
+import { TweakItem } from "@/features/tweaks/components/tweak-item";
 import { Button } from "@/shared/components/ui/button";
 import { PencilIcon } from "@heroicons/react/24/outline";
 
