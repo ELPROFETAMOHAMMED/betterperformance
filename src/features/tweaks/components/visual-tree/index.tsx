@@ -5,21 +5,21 @@ import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 import { useUser } from "@/shared/hooks/use-user";
 import { filterAndSortTweaks, type SortOption } from "@/features/tweaks/utils/filter-tweaks";
-import { VisualTreeSortMenu } from "../visual-tree-sort-menu";
+import { VisualTreeSortMenu } from "@/features/tweaks/components/visual-tree-sort-menu";
 import { ReportsExplorer } from "@/features/tweaks/components/reports-explorer";
 
 import type { TweakCategory, Tweak, TweakHistoryEntry } from "@/features/tweaks/types/tweak.types";
 import type { TweakReport } from "@/features/tweaks/types/tweak-report.types";
 
 // Hooks
-import { useTreeExpansion } from "./hooks/use-tree-expansion";
-import { useGroupSelections } from "./hooks/use-group-selections";
+import { useTreeExpansion } from "@/features/tweaks/components/visual-tree/hooks/use-tree-expansion";
+import { useGroupSelections } from "@/features/tweaks/components/visual-tree/hooks/use-group-selections";
 
 // Trees
-import { LibraryTree } from "./library-tree";
-import { GroupTree } from "./group-tree";
-import { PopularTree } from "./popular-tree";
-import { FlatTree } from "./flat-tree";
+import { LibraryTree } from "@/features/tweaks/components/visual-tree/library-tree";
+import { GroupTree } from "@/features/tweaks/components/visual-tree/group-tree";
+import { PopularTree } from "@/features/tweaks/components/visual-tree/popular-tree";
+import { FlatTree } from "@/features/tweaks/components/visual-tree/flat-tree";
 
 interface VisualTreeProps {
   categories: TweakCategory[];

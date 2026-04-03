@@ -45,7 +45,6 @@ export function PopularTree({
         return (
           <div key={category.id} className="overflow-hidden border-b border-border/10 last:border-0 transition-colors">
             <CategoryRow
-              id={category.id}
               name={category.name}
               description={category.description}
               icon={category.icon}
@@ -55,7 +54,7 @@ export function PopularTree({
               isAdmin={isAdmin}
               selectedTweaks={selectedTweaks}
               onSelectGroup={handleSelectGroup}
-              className="bg-transparent" // overriden in CategoryRow but we keep it flat here
+              className="bg-transparent"
               actions={
                 isAdmin && onEditCategory ? (
                   <Button

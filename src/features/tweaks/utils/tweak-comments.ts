@@ -1,5 +1,5 @@
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
-import { redactSensitive } from "@/shared/lib/utils";
+import { redactSensitive } from "@/shared/security/redact-sensitive";
 
 export function getTweakCommentBlock(tweak: Tweak) {
   const desc = (tweak.description || "")

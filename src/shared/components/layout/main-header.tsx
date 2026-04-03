@@ -2,16 +2,14 @@
 
 import { useState, useEffect, Suspense } from "react";
 import { SidebarTrigger } from "@/shared/components/ui/sidebar";
-import { BreadcrumbNavigator } from "./breadcrumb-navigator";
-// Input import removed
+import { BreadcrumbNavigator } from "@/shared/components/layout/breadcrumb-navigator";
 import { MagnifyingGlassIcon, QueueListIcon } from "@heroicons/react/24/outline";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import { useSelection } from "@/features/tweaks/context/selection-context";
 import { SelectionSheet } from "@/features/tweaks/components/selection-sheet";
 import { Badge } from "@/shared/components/ui/badge";
-// cn import removed
 import { motion, AnimatePresence } from "framer-motion";
-import { TweakSearchOverlay } from "@/features/tweaks/components/search-overlay";
+import { TweakSearchOverlay } from "@/features/tweaks/components/tweak-search-overlay";
 
 function MainHeaderInner() {
   const router = useRouter();
@@ -21,7 +19,6 @@ function MainHeaderInner() {
   const [searchValue] = useState(searchParams.get("q") || "");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
-  // Update URL search params
   useEffect(() => {
     const params = new URLSearchParams(searchParams.toString());
     if (searchValue) {
@@ -30,14 +27,12 @@ function MainHeaderInner() {
       params.delete("q");
     }
 
-    // Only update if the query changed
     const currentQ = searchParams.get("q") || "";
     if (currentQ !== searchValue) {
       router.replace(`${pathname}?${params.toString()}`);
     }
   }, [searchValue, searchParams, pathname, router]);
 
-  // Keyboard shortcut Ctrl+K
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.key === "k" && (e.metaKey || e.ctrlKey)) {

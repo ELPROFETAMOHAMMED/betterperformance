@@ -1,6 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+import { normalizeRole } from "@/shared/auth/normalize-role";
+
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
   const code = requestUrl.searchParams.get("code");
@@ -84,16 +86,6 @@ export async function GET(request: NextRequest) {
           .select("role, email, name, avatar_url")
           .eq("id", user.id)
           .maybeSingle();
-
-        // Helper function to normalize and validate role
-        const normalizeRole = (role: unknown): "user" | "admin" | null => {
-          if (!role) return null;
-          // Convert to string and trim, handle both string and non-string values
-          const roleStr = String(role).trim().toLowerCase();
-          if (roleStr === "admin") return "admin";
-          if (roleStr === "user") return "user";
-          return null;
-        };
 
         // Extract role from profiles table (source of truth)
         // The profiles table is the authoritative source for roles

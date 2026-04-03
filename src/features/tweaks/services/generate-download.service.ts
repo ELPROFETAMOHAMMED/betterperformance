@@ -8,7 +8,7 @@ import {
   prependRestorePointCode,
   wrapWithCompletionNotification,
   wrapTweaksWithAtomicExecution,
-} from "@/features/tweaks/services/powershell-generator";
+} from "@/features/tweaks/services/powershell-compose";
 import { downloadFile } from "@/features/tweaks/utils/file-downloader";
 
 export interface DownloadTweaksOptions {

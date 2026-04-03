@@ -2,6 +2,9 @@
 
 import { useState, useEffect } from "react";
 import type { TweakCategory, Tweak } from "@/features/tweaks/types/tweak.types";
+import { CategoryDeleteDialog } from "@/features/tweaks/components/category-delete-dialog";
+import { CategoryTweakDeleteDialog } from "@/features/tweaks/components/category-tweak-delete-dialog";
+import { CategoryTweaksPanel } from "@/features/tweaks/components/category-tweaks-panel";
 import {
   Dialog,
   DialogContent,
@@ -15,17 +18,6 @@ import { Input } from "@/shared/components/ui/input";
 import { Label } from "@/shared/components/ui/label";
 import { Textarea } from "@/shared/components/ui/textarea";
 import { toast } from "sonner";
-import { TrashIcon } from "@heroicons/react/24/outline";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/shared/components/ui/alert-dialog";
 import DynamicIcon from "@/shared/components/common/dynamic-icon";
 
 interface CategoryFormDialogProps {
@@ -220,50 +212,13 @@ export function CategoryFormDialog({
             </div>
 
             {/* Tweaks List */}
-            <div className="space-y-4 border-t pt-4">
-              <div className="flex items-center justify-between">
-                <Label>Tweaks in this category ({tweakCount})</Label>
-              </div>
-              {tweakCount === 0 ? (
-                <p className="text-sm text-muted-foreground">No tweaks in this category.</p>
-              ) : (
-                <div className="space-y-2 max-h-64 overflow-y-auto">
-                  {tweaks.map((tweak) => (
-                    <div
-                      key={tweak.id}
-                      className="flex items-center justify-between p-3 rounded-md border border-border/40 bg-muted/20 hover:bg-muted/40 transition-colors"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{tweak.title}</p>
-                        {tweak.description && (
-                          <p className="text-xs text-muted-foreground line-clamp-1 mt-1">
-                            {tweak.description}
-                          </p>
-                        )}
-                        {!tweak.is_visible && (
-                          <span className="text-[10px] text-muted-foreground/70 mt-1 inline-block">
-                            (Disabled)
-                          </span>
-                        )}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-                        onClick={() => {
-                          setTweakToDelete(tweak);
-                          setDeleteTweakDialogOpen(true);
-                        }}
-                        title="Delete tweak"
-                      >
-                        <TrashIcon className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
+            <CategoryTweaksPanel
+              tweaks={tweaks}
+              onDeleteTweak={(tweak) => {
+                setTweakToDelete(tweak);
+                setDeleteTweakDialogOpen(true);
+              }}
+            />
 
             <DialogFooter className="flex items-center justify-between">
               <Button
@@ -293,48 +248,22 @@ export function CategoryFormDialog({
       </Dialog>
 
       {/* Delete Tweak Confirmation */}
-      <AlertDialog open={deleteTweakDialogOpen} onOpenChange={setDeleteTweakDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Tweak</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete &quot;{tweakToDelete?.title}&quot;? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingTweak}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteTweak}
-              disabled={isDeletingTweak}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeletingTweak ? "Deleting..." : "Delete"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CategoryTweakDeleteDialog
+        open={deleteTweakDialogOpen}
+        onOpenChange={setDeleteTweakDialogOpen}
+        onConfirm={handleDeleteTweak}
+        isDeleting={isDeletingTweak}
+        tweakTitle={tweakToDelete?.title}
+      />
 
-      {/* Delete Category Confirmation */}
-      <AlertDialog open={deleteCategoryDialogOpen} onOpenChange={setDeleteCategoryDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Delete Category</AlertDialogTitle>
-            <AlertDialogDescription>
-              Are you sure you want to delete the category &quot;{category.name}&quot; and all {tweakCount} tweak{tweakCount === 1 ? "" : "s"} in it? This action cannot be undone.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeletingCategory}>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteCategory}
-              disabled={isDeletingCategory}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeletingCategory ? "Deleting..." : "Delete Category"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      <CategoryDeleteDialog
+        open={deleteCategoryDialogOpen}
+        onOpenChange={setDeleteCategoryDialogOpen}
+        onConfirm={handleDeleteCategory}
+        isDeleting={isDeletingCategory}
+        categoryName={category.name}
+        tweakCount={tweakCount}
+      />
     </>
   );
 }

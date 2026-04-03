@@ -1,24 +1,15 @@
 import { createClient } from "@/shared/utils/supabase/server";
+import { resolveCategoryId } from "@/features/tweaks/server/resolve-category-id";
+import { requireAdmin } from "@/shared/auth/require-admin";
 import { NextResponse } from "next/server";
 
 export async function POST(request: Request) {
   try {
     const supabase = await createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const adminCheck = await requireAdmin(supabase);
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    // Check if user is admin
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profile?.role !== "admin") {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    if (adminCheck.response) {
+      return adminCheck.response;
     }
 
     const body = await request.json();
@@ -44,28 +35,12 @@ export async function POST(request: Request) {
       );
     }
 
-    let finalCategoryId = category_id;
-
-    // Create new category if needed
-    if (category_name && !category_id) {
-      const { data: newCategory, error: categoryError } = await supabase
-        .from("categories")
-        .insert([
-          {
-            name: category_name,
-            icon: category_icon || null,
-            description: category_description || null,
-          },
-        ])
-        .select()
-        .single();
-
-      if (categoryError) {
-        throw categoryError;
-      }
-
-      finalCategoryId = newCategory.id;
-    }
+    const finalCategoryId = await resolveCategoryId(supabase, {
+      categoryDescription: category_description,
+      categoryIcon: category_icon,
+      categoryId: category_id,
+      categoryName: category_name,
+    });
 
     if (!finalCategoryId) {
       return NextResponse.json(

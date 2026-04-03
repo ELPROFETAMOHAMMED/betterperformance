@@ -5,18 +5,13 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
 import { AnimatedCounter } from "@/features/tweaks/components/animated-counter";
-import { cn } from "@/shared/lib/utils";
-import { useUser } from "@/shared/hooks/use-user";
+import { TweakReportsPanel } from "@/features/tweaks/components/tweak-reports-panel";
 import { useTheme } from "next-themes";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
-import { formatDistanceToNow } from "date-fns";
-import { deleteTweakReport } from "../actions/delete-report";
-import { useQueryClient } from "@tanstack/react-query";
 import type { TweakReport } from "@/features/tweaks/types/tweak-report.types";
 
 // UI Components
-import { Button } from "@/shared/components/ui/button";
 import { Badge } from "@/shared/components/ui/badge";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
@@ -30,10 +25,6 @@ import {
   InformationCircleIcon,
   CommandLineIcon,
   FlagIcon,
-  TrashIcon,
-  UsersIcon,
-  UserIcon,
-  ExclamationTriangleIcon,
 } from "@heroicons/react/24/outline";
 
 interface TweakDetailsPanelProps {
@@ -216,13 +207,13 @@ export function TweakDetailsPanel({
               </ScrollArea>
             </TabsContent>
 
-            <TabsContent value="reports" className="h-full m-0">
-               <ReportsView 
-                 activeTweakId={activeTweak.id} 
-                 userReports={userReports} 
-                 allReports={allReports} 
-               />
-            </TabsContent>
+              <TabsContent value="reports" className="h-full m-0">
+                <TweakReportsPanel
+                  activeTweakId={activeTweak.id}
+                  userReports={userReports}
+                  allReports={allReports}
+                />
+              </TabsContent>
 
             <TabsContent value="comments" className="h-full m-0">
               <div className="flex h-full flex-col items-center justify-center p-8 text-center bg-background/5">
@@ -240,149 +231,6 @@ export function TweakDetailsPanel({
       </div>
     </div>
   );
-}
-
-function ReportsView({ 
-    activeTweakId, 
-    userReports, 
-    allReports 
-}: { 
-    activeTweakId: string; 
-    userReports: TweakReport[]; 
-    allReports: TweakReport[]; 
-}) {
-    const [scope, setScope] = useState<"user" | "global">("global");
-    const { user } = useUser();
-    const queryClient = useQueryClient();
-    const [isDeleting, setIsDeleting] = useState<string | null>(null);
-
-    // Filter reports for the active tweak
-    const filteredReports = useMemo(() => {
-        const base = scope === "user" ? userReports : allReports;
-        return base.filter(r => r.tweak_id === activeTweakId);
-    }, [scope, userReports, allReports, activeTweakId]);
-
-    const handleDelete = async (reportId: string) => {
-        if (!window.confirm("Are you sure you want to retract your report?")) return;
-        
-        setIsDeleting(reportId);
-        try {
-          const result = await deleteTweakReport(reportId);
-          if (result.success) {
-            queryClient.invalidateQueries({ queryKey: ["all-reports-with-descriptions"] });
-            queryClient.invalidateQueries({ queryKey: ["user-reports"] });
-          } else {
-            alert(result.error || "Failed to delete report");
-          }
-        } catch (e) {
-          console.error(e);
-        } finally {
-          setIsDeleting(null);
-        }
-    };
-
-    return (
-        <ScrollArea className="h-full">
-            <div className="px-6 xl:px-8 py-6 max-w-4xl mx-auto space-y-6">
-                <div className="flex items-center justify-between">
-                    <div className="space-y-1">
-                        <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider">Reports Management</h4>
-                        <p className="text-xs text-muted-foreground">Community feedback for this tweak</p>
-                    </div>
-                    <div className="flex items-center p-1 bg-muted rounded-lg border border-border/20">
-                        <Button
-                            variant={scope === "global" ? "secondary" : "ghost"}
-                            size="sm"
-                            className="h-7 px-3 rounded-md gap-1.5"
-                            onClick={() => setScope("global")}
-                        >
-                            <UsersIcon className="h-3 w-3" />
-                            <span className="text-[11px] font-medium">Global</span>
-                            <Badge variant="outline" className="h-4 px-1 text-[9px]">{allReports.filter(r => r.tweak_id === activeTweakId).length}</Badge>
-                        </Button>
-                        <Button
-                            variant={scope === "user" ? "secondary" : "ghost"}
-                            size="sm"
-                            className="h-7 px-3 rounded-md gap-1.5"
-                            onClick={() => setScope("user")}
-                            disabled={!user}
-                        >
-                            <UserIcon className="h-3 w-3" />
-                            <span className="text-[11px] font-medium">Mine</span>
-                            <Badge variant="outline" className="h-4 px-1 text-[9px]">{userReports.filter(r => r.tweak_id === activeTweakId).length}</Badge>
-                        </Button>
-                    </div>
-                </div>
-
-                <div className="grid gap-3">
-                    {filteredReports.length === 0 ? (
-                        <div className="py-20 text-center border-2 border-dashed border-border/40 rounded-xl bg-muted/5">
-                            <ExclamationTriangleIcon className="h-10 w-10 mx-auto text-muted-foreground/30 mb-3" />
-                            <h5 className="font-medium text-foreground">No reports found</h5>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {scope === "user" ? "You haven't reported this tweak yet." : "No community reports for this tweak."}
-                            </p>
-                        </div>
-                    ) : (
-                        filteredReports.map((report) => (
-                            <div
-                                key={report.id}
-                                className="group relative flex flex-col gap-3 p-4 rounded-xl bg-card border border-border/40 hover:border-primary/40 transition-all shadow-sm"
-                            >
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center gap-2 mb-1.5">
-                                            <Badge variant="outline" className={cn(
-                                                "text-[10px] h-4 font-bold uppercase tracking-tighter px-1.5",
-                                                report.status === "resolved" ? "text-emerald-500 border-emerald-500/20" : "text-amber-500 border-amber-500/20"
-                                            )}>
-                                                {report.status}
-                                            </Badge>
-                                            <span className={cn(
-                                                "text-[10px] font-bold uppercase tracking-wider",
-                                                report.risk_level === "high" ? "text-red-500" :
-                                                report.risk_level === "medium" ? "text-amber-500" : "text-emerald-500"
-                                            )}>
-                                                {report.risk_level} risk
-                                            </span>
-                                        </div>
-                                        <h5 className="text-sm font-semibold text-foreground line-clamp-1">
-                                            {report.title}
-                                        </h5>
-                                    </div>
-                                    
-                                    {user?.id === report.user_id && (
-                                        <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-7 w-7 text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                            onClick={() => handleDelete(report.id)}
-                                            disabled={isDeleting === report.id}
-                                        >
-                                            {isDeleting === report.id ? (
-                                                <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
-                                            ) : (
-                                                <TrashIcon className="h-4 w-4" />
-                                            )}
-                                        </Button>
-                                    )}
-                                </div>
-
-                                <p className="text-xs text-muted-foreground leading-relaxed italic bg-muted/20 p-3 rounded-lg border border-border/10">
-                                    &quot;{report.description}&quot;
-                                </p>
-
-                                <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1">
-                                    <span>{report.user_id === user?.id ? "Your report" : "Community report"}</span>
-                                    <span>{formatDistanceToNow(new Date(report.created_at), { addSuffix: true })}</span>
-                                </div>
-                            </div>
-                        ))
-                    )}
-                </div>
-            </div>
-        </ScrollArea>
-    );
 }
 
 function TabTrigger({ value, icon, children }: { value: string; icon: React.ReactNode; children: React.ReactNode }) {

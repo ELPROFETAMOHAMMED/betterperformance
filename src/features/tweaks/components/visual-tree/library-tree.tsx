@@ -35,7 +35,6 @@ export function LibraryTree({
         return (
           <div key={category.id} className="mb-2 last:mb-0">
             <CategoryRow
-              id={category.id}
               name={category.name}
               description={category.description}
               icon={category.icon}

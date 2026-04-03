@@ -52,7 +52,6 @@ export function GroupTree({
         return (
           <div key={group.id} className="mb-2 last:mb-0">
             <CategoryRow
-              id={group.id}
               name={group.title}
               icon={group.icon}
               isExpanded={isExpanded}

@@ -1,0 +1,252 @@
+"use client";
+
+import {
+  ArrowDownTrayIcon,
+  ArrowPathIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ClipboardIcon,
+  FlagIcon,
+  PencilIcon,
+  PlusIcon,
+} from "@heroicons/react/24/outline";
+import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
+
+import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/shared/components/ui/tooltip";
+import { cn } from "@/shared/lib/cn";
+
+type TweaksHeaderProps = {
+  activeCategory: TweakCategory | null;
+  activeIndex: number;
+  activeTab: string;
+  activeTweak: Tweak | null;
+  globalIsLoading: boolean;
+  isAdmin: boolean;
+  isCopying: boolean;
+  isDownloadLoading: boolean;
+  isSavingFavorite: boolean;
+  selectedTweaksCount: number;
+  onCopy: () => void;
+  onCreateTweak: () => void;
+  onDownload: () => void;
+  onEditTweak: (tweak: Tweak) => void;
+  onNextTweak: () => void;
+  onOpenFavoriteDialog: (tweaks: Tweak[], favoriteName: string) => void;
+  onOpenReportDialog: () => void;
+  onPrevTweak: () => void;
+  onRefresh: () => void;
+};
+
+export function TweaksHeader({
+  activeCategory,
+  activeIndex,
+  activeTab,
+  activeTweak,
+  globalIsLoading,
+  isAdmin,
+  isCopying,
+  isDownloadLoading,
+  isSavingFavorite,
+  selectedTweaksCount,
+  onCopy,
+  onCreateTweak,
+  onDownload,
+  onEditTweak,
+  onNextTweak,
+  onOpenFavoriteDialog,
+  onOpenReportDialog,
+  onPrevTweak,
+  onRefresh,
+}: TweaksHeaderProps) {
+  return (
+    <div className="w-full shrink-0 border-b border-border/20 bg-background/50 py-2 backdrop-blur-xl">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center border-r border-border/20 px-4 lg:w-[32%]">
+          <span className="text-sm font-bold uppercase tracking-tight opacity-50">
+            Explorer
+          </span>
+        </div>
+
+        <div className="flex flex-1 items-center justify-between px-4">
+          <div className="flex items-center gap-2">
+            {activeTweak ? (
+              <>
+                <Badge variant="outline" className="bg-background/50 font-normal shadow-sm">
+                  {activeIndex + 1} / {selectedTweaksCount}
+                </Badge>
+                <div className="mx-1 h-4 w-px bg-border/60" />
+                <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                  {activeCategory?.name || "Uncategorized"}
+                </span>
+              </>
+            ) : (
+              <span className="pl-2 text-xs italic text-muted-foreground">
+                No tweaks selected
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 font-normal">
+              <TooltipProvider>
+                {activeTweak && (
+                  <div className="mr-2 flex items-center gap-1 border-r border-border/40 pr-2">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-yellow-500 hover:bg-yellow-500/10"
+                          onClick={() =>
+                            onOpenFavoriteDialog(
+                              [activeTweak],
+                              `Favorite: ${activeTweak.title}`
+                            )
+                          }
+                          disabled={isSavingFavorite}
+                        >
+                          <StarIconSolid className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Save to favorites</TooltipContent>
+                    </Tooltip>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={onCopy}
+                          disabled={isCopying}
+                        >
+                          <ClipboardIcon className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Copy code</TooltipContent>
+                    </Tooltip>
+
+                    {isAdmin && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => onEditTweak(activeTweak)}
+                          >
+                            <PencilIcon className="h-4 w-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit Tweak</TooltipContent>
+                      </Tooltip>
+                    )}
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={onOpenReportDialog}
+                        >
+                          <FlagIcon className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>Report issue</TooltipContent>
+                    </Tooltip>
+                  </div>
+                )}
+
+                {activeTab === "library" && isAdmin && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 gap-1.5"
+                        onClick={onCreateTweak}
+                      >
+                        <PlusIcon className="h-3.5 w-3.5" />
+                        <span className="hidden sm:inline">Add Tweak</span>
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Create new Tweak</TooltipContent>
+                  </Tooltip>
+                )}
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-8 gap-1.5"
+                      onClick={onRefresh}
+                      disabled={globalIsLoading}
+                    >
+                      <ArrowPathIcon
+                        className={cn(
+                          "h-3.5 w-3.5",
+                          globalIsLoading && "animate-spin"
+                        )}
+                      />
+                      <span>Refresh</span>
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Refresh data</TooltipContent>
+                </Tooltip>
+
+                {activeTweak && (
+                  <Button
+                    size="sm"
+                    className="ml-1 h-8 gap-2 rounded-lg px-4 shadow-sm transition-all hover:scale-105 active:scale-95"
+                    onClick={onDownload}
+                    disabled={isDownloadLoading}
+                  >
+                    {isDownloadLoading ? (
+                      <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                    ) : (
+                      <>
+                        <ArrowDownTrayIcon className="h-3.5 w-3.5" />
+                        <span>Download</span>
+                      </>
+                    )}
+                  </Button>
+                )}
+              </TooltipProvider>
+            </div>
+
+            <div className="flex items-center gap-1 border-l border-border/40 pl-3">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onPrevTweak}
+                disabled={!activeTweak || activeIndex <= 0}
+              >
+                <ChevronLeftIcon className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                onClick={onNextTweak}
+                disabled={!activeTweak || activeIndex >= selectedTweaksCount - 1}
+              >
+                <ChevronRightIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

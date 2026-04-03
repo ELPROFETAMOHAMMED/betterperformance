@@ -13,7 +13,6 @@ import type { Tweak } from "@/features/tweaks/types/tweak.types";
 import React from "react";
 
 interface CategoryRowProps {
-  id: string;
   name: string;
   description?: string;
   icon?: string | React.ReactNode;
@@ -28,7 +27,6 @@ interface CategoryRowProps {
 }
 
 export function CategoryRow({
-  id,
   name,
   description,
   icon,

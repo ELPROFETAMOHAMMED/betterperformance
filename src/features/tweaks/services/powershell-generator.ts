@@ -2,24 +2,23 @@
  * Service for generating PowerShell code snippets
  */
 
-import { psHeader as ps1Header } from "../templates/ps1-header";
-import { atomicExecutor } from "../templates/atomic-executor";
-import { restorePoint } from "../templates/restore-point";
-import { completion as completionCode } from "../templates/completion";
-import { trustedInstaller } from "../templates/trusted-installer";
-import { logging as loggingCode } from "../templates/logging";
+import { psHeader as ps1Header } from "@/features/tweaks/templates/ps1-header";
+import { atomicExecutor } from "@/features/tweaks/templates/atomic-executor";
+import { restorePoint } from "@/features/tweaks/templates/restore-point";
+import { completion as completionCode } from "@/features/tweaks/templates/completion";
+import { trustedInstaller } from "@/features/tweaks/templates/trusted-installer";
+import { logging as loggingCode } from "@/features/tweaks/templates/logging";
 
-export function generateAdminCheckCode(): string {
-    return ""; // Now bundled into ps1Header
-}
-
-export function generateConsoleTheme(): string {
-    return ""; // Now bundled manually into ps1-header.ps1 directly
-}
-
-export function generateAsciiLogo(): string {
-    return ""; // Now bundled manually into ps1-header.ps1 directly
-}
+/**
+ * DEPRECATED NOT USED ANYWHERE 
+ * Directly imported from the ps1Header file
+ *  
+export function generateAdminCheckCode(): string => ""; 
+export function generateConsoleTheme(): string => ""; 
+export function generateAsciiLogo(): string => ""; 
+ *  
+ *  
+*/
 
 export function generateTrustedInstallerFunction(): string {
     return trustedInstaller;

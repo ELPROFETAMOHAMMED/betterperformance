@@ -1,14 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
-  // Enable static optimization for better SEO
   output: "standalone",
-  // Optimize images for better performance and SEO
   images: {
     formats: ["image/avif", "image/webp"],
   },
-  // Headers for better SEO and security
   async headers() {
     return [
       {
@@ -33,9 +29,6 @@ const nextConfig: NextConfig = {
         ],
       },
     ];
-  },
-  webpack(config: any) {
-    return config;
   },
 };
 

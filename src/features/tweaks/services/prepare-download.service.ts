@@ -3,13 +3,11 @@
  */
 
 import type { profile } from "@/features/auth/types/user.types";
+import { ensureDownloadSession } from "@/features/tweaks/services/ensure-download-session";
+import { saveDownloadHistory } from "@/features/tweaks/services/save-download-history";
+import { trackTweakDownloads } from "@/features/tweaks/services/track-tweak-downloads";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
-import {
-  saveTweakHistory,
-  incrementTweakDownloads,
-} from "@/features/history-tweaks/utils/tweak-history-client";
-import { format } from "date-fns";
-import { withTimeout, createSafetyTimeout } from "@/shared/utils/async-helpers";
+import { createSafetyTimeout } from "@/shared/utils/async-helpers";
 
 export interface PrepareDownloadOptions {
   tweaks: Tweak[];
@@ -42,51 +40,11 @@ export async function prepareDownload({
   }, 10000);
 
   try {
-    // Try to get user from session if not available
     const currentUser = user;
 
-    if ((userLoading || !currentUser) && typeof window !== "undefined") {
-      try {
-        const { createClient } = await import("@/shared/utils/supabase/client");
-        const supabase = createClient();
-        const sessionPromise = supabase.auth.getSession();
-        await withTimeout(sessionPromise, 3000);
-        // Note: We don't update currentUser here as it's read-only from the hook
-        // The download will proceed regardless
-      } catch (e) {
-        console.warn("Could not fetch user session:", e);
-        // Continue with download even if this fails
-      }
-    }
-
-    // Increment downloads for each tweak (works for both logged in and anonymous users)
-    try {
-      const incrementPromise = incrementTweakDownloads(
-        tweaks.map((t) => t.id)
-      );
-      await withTimeout(incrementPromise, 5000);
-    } catch (error) {
-      console.warn("Failed to increment download count:", error);
-      // Continue with download even if this fails
-    }
-
-    // Save tweak history with formatted date as name (only if user is available, with timeout)
-    if (currentUser) {
-      try {
-        const now = new Date();
-        const formattedDate = format(now, "dd/MM/yyyy");
-        const historyName = `Last Tweak Applied - ${formattedDate}`;
-        const savePromise = saveTweakHistory({
-          tweaks,
-          name: historyName,
-          isFavorite: false,
-        });
-        await withTimeout(savePromise, 5000);
-      } catch (error) {
-        console.warn("Failed to save tweak history:", error);
-        // Continue with download even if this fails
-      }
-    }
+    await ensureDownloadSession(userLoading, Boolean(currentUser));
+    await trackTweakDownloads(tweaks);
+    await saveDownloadHistory(tweaks, currentUser);
 
     onSuccess?.();
     return { user: currentUser, safetyTimeout };

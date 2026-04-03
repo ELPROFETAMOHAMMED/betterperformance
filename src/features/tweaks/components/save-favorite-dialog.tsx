@@ -13,7 +13,6 @@ import {
 } from "@/shared/components/ui/alert-dialog";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
-import type { Tweak } from "@/features/tweaks/types/tweak.types";
 
 interface SaveFavoriteDialogProps {
   open: boolean;
