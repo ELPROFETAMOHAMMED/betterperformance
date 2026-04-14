@@ -1,6 +1,6 @@
 import type { User } from "@supabase/supabase-js";
 
-import { normalizeRole } from "@/shared/auth/normalize-role";
+import { resolveUserRole } from "@/shared/auth/normalize-role";
 import type {
   googleUserMetadata,
   profile,
@@ -21,14 +21,9 @@ export function buildUserProfile(
   profileData: ProfileRow | null,
   profileError: Error | null
 ): profile {
-  const profileRole =
-    profileData && !profileError && profileData.role
-      ? normalizeRole(profileData.role)
-      : null;
-  const metadataRole = authUser.user_metadata?.role
-    ? normalizeRole(authUser.user_metadata.role)
-    : null;
-  const finalRole = profileRole || metadataRole || "user";
+  const profileRole = profileData && !profileError ? profileData.role : null;
+  const metadataRole = authUser.user_metadata?.role ?? null;
+  const finalRole = resolveUserRole(profileRole, metadataRole);
 
   return {
     ...authUser,

@@ -17,3 +17,22 @@ export function normalizeRole(role: unknown): NormalizedRole | null {
 
   return null;
 }
+
+export function resolveUserRole(
+  profileRole: unknown,
+  metadataRole: unknown
+): NormalizedRole {
+  const normalizedProfileRole = normalizeRole(profileRole);
+
+  if (normalizedProfileRole) {
+    return normalizedProfileRole;
+  }
+
+  const normalizedMetadataRole = normalizeRole(metadataRole);
+
+  if (normalizedMetadataRole) {
+    return normalizedMetadataRole;
+  }
+
+  return "user";
+}

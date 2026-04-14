@@ -17,10 +17,10 @@ export function generateAdminCheckCode(): string => "";
 export function generateConsoleTheme(): string => ""; 
 export function generateAsciiLogo(): string => ""; 
  *  
- *  
+* 
 */
 
-export function generateTrustedInstallerFunction(): string {
+export function generateTrustedInstallerFunction(): string { 
     return trustedInstaller;
 }
 

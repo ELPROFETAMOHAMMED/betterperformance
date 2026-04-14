@@ -21,9 +21,14 @@ interface CategoryRowProps {
   tweaks: Tweak[];
   isAdmin: boolean;
   selectedTweaks: Set<string>;
-  onSelectGroup: (tweaks: Tweak[], e: React.MouseEvent) => void;
-  actions?: React.ReactNode; // For edit/delete buttons
+  onSelectGroup?: (tweaks: Tweak[], e: React.MouseEvent) => void;
+  actions?: React.ReactNode;
   className?: string;
+  selectionCount?: {
+    selected: number;
+    total: number;
+  };
+  hideSelectGroupButton?: boolean;
 }
 
 export function CategoryRow({
@@ -38,10 +43,19 @@ export function CategoryRow({
   onSelectGroup,
   actions,
   className,
+  selectionCount,
+  hideSelectGroupButton = false,
 }: CategoryRowProps) {
-  const selectableTweaks = isAdmin ? tweaks : tweaks.filter((t) => t.is_visible);
-  const selectedCount = selectableTweaks.filter((t) => selectedTweaks.has(t.id)).length;
-  const allSelected = selectableTweaks.length > 0 && selectedCount === selectableTweaks.length;
+  const selectableTweaks = selectionCount
+    ? tweaks
+    : isAdmin
+      ? tweaks
+      : tweaks.filter((t) => t.is_visible);
+  const selectedCount = selectionCount
+    ? selectionCount.selected
+    : selectableTweaks.filter((t) => selectedTweaks.has(t.id)).length;
+  const totalCount = selectionCount ? selectionCount.total : selectableTweaks.length;
+  const allSelected = totalCount > 0 && selectedCount === totalCount;
   const someSelected = selectedCount > 0 && !allSelected;
 
   return (
@@ -87,24 +101,26 @@ export function CategoryRow({
 
       <div className="flex items-center gap-2">
         <span className="text-[10px] text-muted-foreground font-mono">
-          {selectedCount}/{selectableTweaks.length}
+          {selectedCount}/{totalCount}
         </span>
         {actions}
-        <Button
-          variant="ghost"
-          size="icon"
-          className={cn(
-            "h-6 w-6 rounded-full",
-            allSelected
-              ? "text-primary hover:text-primary/80"
-              : someSelected
-              ? "text-primary/70 hover:text-primary"
-              : "text-muted-foreground hover:text-foreground"
-          )}
-          onClick={(e: React.MouseEvent) => onSelectGroup(tweaks, e)}
-        >
-          {allSelected ? <CheckCircleIconSolid className="h-4 w-4" /> : <CheckCircleIcon className="h-4 w-4" />}
-        </Button>
+        {!hideSelectGroupButton && onSelectGroup && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className={cn(
+              "h-6 w-6 rounded-full",
+              allSelected
+                ? "text-primary hover:text-primary/80"
+                : someSelected
+                  ? "text-primary/70 hover:text-primary"
+                  : "text-muted-foreground hover:text-foreground"
+            )}
+            onClick={(e: React.MouseEvent) => onSelectGroup(tweaks, e)}
+          >
+            {allSelected ? <CheckCircleIconSolid className="h-4 w-4" /> : <CheckCircleIcon className="h-4 w-4" />}
+          </Button>
+        )}
       </div>
     </div>
   );

@@ -3,11 +3,13 @@
 import dynamic from "next/dynamic";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
 import type { TweakCategory } from "@/features/tweaks/types/tweak.types";
+import type { WallpapersPageData } from "@/features/wallpapers/types/wallpaper.types";
 import { Skeleton } from "@/shared/components/ui/skeleton";
 
 interface TweaksPageClientProps {
   categories: TweakCategory[];
   activeTab?: string;
+  wallpapersPageData?: WallpapersPageData | null;
 }
 
 const TweaksContent = dynamic(() => import("./tweaks-content"), {
@@ -22,7 +24,11 @@ const TweaksContent = dynamic(() => import("./tweaks-content"), {
   ),
 });
 
-export default function TweaksPageClient({ categories, activeTab }: TweaksPageClientProps) {
+export default function TweaksPageClient({
+  categories,
+  activeTab,
+  wallpapersPageData,
+}: TweaksPageClientProps) {
   if (!categories || categories.length === 0) {
     return (
       <ScrollArea className="h-full w-full">
@@ -36,6 +42,6 @@ export default function TweaksPageClient({ categories, activeTab }: TweaksPageCl
   }
 
   return (
-    <TweaksContent categories={categories} activeTab={activeTab} />
+    <TweaksContent categories={categories} activeTab={activeTab} wallpapersPageData={wallpapersPageData} />
   );
 }

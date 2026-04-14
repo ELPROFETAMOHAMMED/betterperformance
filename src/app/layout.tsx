@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import "./globals.css";
 import ThemeProvider from "@/shared/providers/theme-provider";
-import { AnimatedBackground } from "@/shared/components/layout/animated-background";
 
 export const metadata: Metadata = {
   title: {
@@ -147,7 +146,6 @@ export default function RootLayout({
       <body suppressHydrationWarning>
         <ThemeProvider>
           {children}
-          <AnimatedBackground />
         </ThemeProvider>
       </body>
     </html>

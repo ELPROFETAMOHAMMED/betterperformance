@@ -15,7 +15,7 @@ function MainHeaderInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { selectedTweaksArray } = useSelection();
+  const { selectedItemsArray } = useSelection();
   const [searchValue] = useState(searchParams.get("q") || "");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
@@ -75,7 +75,7 @@ function MainHeaderInner() {
         />
 
         <AnimatePresence>
-          {selectedTweaksArray.length > 0 && (
+          {selectedItemsArray.length > 0 && (
             <SelectionSheet>
               <motion.div
                 initial={{ scale: 0.8, opacity: 0 }}
@@ -85,7 +85,7 @@ function MainHeaderInner() {
               >
                 <Badge variant="secondary" className="h-9 gap-2 px-3 rounded-full bg-primary/10 text-primary border-primary/20 font-semibold shadow-sm group-hover:bg-primary/20 transition-colors">
                   <QueueListIcon className="h-4 w-4" />
-                  <span>{selectedTweaksArray.length}</span>
+                  <span>{selectedItemsArray.length}</span>
                 </Badge>
               </motion.div>
             </SelectionSheet>

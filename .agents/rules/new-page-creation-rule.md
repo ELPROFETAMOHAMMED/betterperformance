@@ -21,12 +21,25 @@ Do not continue until the user explicitly confirms.
 
 Follow this Screaming Architecture structure. One file, one responsibility.
 
+New pages must be created inside the main application route group so they inherit the shared shell layout with sidebar, header, breadcrumb, and content area.
+
+In this repository, the main shell currently lives under `src/app/(main)/layout.tsx`.
+
+Use this pattern for new app pages:
+
+```text
+src/app/(main)/[proposed-route]/page.tsx
+```
+
+Do not create new application pages directly under `src/app/[route]/page.tsx` unless the page is intentionally outside the main shell.
+
 For a page named `[page-name]`:
 
 ```text
 src/
 ├── app/
-│   └── [proposed-route]/
+│   └── (main)/
+│       └── [proposed-route]/
 │       └── page.tsx
 ├── features/
 │   └── [page-name]/
@@ -100,6 +113,15 @@ Rules:
 - If no category fits, propose a new one and justify it.
 - Follow the exact visual and structural pattern already used by the sidebar.
 - Use the same icon pattern used by existing sidebar entries.
+
+## Step 4.1 — Breadcrumb Integration
+
+- Update breadcrumb behavior so the new page resolves correctly inside the existing header flow.
+- Follow the same breadcrumb pattern as existing app pages.
+- The breadcrumb must reflect the semantic section path, for example:
+  - `Home → Tweaks → Reported`
+  - `Home → Media → Wallpapers`
+- Before implementing a new page, inspect an existing page inside the main route group and mirror its folder structure and layout inheritance pattern.
 
 ## Step 5 — Imports And Conventions
 

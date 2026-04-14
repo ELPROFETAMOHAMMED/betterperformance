@@ -5,8 +5,8 @@ import { format } from "date-fns";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
-import { saveTweakHistory } from "@/features/history-tweaks/utils/tweak-history-client";
 import type { profile } from "@/features/auth/types/user.types";
+import { toggleFavorite } from "@/features/favorites/services/favorites-client";
 
 interface UseFavoriteDialogParams {
   selectedTweaks: Map<string, Tweak>;
@@ -87,15 +87,32 @@ export function useFavoriteDialog({
 
     try {
       setIsSavingFavorite(true);
-      await saveTweakHistory({
-        tweaks: tweaksToSave,
-        name: favoriteName.trim(),
-        isFavorite: true,
-      });
-      // Update counters locally after successful save
       const tweakIds = tweaksToSave.map((t) => t.id);
+
+      await Promise.all(
+        tweakIds.map(async (tweakId) => {
+          if (favoriteTweakIds?.has(tweakId)) {
+            return;
+          }
+
+          const result = await toggleFavorite({ itemType: "tweak", itemId: tweakId });
+
+          if (!result.success) {
+            throw new Error("Unable to toggle favorite");
+          }
+
+          if (!result.isFavorite) {
+            // If the API returned a removal unexpectedly, re-add
+            const retry = await toggleFavorite({ itemType: "tweak", itemId: tweakId });
+            if (!retry.success || !retry.isFavorite) {
+              throw new Error("Failed to add favorite");
+            }
+          }
+        })
+      );
+
       onCountersUpdated?.(tweakIds, "favorite");
-      await queryClient.invalidateQueries({ queryKey: ["history-tweaks"] });
+      await queryClient.invalidateQueries({ queryKey: ["favorites-items"] });
       toast.success("Saved as favorite");
       closeFavoriteDialog();
     } catch (error) {
@@ -112,6 +129,7 @@ export function useFavoriteDialog({
     queryClient,
     closeFavoriteDialog,
     onCountersUpdated,
+    favoriteTweakIds,
   ]);
 
   return {

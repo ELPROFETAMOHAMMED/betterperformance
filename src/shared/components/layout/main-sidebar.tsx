@@ -17,25 +17,27 @@ import {
   SidebarMenuItem,
 } from "@/shared/components/ui/sidebar";
 import UserCard from "@/features/home/components/user-card";
-import { 
-  HomeIcon, 
-  WrenchScrewdriverIcon, 
+import {
+  HomeIcon,
+  WrenchScrewdriverIcon,
   Cog6ToothIcon,
   FireIcon,
   StarIcon,
   ClockIcon,
   ExclamationTriangleIcon,
-  CommandLineIcon
+  CommandLineIcon,
+  PhotoIcon
 } from "@heroicons/react/24/outline";
-import { 
-  HomeIcon as HomeIconSolid, 
-  WrenchScrewdriverIcon as WrenchScrewdriverIconSolid, 
+import {
+  HomeIcon as HomeIconSolid,
+  WrenchScrewdriverIcon as WrenchScrewdriverIconSolid,
   Cog6ToothIcon as Cog6ToothIconSolid,
   FireIcon as FireIconSolid,
   StarIcon as StarIconSolid,
   ClockIcon as ClockIconSolid,
   ExclamationTriangleIcon as ExclamationTriangleIconSolid,
-  CommandLineIcon as CommandLineIconSolid
+  CommandLineIcon as CommandLineIconSolid,
+  PhotoIcon as PhotoIconSolid
 } from "@heroicons/react/24/solid";
 
 const TOP_GROUPS = [
@@ -75,6 +77,17 @@ const TOP_GROUPS = [
         url: "/tweaks/apps",
         icon: CommandLineIcon,
         iconSolid: CommandLineIconSolid,
+      }
+    ]
+  },
+  {
+    label: "Media",
+    items: [
+      {
+        title: "Wallpapers",
+        url: "/tweaks/wallpapers",
+        icon: PhotoIcon,
+        iconSolid: PhotoIconSolid,
       }
     ]
   }
@@ -125,13 +138,13 @@ export function MainSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
       <SidebarHeader className="flex h-14 items-center border-b border-border/40 px-4 group-data-[state=collapsed]:px-0 group-data-[state=collapsed]:justify-center transition-all duration-300">
         <div className="flex items-center gap-3 overflow-hidden">
           <div className="flex shrink-0 items-center justify-center">
-             <Image 
-                src="/assets/Aplication-logo.png" 
-                alt="Logo" 
-                width={32} 
-                height={32} 
-                className="object-contain"
-              />
+            <Image
+              src="/assets/Aplication-logo.png"
+              alt="Logo"
+              width={32}
+              height={32}
+              className="object-contain"
+            />
           </div>
           <div className="flex flex-col gap-0.5 leading-none group-data-[state=collapsed]:hidden transition-all duration-300">
             <span className="font-bold text-sm tracking-tight">BetterPerformance</span>
@@ -162,8 +175,8 @@ export function MainSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
                         tooltip={item.title}
                         className={cn(
                           "group/button relative h-9 w-full transition-all duration-200",
-                          active 
-                            ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/20 shadow-sm" 
+                          active
+                            ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/20 shadow-sm"
                             : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
                         )}
                       >
@@ -213,8 +226,8 @@ export function MainSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
                         tooltip={item.title}
                         className={cn(
                           "group/button relative h-9 w-full transition-all duration-200",
-                          active 
-                            ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/20 shadow-sm" 
+                          active
+                            ? "bg-primary/10 text-primary font-semibold ring-1 ring-primary/20 shadow-sm"
                             : "text-muted-foreground hover:bg-sidebar-accent hover:text-foreground"
                         )}
                       >

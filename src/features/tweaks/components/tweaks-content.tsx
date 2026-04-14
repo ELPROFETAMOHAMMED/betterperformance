@@ -12,6 +12,11 @@ import { useUser } from "@/shared/hooks/use-user";
 import { useSearchParams } from "next/navigation";
 import { useSelection } from "@/features/tweaks/context/selection-context";
 import { TweakDetailsPanel } from "@/features/tweaks/components/tweak-details-panel";
+import { FavoritesPanel } from "@/features/tweaks/components/favorites-panel";
+import { useFavorites } from "@/features/favorites/hooks/use-favorites";
+import { WallpapersGrid } from "@/features/wallpapers/components/wallpapers-grid";
+import { WallpapersHeader } from "@/features/wallpapers/components/wallpapers-header";
+import type { WallpapersPageData } from "@/features/wallpapers/types/wallpaper.types";
 import { useTweakHistoryFilters } from "@/features/tweaks/hooks/use-tweak-history-filters";
 import { useTweakReportsFilters } from "@/features/tweaks/hooks/use-tweak-reports-filters";
 import { useTweakDownload } from "@/features/tweaks/hooks/use-tweak-download";
@@ -21,9 +26,14 @@ import { useHistoryDialogs } from "@/features/tweaks/hooks/use-history-dialogs";
 interface TweaksContentProps {
   categories: TweakCategory[];
   activeTab?: string;
+  wallpapersPageData?: WallpapersPageData | null;
 }
 
-export default function TweaksContent({ categories, activeTab = "library" }: TweaksContentProps) {
+export default function TweaksContent({
+  categories,
+  activeTab = "library",
+  wallpapersPageData = null,
+}: TweaksContentProps) {
   const { user, loading: userLoading } = useUser();
   const isAdmin = user?.user_metadata?.role === "admin";
   const searchParams = useSearchParams();
@@ -43,12 +53,12 @@ export default function TweaksContent({ categories, activeTab = "library" }: Twe
 
   const {
     historyTweakIds,
-    favoriteTweakIds,
     userFavoriteSelections,
     userHistorySelections,
     isLoading: isHistoryLoading,
     handleRefresh,
   } = useTweakHistoryFilters(!!user);
+  const { favoriteTweakIds } = useFavorites(!!user);
 
   const {
     reportedTweakIds,
@@ -135,6 +145,7 @@ export default function TweaksContent({ categories, activeTab = "library" }: Twe
   const infoTweak = activeTweak;
 
   const globalIsLoading = isHistoryLoading || isReportsLoading;
+  const isWallpapersTab = activeTab === "wallpapers";
 
   return (
     <motion.div
@@ -166,46 +177,61 @@ export default function TweaksContent({ categories, activeTab = "library" }: Twe
       />
 
       <div className="flex w-full flex-1 flex-col lg:flex-row min-h-0 overflow-hidden bg-background/20 backdrop-blur-xl">
-        {/* Left: Library Panel (VisualTree) */}
-        <div className="flex w-full flex-col lg:w-[32%] shrink-0 h-full border-b lg:border-b-0 lg:border-r border-border/20 bg-muted/5">
-          <VisualTree
-            activeTab={activeTab}
-            searchQuery={searchQuery}
-            categories={categories}
-            selectedTweaks={selectedTweaksSet}
-            onTweakToggle={handleTweakToggle}
-            historyTweakIds={historyTweakIds}
-            favoriteTweakIds={favoriteTweakIds}
-            reportedTweakIds={reportedTweakIds}
-            userReports={userReports}
-            allReports={allReports}
-            userReportDescriptions={userReportDescriptions}
-            allReportDescriptions={allReportDescriptions}
-            userFavoriteSelections={userFavoriteSelections}
-            userHistorySelections={userHistorySelections}
-            onSelectAll={() => handleSelectAllTweaks(categories, isAdmin)}
-            onClearSelection={handleClearAll}
-            isLoading={isHistoryLoading || isReportsLoading}
-            onRenameSelection={openRenameDialog}
-            onDeleteSelection={openDeleteDialog}
-            onSaveAsFavorite={openSaveAsFavoriteDialog}
-            onRefresh={() => handleRefresh(!!user)}
-            onCreateTweak={handleCreateTweak}
-            onEditCategory={isAdmin ? handleEditCategory : undefined}
-          />
-        </div>
+        {isWallpapersTab && wallpapersPageData ? (
+          <div className="flex h-full w-full flex-1 flex-col bg-background/50 backdrop-blur-xl overflow-hidden">
+            <div className="h-full overflow-y-auto p-4 md:p-5 lg:p-6">
+              <div className="space-y-6">
+                <WallpapersHeader total={wallpapersPageData.total} />
+                <WallpapersGrid pageData={wallpapersPageData} />
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="flex w-full flex-col lg:w-[32%] shrink-0 h-full border-b lg:border-b-0 lg:border-r border-border/20 bg-muted/5">
+              <VisualTree
+                activeTab={activeTab}
+                searchQuery={searchQuery}
+                categories={categories}
+                selectedTweaks={selectedTweaksSet}
+                onTweakToggle={handleTweakToggle}
+                historyTweakIds={historyTweakIds}
+                favoriteTweakIds={favoriteTweakIds}
+                reportedTweakIds={reportedTweakIds}
+                userReports={userReports}
+                allReports={allReports}
+                userReportDescriptions={userReportDescriptions}
+                allReportDescriptions={allReportDescriptions}
+                userFavoriteSelections={userFavoriteSelections}
+                userHistorySelections={userHistorySelections}
+                onSelectAll={() => handleSelectAllTweaks(categories, isAdmin)}
+                onClearSelection={handleClearAll}
+                isLoading={isHistoryLoading || isReportsLoading}
+                onRenameSelection={openRenameDialog}
+                onDeleteSelection={openDeleteDialog}
+                onSaveAsFavorite={openSaveAsFavoriteDialog}
+                onRefresh={() => handleRefresh(!!user)}
+                onCreateTweak={handleCreateTweak}
+                onEditCategory={isAdmin ? handleEditCategory : undefined}
+              />
+            </div>
 
-        {/* Right: Details Panel */}
-        <div className="flex h-full w-full flex-1 flex-col bg-background/50 backdrop-blur-xl overflow-hidden">
-          <TweakDetailsPanel
-            selectedTweaks={selectedTweaksArray}
-            activeTweakId={activeTweakId}
-            categories={categories}
-            userReports={userReports}
-            allReports={allReports}
-            isAdmin={isAdmin}
-          />
-        </div>
+            <div className="flex h-full w-full flex-1 flex-col bg-background/50 backdrop-blur-xl overflow-hidden">
+              {activeTab === "favorites" ? (
+                <FavoritesPanel />
+              ) : (
+                <TweakDetailsPanel
+                  selectedTweaks={selectedTweaksArray}
+                  activeTweakId={activeTweakId}
+                  categories={categories}
+                  userReports={userReports}
+                  allReports={allReports}
+                  isAdmin={isAdmin}
+                />
+              )}
+            </div>
+          </>
+        )}
       </div>
 
       <TweaksDialogs

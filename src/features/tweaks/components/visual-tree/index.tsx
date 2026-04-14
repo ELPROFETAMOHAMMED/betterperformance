@@ -45,7 +45,6 @@ interface VisualTreeProps {
   onEditCategory?: (category: TweakCategory) => void;
   searchQuery?: string;
   activeTab?: string;
-  onTabChange?: (tab: string) => void;
 }
 
 export default function VisualTree({
@@ -76,7 +75,7 @@ export default function VisualTree({
 
   // View States
   const [favoritesScope] = useState<"user" | "global">("user");
-  const [favoritesView] = useState<"list" | "tree">("tree");
+  const [favoritesView] = useState<"list" | "tree">("list");
   const [reportedScope, setReportedScope] = useState<"user" | "global">("global");
   const [historyView] = useState<"list" | "tree">("tree");
   const [historyShowCategory] = useState(true);

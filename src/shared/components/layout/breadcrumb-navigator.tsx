@@ -12,9 +12,32 @@ import {
   BreadcrumbSeparator,
 } from "@/shared/components/ui/breadcrumb";
 
+type BreadcrumbSegment = {
+  href: string;
+  label: string;
+};
+
+const BREADCRUMB_OVERRIDES: Record<string, BreadcrumbSegment[]> = {
+  "/wallpapers": [
+    { href: "/media", label: "Media" },
+    { href: "/wallpapers", label: "Wallpapers" },
+  ],
+};
+
 export function BreadcrumbNavigator() {
   const pathname = usePathname();
   const segments = pathname.split("/").filter(Boolean);
+  const breadcrumbSegments =
+    BREADCRUMB_OVERRIDES[pathname] ||
+    segments
+      .filter((segment) => segment !== "home")
+      .map((segment, index) => ({
+        href: `/${segments.slice(0, index + 1).join("/")}`,
+        label: segment
+          .split("-")
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" "),
+      }));
 
   return (
     <Breadcrumb>
@@ -24,28 +47,18 @@ export function BreadcrumbNavigator() {
             <Link href="/home">Home</Link>
           </BreadcrumbLink>
         </BreadcrumbItem>
-        {segments.map((segment, index) => {
-          // Skip "home" if it's already the primary link
-          if (segment === "home") return null;
-
-          const href = `/${segments.slice(0, index + 1).join("/")}`;
-          const isLast = index === segments.length - 1;
-          
-          // Format label: capitalize and replace hyphens with spaces
-          const label = segment
-            .split("-")
-            .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-            .join(" ");
+        {breadcrumbSegments.map((segment, index) => {
+          const isLast = index === breadcrumbSegments.length - 1;
 
           return (
-            <React.Fragment key={href}>
+            <React.Fragment key={segment.href}>
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 {isLast ? (
-                  <BreadcrumbPage>{label}</BreadcrumbPage>
+                  <BreadcrumbPage>{segment.label}</BreadcrumbPage>
                 ) : (
                   <BreadcrumbLink asChild>
-                    <Link href={href}>{label}</Link>
+                    <Link href={segment.href}>{segment.label}</Link>
                   </BreadcrumbLink>
                 )}
               </BreadcrumbItem>
