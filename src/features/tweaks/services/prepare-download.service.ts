@@ -7,9 +7,11 @@ import { ensureDownloadSession } from "@/features/tweaks/services/ensure-downloa
 import { saveDownloadHistory } from "@/features/tweaks/services/save-download-history";
 import { trackTweakDownloads } from "@/features/tweaks/services/track-tweak-downloads";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
+import type { SelectedItem } from "@/shared/types/selection.types";
 import { createSafetyTimeout } from "@/shared/utils/async-helpers";
 
 export interface PrepareDownloadOptions {
+  selectedItems: SelectedItem[];
   tweaks: Tweak[];
   user: profile | null;
   userLoading: boolean;
@@ -27,6 +29,7 @@ export interface DownloadPreparationResult {
  * Returns the user and a safety timeout that should be cleared when download starts
  */
 export async function prepareDownload({
+  selectedItems,
   tweaks,
   user,
   userLoading,
@@ -44,7 +47,7 @@ export async function prepareDownload({
 
     await ensureDownloadSession(userLoading, Boolean(currentUser));
     await trackTweakDownloads(tweaks);
-    await saveDownloadHistory(tweaks, currentUser);
+    await saveDownloadHistory(selectedItems, currentUser);
 
     onSuccess?.();
     return { user: currentUser, safetyTimeout };

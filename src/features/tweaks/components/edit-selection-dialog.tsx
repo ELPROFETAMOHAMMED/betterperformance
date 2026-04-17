@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import type { Tweak } from "@/features/tweaks/types/tweak.types";
 import { Button } from "@/shared/components/ui/button";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import {
@@ -14,42 +13,45 @@ import {
   DialogTitle,
 } from "@/shared/components/ui/dialog";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import type { SelectedItem } from "@/shared/types/selection.types";
 
 type EditSelectionDialogProps = {
   open: boolean;
-  tweaks: Tweak[];
+  items: SelectedItem[];
   isSaving: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: (tweaks: Tweak[]) => void;
+  onConfirm: (items: SelectedItem[]) => void;
 };
 
 export function EditSelectionDialog({
   open,
-  tweaks,
+  items,
   isSaving,
   onOpenChange,
   onConfirm,
 }: EditSelectionDialogProps) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (open) {
-      setSelectedIds(new Set(tweaks.map((tweak) => tweak.id)));
+      setSelectedKeys(new Set(items.map((item) => `${item.type}:${item.id}`)));
     }
-  }, [open, tweaks]);
+  }, [open, items]);
 
-  const selectedTweaks = useMemo(
-    () => tweaks.filter((tweak) => selectedIds.has(tweak.id)),
-    [selectedIds, tweaks]
+  const selectedItems = useMemo(
+    () => items.filter((item) => selectedKeys.has(`${item.type}:${item.id}`)),
+    [selectedKeys, items]
   );
 
-  const handleToggle = (id: string) => {
-    setSelectedIds((previous) => {
+  const handleToggle = (item: SelectedItem) => {
+    const key = `${item.type}:${item.id}`;
+
+    setSelectedKeys((previous) => {
       const next = new Set(previous);
-      if (next.has(id)) {
-        next.delete(id);
+      if (next.has(key)) {
+        next.delete(key);
       } else {
-        next.add(id);
+        next.add(key);
       }
       return next;
     });
@@ -59,46 +61,48 @@ export function EditSelectionDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Edit tweaks</DialogTitle>
+          <DialogTitle>Edit selection</DialogTitle>
           <DialogDescription>
-            Keep the tweaks you want in this selection.
+            Keep the items you want in this list.
           </DialogDescription>
         </DialogHeader>
 
         <ScrollArea className="max-h-72">
           <div className="space-y-2 pr-2">
-            {tweaks.map((tweak) => (
-              <Button
-                asChild
-                key={tweak.id}
-                variant="ghost"
-                className="h-auto w-full justify-start rounded-md border border-border px-3 py-2 text-left hover:bg-secondary/40"
-              >
-                <div
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleToggle(tweak.id)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Enter" || event.key === " ") {
-                      event.preventDefault();
-                      handleToggle(tweak.id);
-                    }
-                  }}
+            {items.map((item) => {
+              const key = `${item.type}:${item.id}`;
+
+              return (
+                <Button
+                  asChild
+                  key={key}
+                  variant="ghost"
+                  className="h-auto w-full justify-start rounded-md border border-border px-3 py-2 text-left hover:bg-secondary/40"
                 >
-                  <Checkbox checked={selectedIds.has(tweak.id)} className="mt-0.5" />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-foreground">
-                      {tweak.title}
-                    </p>
-                    {tweak.description ? (
-                      <p className="line-clamp-2 text-xs text-muted-foreground">
-                        {tweak.description}
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => handleToggle(item)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        handleToggle(item);
+                      }
+                    }}
+                  >
+                    <Checkbox checked={selectedKeys.has(key)} className="mt-0.5" />
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-foreground">
+                        {item.item.title}
                       </p>
-                    ) : null}
+                      <p className="line-clamp-2 text-xs text-muted-foreground">
+                        {item.type}
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </Button>
-            ))}
+                </Button>
+              );
+            })}
           </div>
         </ScrollArea>
 
@@ -106,10 +110,7 @@ export function EditSelectionDialog({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
-          <Button
-            onClick={() => onConfirm(selectedTweaks)}
-            disabled={isSaving || selectedTweaks.length === 0}
-          >
+          <Button onClick={() => onConfirm(selectedItems)} disabled={isSaving || selectedItems.length === 0}>
             {isSaving ? "Saving..." : "Save changes"}
           </Button>
         </DialogFooter>

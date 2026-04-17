@@ -44,7 +44,7 @@ export function SaveFavoriteDialog({
         <AlertDialogHeader>
           <AlertDialogTitle className="text-2xl font-black tracking-tight">Save selection as favorite</AlertDialogTitle>
           <AlertDialogDescription className="text-muted-foreground/80">
-            Give this combination of tweaks a descriptive name.
+            Give this combination of items a descriptive name.
           </AlertDialogDescription>
         </AlertDialogHeader>
         
@@ -58,7 +58,7 @@ export function SaveFavoriteDialog({
           />
           {tweaksCount > 0 && (
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/5 text-primary text-xs font-semibold w-fit border border-primary/10">
-              Contains {tweaksCount} tweak{tweaksCount === 1 ? "" : "s"}.
+              Contains {tweaksCount} item{tweaksCount === 1 ? "" : "s"}.
             </div>
           )}
         </div>

@@ -22,6 +22,7 @@ import { useTweakReportsFilters } from "@/features/tweaks/hooks/use-tweak-report
 import { useTweakDownload } from "@/features/tweaks/hooks/use-tweak-download";
 import { useFavoriteDialog } from "@/features/tweaks/hooks/use-favorite-dialog";
 import { useHistoryDialogs } from "@/features/tweaks/hooks/use-history-dialogs";
+import type { SelectedItem } from "@/shared/types/selection.types";
 
 interface TweaksContentProps {
   categories: TweakCategory[];
@@ -40,12 +41,15 @@ export default function TweaksContent({
   const searchQuery = searchParams.get("q") || "";
 
   const {
+    selectedItems,
+    selectedItemsArray,
     selectedTweaks,
     selectedTweaksArray,
     selectedTweaksSet,
     activeTweakId,
     setActiveTweakId,
     toggleTweak: handleTweakToggle,
+    toggleWallpaper: handleWallpaperToggle,
     clearSelection: handleClearAll,
     selectAll: handleSelectAllTweaks,
     updateTweakCounters,
@@ -75,10 +79,8 @@ export default function TweaksContent({
     isCopying,
     handleCopy,
     handleDownloadWithSettings,
-    warningDialogOpen,
-    onWarningContinue,
-    onWarningCancel,
   } = useTweakDownload({
+    selectedItems: selectedItemsArray,
     selectedTweaks,
     user,
     userLoading,
@@ -89,15 +91,14 @@ export default function TweaksContent({
     favoriteDialogOpen,
     favoriteName,
     isSavingFavorite,
-    tweaksForFavorite,
+    itemsForFavorite,
     setFavoriteDialogOpen,
     setFavoriteName,
     openSaveAsFavoriteDialog,
     handleConfirmSaveFavorite,
   } = useFavoriteDialog({
-    selectedTweaks,
+    selectedItems: selectedItemsArray,
     user,
-    favoriteTweakIds,
     onCountersUpdated: updateTweakCounters,
   });
 
@@ -152,6 +153,14 @@ export default function TweaksContent({
 
   const globalIsLoading = isHistoryLoading || isReportsLoading;
   const isWallpapersTab = activeTab === "wallpapers";
+  const handleItemToggle = (item: SelectedItem) => {
+    if (item.type === "tweak") {
+      handleTweakToggle(item.item);
+      return;
+    }
+
+    handleWallpaperToggle(item.item);
+  };
 
   return (
     <motion.div
@@ -170,14 +179,12 @@ export default function TweaksContent({
         isAdmin={isAdmin}
         isCopying={isCopying}
         isDownloadLoading={isLoading}
-        isSavingFavorite={isSavingFavorite}
         selectedTweaksCount={selectedTweaksArray.length}
         onCopy={() => handleCopy(activeTweakId)}
         onCreateTweak={handleCreateTweak}
         onDownload={handleDownloadWithSettings}
         onEditTweak={handleEditTweak}
         onNextTweak={handleNextTweak}
-        onOpenFavoriteDialog={openSaveAsFavoriteDialog}
         onOpenReportDialog={() => setReportDialogOpen(true)}
         onPrevTweak={handlePrevTweak}
         onRefresh={() => handleRefresh(!!user)}
@@ -187,7 +194,7 @@ export default function TweaksContent({
         {isWallpapersTab && wallpapersPageData ? (
           <div className="flex h-full w-full flex-1 flex-col bg-background/50 backdrop-blur-xl overflow-hidden">
             <div className="h-full overflow-y-auto">
-              <WallpapersHeader   total={wallpapersPageData.total} />
+              <WallpapersHeader total={wallpapersPageData.total} />
               <WallpapersGrid pageData={wallpapersPageData} />
             </div>
           </div>
@@ -200,6 +207,8 @@ export default function TweaksContent({
                 categories={categories}
                 selectedTweaks={selectedTweaksSet}
                 onTweakToggle={handleTweakToggle}
+                selectedItems={selectedItems}
+                onItemToggle={handleItemToggle}
                 historyTweakIds={historyTweakIds}
                 favoriteTweakIds={favoriteTweakIds}
                 reportedTweakIds={reportedTweakIds}
@@ -258,9 +267,8 @@ export default function TweaksContent({
         renameDialogOpen={renameDialogOpen}
         renameValue={renameValue}
         reportDialogOpen={reportDialogOpen}
-        tweaksForFavoriteCount={tweaksForFavorite.length}
+        tweaksForFavoriteCount={itemsForFavorite.length}
         tweakFormDialogOpen={tweakFormDialogOpen}
-        warningDialogOpen={warningDialogOpen}
         onReportSubmitted={refreshReports}
         onCategoryFormOpenChange={setCategoryFormDialogOpen}
         onCategoryFormSuccess={handleCategoryFormSuccess}
@@ -277,8 +285,6 @@ export default function TweaksContent({
         onSelectionRename={confirmRename}
         onTweakFormOpenChange={setTweakFormDialogOpen}
         onTweakFormSuccess={handleTweakFormSuccess}
-        onWarningCancel={onWarningCancel}
-        onWarningContinue={onWarningContinue}
       />
     </motion.div>
   );

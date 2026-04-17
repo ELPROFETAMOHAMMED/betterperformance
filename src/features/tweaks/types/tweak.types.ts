@@ -1,9 +1,11 @@
+import type { SelectedItem } from "@/shared/types/selection.types";
+
 export interface TweakHistoryEntry {
   id: string;
   userId: string;
   createdAt: string;
   name?: string;
-  tweaks: { id: string }[] | string | unknown;
+  tweaks: SelectedItem[] | string | unknown;
   isFavorite?: boolean;
 }
 

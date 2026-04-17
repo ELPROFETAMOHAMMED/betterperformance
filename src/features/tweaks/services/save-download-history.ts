@@ -1,11 +1,11 @@
 import type { profile } from "@/features/auth/types/user.types";
 import { saveTweakHistory } from "@/features/history-tweaks/utils/tweak-history-client";
-import type { Tweak } from "@/features/tweaks/types/tweak.types";
+import type { SelectedItem } from "@/shared/types/selection.types";
 import { withTimeout } from "@/shared/utils/async-helpers";
 import { format } from "date-fns";
 
 export async function saveDownloadHistory(
-  tweaks: Tweak[],
+  tweaks: SelectedItem[],
   user: profile | null
 ) {
   if (!user) {
@@ -13,12 +13,16 @@ export async function saveDownloadHistory(
   }
 
   try {
+    if (tweaks.length === 0) {
+      return;
+    }
+
     const formattedDate = format(new Date(), "dd/MM/yyyy");
 
     await withTimeout(
       saveTweakHistory({
         tweaks,
-        name: `Last Tweak Applied - ${formattedDate}`,
+        name: `Last Selection Applied - ${formattedDate}`,
         isFavorite: false,
       }),
       5000

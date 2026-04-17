@@ -1,12 +1,7 @@
 import { Badge } from "@/shared/components/ui/badge";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
-import { StarIcon } from "@heroicons/react/24/outline";
-import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
 import { cn } from "@/shared/lib/utils";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
-import { useFavorites } from "@/features/favorites/hooks/use-favorites";
-import { Button } from "@/shared/components/ui/button";
-import { toast } from "sonner";
 
 interface TweakItemProps {
   tweak: Tweak;
@@ -29,29 +24,12 @@ export function TweakItem({
   showReportDescription = false,
   isAdmin = false,
 }: TweakItemProps) {
-  const { favoriteTweakIds, toggleFavorite } = useFavorites();
   const isDisabled = !tweak.is_visible && !isAdmin;
-  const isFavorite = favoriteTweakIds.has(tweak.id);
 
   const handleClick = (e: React.MouseEvent) => {
     if (isDisabled) return;
     e.stopPropagation();
     onToggle();
-  };
-
-  const handleToggleFavorite = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-
-    try {
-      const result = await toggleFavorite({
-        itemType: "tweak",
-        itemId: tweak.id,
-      });
-
-      toast.success(result.isFavorite ? "Added to favorites" : "Removed from favorites");
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to update favorite");
-    }
   };
 
   return (
@@ -101,15 +79,6 @@ export function TweakItem({
               {categoryName}
             </Badge>
           )}
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={handleToggleFavorite}
-            disabled={isDisabled}
-          >
-            {isFavorite ? <StarSolidIcon className="h-3.5 w-3.5 text-yellow-500" /> : <StarIcon className="h-3.5 w-3.5" />}
-          </Button>
         </div>
         {showCategoryAsDescription && categoryName ? (
            <p className="line-clamp-2 flex items-center gap-1 text-xs leading-relaxed text-muted-foreground">

@@ -41,16 +41,16 @@ export function useTweakHistoryFilters(
         if (entry.isFavorite) {
           favSelections.push(entry);
           if (Array.isArray(entry.tweaks)) {
-            (entry.tweaks as { id: string }[]).forEach((t) =>
-              favoriteIds.add(t.id),
-            );
+            entry.tweaks
+              .filter((item) => item.type === "tweak")
+              .forEach((item) => favoriteIds.add(item.id));
           }
         } else {
           histSelections.push(entry);
           if (Array.isArray(entry.tweaks)) {
-            (entry.tweaks as { id: string }[]).forEach((t) =>
-              historyIds.add(t.id),
-            );
+            entry.tweaks
+              .filter((item) => item.type === "tweak")
+              .forEach((item) => historyIds.add(item.id));
           }
         }
       }

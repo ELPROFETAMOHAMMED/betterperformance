@@ -1,45 +1,48 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { PhotoIcon } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
 
 import { useFavorites } from "@/features/favorites/hooks/use-favorites";
-import { TweakItem } from "@/features/tweaks/components/tweak-item";
 import { useSelection } from "@/features/tweaks/context/selection-context";
-import { WallpaperCard } from "@/features/wallpapers/components/wallpaper-card";
-import { downloadWallpaperScript } from "@/features/wallpapers/services/download-wallpaper-script";
-import type { Wallpaper } from "@/features/wallpapers/types/wallpaper.types";
+import { downloadSelectionScript } from "@/features/tweaks/services/download-selection-script";
 import { Card } from "@/shared/components/ui/card";
+import { Badge } from "@/shared/components/ui/badge";
+import { Button } from "@/shared/components/ui/button";
 import { Separator } from "@/shared/components/ui/separator";
-import { useUser } from "@/shared/hooks/use-user";
 
 export function FavoritesPanel() {
-  const router = useRouter();
-  const { user } = useUser();
   const { favorites, isLoading } = useFavorites();
-  const { selectedTweaksSet, selectedWallpapersSet, toggleTweak, toggleWallpaper } = useSelection();
-  const isAdmin = user?.user_metadata.role === "admin";
+  const {
+    toggleTweak,
+    toggleWallpaper,
+    clearSelection,
+  } = useSelection();
 
-  const tweaks = favorites
-    .filter((favorite) => favorite.itemType === "tweak" && favorite.tweak)
-    .map((favorite) => favorite.tweak)
-    .filter((tweak): tweak is NonNullable<typeof tweak> => Boolean(tweak));
+  const handleApplyFavorite = async (favoriteId: string) => {
+    const favorite = favorites.find((item) => item.id === favoriteId);
+    if (!favorite) {
+      return;
+    }
 
-  const wallpapers = favorites
-    .filter((favorite) => favorite.itemType === "wallpaper" && favorite.wallpaper)
-    .map((favorite) => favorite.wallpaper)
-    .filter((wallpaper): wallpaper is NonNullable<typeof wallpaper> => Boolean(wallpaper));
+    clearSelection();
+    favorite.selection.items.forEach((item) => {
+      if (item.type === "tweak") {
+        toggleTweak(item.item);
+        return;
+      }
 
-  const handleDownloadSingle = async (wallpaper: Wallpaper) => {
+      toggleWallpaper(item.item);
+    });
+
     try {
-      await downloadWallpaperScript({
-        wallpaperIds: [wallpaper.id],
-        lastSelectedId: wallpaper.id,
+      downloadSelectionScript(favorite.selection.items, {
+        encodingUtf8: true,
+        autoCreateRestorePoint: true,
       });
-      toast.success(`Script ready for ${wallpaper.title}`);
+      toast.success(`Script ready for ${favorite.selection.name}`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Failed to download wallpaper script");
+      toast.error(error instanceof Error ? error.message : "Failed to generate script");
     }
   };
 
@@ -51,14 +54,14 @@ export function FavoritesPanel() {
     );
   }
 
-  if (tweaks.length === 0 && wallpapers.length === 0) {
+  if (favorites.length === 0) {
     return (
       <div className="h-full overflow-y-auto p-4 md:p-5 lg:p-6">
         <Card className="border-border/30 bg-muted/20 p-12 text-center shadow-sm backdrop-blur-sm">
           <PhotoIcon className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
           <h2 className="text-lg font-semibold text-foreground">No favorites yet</h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Add tweaks or wallpapers to favorites and they will appear here.
+            Save a selection from history and it will appear here.
           </p>
         </Card>
       </div>
@@ -67,50 +70,45 @@ export function FavoritesPanel() {
 
   return (
     <div className="h-full overflow-y-auto p-4 md:p-5 lg:p-6">
-      <div className="space-y-6">
-        {tweaks.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground">Tweaks</span>
-              <Separator className="flex-1" />
-            </div>
-            <Card className="border-border/30 bg-card/70 py-2">
-              {tweaks.map((tweak) => (
-                <TweakItem
-                  key={tweak.id}
-                  tweak={tweak}
-                  selected={selectedTweaksSet.has(tweak.id)}
-                  onToggle={() => toggleTweak(tweak)}
-                  isAdmin={isAdmin}
-                />
-              ))}
-            </Card>
-          </div>
-        )}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <Separator className="flex-1" />
+          <span className="text-xs text-muted-foreground">Favorites</span>
+          <Separator className="flex-1" />
+        </div>
 
-        {wallpapers.length > 0 && (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3">
-              <Separator className="flex-1" />
-              <span className="text-xs text-muted-foreground">Wallpapers</span>
-              <Separator className="flex-1" />
-            </div>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {wallpapers.map((wallpaper) => (
-                <WallpaperCard
-                  key={wallpaper.id}
-                  wallpaper={wallpaper}
-                  isAdmin={isAdmin}
-                  isSelected={selectedWallpapersSet.has(wallpaper.id)}
-                  onDeleted={() => router.refresh()}
-                  onDownload={handleDownloadSingle}
-                  onToggleSelected={toggleWallpaper}
-                />
-              ))}
-            </div>
-          </div>
-        )}
+        <div className="space-y-3">
+          {favorites.map((favorite) => (
+            <Card key={favorite.id} className="border-border/30 bg-card/70 p-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="truncate text-sm font-semibold text-foreground">
+                    {favorite.selection.name}
+                  </h3>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {favorite.selection.items.length} item{favorite.selection.items.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+                <Button variant="outline" size="sm" onClick={() => handleApplyFavorite(favorite.id)}>
+                  Apply
+                </Button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {favorite.selection.items.slice(0, 6).map((item) => (
+                  <Badge key={`${item.type}:${item.id}`} variant="secondary" className="max-w-full truncate text-[11px]">
+                    {item.item.title}
+                  </Badge>
+                ))}
+                {favorite.selection.items.length > 6 ? (
+                  <Badge variant="outline" className="text-[11px]">
+                    +{favorite.selection.items.length - 6} more
+                  </Badge>
+                ) : null}
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     </div>
   );

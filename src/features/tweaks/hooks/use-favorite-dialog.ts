@@ -1,73 +1,68 @@
- "use client";
+"use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import type { Tweak } from "@/features/tweaks/types/tweak.types";
+
 import type { profile } from "@/features/auth/types/user.types";
-import { toggleFavorite } from "@/features/favorites/services/favorites-client";
+import { saveTweakHistory } from "@/features/history-tweaks/utils/tweak-history-client";
+import { useSelection } from "@/features/tweaks/context/selection-context";
+import type { Tweak } from "@/features/tweaks/types/tweak.types";
+import type { SelectedItem } from "@/shared/types/selection.types";
 
 interface UseFavoriteDialogParams {
-  selectedTweaks: Map<string, Tweak>;
+  selectedItems?: SelectedItem[];
+  selectedTweaks?: Map<string, Tweak>;
   user: profile | null;
-  favoriteTweakIds?: Set<string>;
   onCountersUpdated?: (tweakIds: string[], type: "download" | "favorite") => void;
 }
 
-export function useFavoriteDialog({
-  selectedTweaks,
-  user,
-  favoriteTweakIds,
-  onCountersUpdated,
-}: UseFavoriteDialogParams) {
-  const queryClient = useQueryClient();
+export function useFavoriteDialog({ selectedItems, user }: UseFavoriteDialogParams) {
+  const { selectedItemsArray } = useSelection();
   const [favoriteDialogOpen, setFavoriteDialogOpen] = useState(false);
   const [favoriteName, setFavoriteName] = useState("");
   const [isSavingFavorite, setIsSavingFavorite] = useState(false);
-  const [tweaksForFavorite, setTweaksForFavorite] = useState<Tweak[]>([]);
+  const [itemsForFavorite, setItemsForFavorite] = useState<SelectedItem[]>([]);
+
+  const itemsToSave = useMemo(
+    () => (itemsForFavorite.length > 0 ? itemsForFavorite : selectedItems ?? selectedItemsArray),
+    [itemsForFavorite, selectedItems, selectedItemsArray]
+  );
 
   const openQuickSaveDialog = useCallback(() => {
-    const tweaksToSave = Array.from(selectedTweaks.values());
-    if (tweaksToSave.length === 0) return;
+    const currentSelection = selectedItems ?? selectedItemsArray;
+
+    if (currentSelection.length === 0) {
+      toast.error("Nothing to save", {
+        description: "Select items first.",
+      });
+      return;
+    }
 
     if (!user) {
       toast.error("Unable to save selection", {
-        description: "You need to be signed in to keep a history of tweaks.",
+        description: "You need to be signed in to save favorites.",
       });
       return;
     }
 
     const now = new Date();
-    const defaultName = `Favorite selection - ${format(
-      now,
-      "dd/MM/yyyy HH:mm"
-    )}`;
-
-    setTweaksForFavorite(tweaksToSave);
-    setFavoriteName(defaultName);
+    setItemsForFavorite(currentSelection);
+    setFavoriteName(`Favorite selection - ${format(now, "dd/MM/yyyy HH:mm")}`);
     setFavoriteDialogOpen(true);
-  }, [selectedTweaks, user]);
+  }, [selectedItems, selectedItemsArray, user]);
 
   const openSaveAsFavoriteDialog = useCallback(
-    (tweaks: Tweak[], defaultName: string) => {
-      // If saving a single tweak, check if it's already in favorites
-      if (tweaks.length === 1 && favoriteTweakIds) {
-        const tweakId = tweaks[0]?.id;
-        if (tweakId && favoriteTweakIds.has(tweakId)) {
-          toast.error("Tweak already in favorites", {
-            description: "This tweak is already saved in your favorites.",
-          });
-          return;
-        }
+    (items: SelectedItem[], defaultName: string) => {
+      if (items.length === 0) {
+        return;
       }
-      
-      // If multiple tweaks, allow saving (even if some tweaks might be in other favorites)
-      setTweaksForFavorite(tweaks);
+
+      setItemsForFavorite(items);
       setFavoriteName(defaultName);
       setFavoriteDialogOpen(true);
     },
-    [favoriteTweakIds]
+    []
   );
 
   const closeFavoriteDialog = useCallback(() => {
@@ -78,42 +73,18 @@ export function useFavoriteDialog({
   const handleConfirmSaveFavorite = useCallback(async () => {
     if (!user) return;
 
-    const tweaksToSave =
-      tweaksForFavorite.length > 0
-        ? tweaksForFavorite
-        : Array.from(selectedTweaks.values());
-
-    if (!tweaksToSave.length || !favoriteName.trim()) return;
+    if (itemsToSave.length === 0 || !favoriteName.trim()) return;
 
     try {
       setIsSavingFavorite(true);
-      const tweakIds = tweaksToSave.map((t) => t.id);
 
-      await Promise.all(
-        tweakIds.map(async (tweakId) => {
-          if (favoriteTweakIds?.has(tweakId)) {
-            return;
-          }
+      await saveTweakHistory({
+        tweaks: itemsToSave,
+        name: favoriteName.trim(),
+        isFavorite: true,
+      });
 
-          const result = await toggleFavorite({ itemType: "tweak", itemId: tweakId });
-
-          if (!result.success) {
-            throw new Error("Unable to toggle favorite");
-          }
-
-          if (!result.isFavorite) {
-            // If the API returned a removal unexpectedly, re-add
-            const retry = await toggleFavorite({ itemType: "tweak", itemId: tweakId });
-            if (!retry.success || !retry.isFavorite) {
-              throw new Error("Failed to add favorite");
-            }
-          }
-        })
-      );
-
-      onCountersUpdated?.(tweakIds, "favorite");
-      await queryClient.invalidateQueries({ queryKey: ["favorites-items"] });
-      toast.success("Saved as favorite");
+      toast.success("Saved to favorites");
       closeFavoriteDialog();
     } catch (error) {
       console.error(error);
@@ -121,22 +92,13 @@ export function useFavoriteDialog({
     } finally {
       setIsSavingFavorite(false);
     }
-  }, [
-    user,
-    tweaksForFavorite,
-    selectedTweaks,
-    favoriteName,
-    queryClient,
-    closeFavoriteDialog,
-    onCountersUpdated,
-    favoriteTweakIds,
-  ]);
+  }, [user, itemsToSave, favoriteName, closeFavoriteDialog]);
 
   return {
     favoriteDialogOpen,
     favoriteName,
     isSavingFavorite,
-    tweaksForFavorite,
+    itemsForFavorite,
     setFavoriteDialogOpen,
     setFavoriteName,
     setIsSavingFavorite,
@@ -145,5 +107,3 @@ export function useFavoriteDialog({
     handleConfirmSaveFavorite,
   };
 }
-
-

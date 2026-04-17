@@ -4,14 +4,11 @@ import Image from "next/image";
 import { useState, useTransition } from "react";
 import {
   ArrowDownTrayIcon,
-  StarIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
-import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
 import { toast } from "sonner";
 
 import { deleteWallpaperAction } from "@/features/wallpapers/actions/delete-wallpaper";
-import { useFavorites } from "@/features/favorites/hooks/use-favorites";
 import type { Wallpaper } from "@/features/wallpapers/types/wallpaper.types";
 import {
   AlertDialog,
@@ -48,9 +45,6 @@ export function WallpaperCard({
 }: WallpaperCardProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isDeleting, startDeleteTransition] = useTransition();
-  const [isTogglingFavorite, startFavoriteTransition] = useTransition();
-  const { favoriteWallpaperIds, toggleFavorite } = useFavorites();
-  const isFavorite = favoriteWallpaperIds.has(wallpaper.id);
 
   const handleDelete = () => {
     startDeleteTransition(async () => {
@@ -64,21 +58,6 @@ export function WallpaperCard({
       toast.success("Wallpaper deleted successfully");
       setDeleteDialogOpen(false);
       onDeleted();
-    });
-  };
-
-  const handleToggleFavorite = () => {
-    startFavoriteTransition(async () => {
-      try {
-        const result = await toggleFavorite({
-          itemType: "wallpaper",
-          itemId: wallpaper.id,
-        });
-
-        toast.success(result.isFavorite ? "Added to favorites" : "Removed from favorites");
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : "Failed to update favorite");
-      }
     });
   };
 
@@ -114,18 +93,6 @@ export function WallpaperCard({
           </div>
 
           <div className="absolute right-2 top-2 z-10 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-            <Button
-              variant="secondary"
-              size="icon"
-              className="h-8 w-8 rounded-[var(--radius-md)]"
-              disabled={isTogglingFavorite}
-              onClick={(event) => {
-                event.stopPropagation();
-                handleToggleFavorite();
-              }}
-            >
-              {isFavorite ? <StarSolidIcon className="h-4 w-4 text-yellow-500" /> : <StarIcon className="h-4 w-4" />}
-            </Button>
             <Button
               variant="secondary"
               size="icon"

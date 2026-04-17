@@ -14,3 +14,5 @@ export type SelectedWallpaperItem = {
 };
 
 export type SelectedItem = SelectedTweakItem | SelectedWallpaperItem;
+
+export type SelectedItemKey = `${SelectedItem["type"]}:${string}`;

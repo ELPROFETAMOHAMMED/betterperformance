@@ -14,6 +14,8 @@ import { useSearchChocoPackages } from "@/features/app-installer/search-packages
 import { useSearchPackages } from "@/features/app-installer/search-packages/use-search-packages";
 import type { ChocoPackage } from "@/features/app-installer/types/choco-package";
 import type { WingetPackage } from "@/features/app-installer/types/winget-package";
+import { mapChocoPkgToTweak, mapPkgToTweak } from "@/features/app-installer/utils/map-pkg-to-tweak";
+import { useSelection } from "@/features/tweaks/context/selection-context";
 import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Empty, EmptyDescription, EmptyTitle } from "@/shared/components/ui/empty";
@@ -36,6 +38,7 @@ export default function AppInstallerPage() {
   const [selectedWingetPackages, setSelectedWingetPackages] = useState<WingetPackage[]>([]);
   const [selectedChocoPackages, setSelectedChocoPackages] = useState<ChocoPackage[]>([]);
   const [hasCopied, setHasCopied] = useState(false);
+  const { toggleTweak } = useSelection();
 
   const { packages: wingetPackages, isLoading: isWingetLoading, error: wingetError } = useSearchPackages(
     sourceTab === "winget" ? query : ""
@@ -95,31 +98,39 @@ export default function AppInstallerPage() {
   }, [sourceTab, selectedWingetPackages, selectedChocoPackages]);
 
   const toggleWingetPackage = (id: string) => {
+    const pkg = wingetPackages.find((item) => item.Id === id);
+    if (!pkg) {
+      return;
+    }
+
     setSelectedWingetPackages((previous) => {
-      const isSelected = previous.some((pkg) => pkg.Id === id);
-      if (isSelected) {
-        return previous.filter((pkg) => pkg.Id !== id);
-      }
-      const pkg = wingetPackages.find((item) => item.Id === id);
-      return pkg ? [...previous, pkg] : previous;
+      const isSelected = previous.some((item) => item.Id === id);
+      return isSelected ? previous.filter((item) => item.Id !== id) : [...previous, pkg];
     });
+
+    toggleTweak(mapPkgToTweak(pkg));
   };
 
   const toggleChocoPackage = (id: string) => {
+    const pkg = chocoPackages.find((item) => item.id === id);
+    if (!pkg) {
+      return;
+    }
+
     setSelectedChocoPackages((previous) => {
-      const isSelected = previous.some((pkg) => pkg.id === id);
-      if (isSelected) {
-        return previous.filter((pkg) => pkg.id !== id);
-      }
-      const pkg = chocoPackages.find((item) => item.id === id);
-      return pkg ? [...previous, pkg] : previous;
+      const isSelected = previous.some((item) => item.id === id);
+      return isSelected ? previous.filter((item) => item.id !== id) : [...previous, pkg];
     });
+
+    toggleTweak(mapChocoPkgToTweak(pkg));
   };
 
   const clearCurrentSelection = () => {
     if (sourceTab === "winget") {
+      selectedWingetPackages.forEach((pkg) => toggleTweak(mapPkgToTweak(pkg)));
       setSelectedWingetPackages([]);
     } else {
+      selectedChocoPackages.forEach((pkg) => toggleTweak(mapChocoPkgToTweak(pkg)));
       setSelectedChocoPackages([]);
     }
     toast.success("Selection cleared");

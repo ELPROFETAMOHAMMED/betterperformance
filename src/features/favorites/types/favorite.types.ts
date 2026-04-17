@@ -1,23 +1,6 @@
-import type { Tweak } from "@/features/tweaks/types/tweak.types";
-import type { Wallpaper } from "@/features/wallpapers/types/wallpaper.types";
+import type { SelectedItem } from "@/shared/types/selection.types";
 
 export type FavoriteItemType = "tweak" | "wallpaper";
-
-export type FavoriteItem =
-  | {
-      id: string;
-      itemType: "tweak";
-      tweak: Tweak;
-      wallpaper: null;
-      createdAt: string;
-    }
-  | {
-      id: string;
-      itemType: "wallpaper";
-      tweak: null;
-      wallpaper: Wallpaper;
-      createdAt: string;
-    };
 
 export type ToggleFavoriteInput = {
   itemType: FavoriteItemType;
@@ -27,4 +10,17 @@ export type ToggleFavoriteInput = {
 export type ToggleFavoriteResult = {
   success: boolean;
   isFavorite: boolean;
+};
+
+export type FavoriteItem = {
+  id: string;
+  itemType: "selection";
+  tweak: null;
+  wallpaper: null;
+  selection: {
+    name: string;
+    items: SelectedItem[];
+    createdAt: string;
+  };
+  createdAt: string;
 };

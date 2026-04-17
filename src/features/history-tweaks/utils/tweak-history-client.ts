@@ -1,4 +1,5 @@
-import type { Tweak, TweakHistoryEntry } from "@/features/tweaks/types/tweak.types";
+import type { TweakHistoryEntry } from "@/features/tweaks/types/tweak.types";
+import type { SelectedItem } from "@/shared/types/selection.types";
 
 export async function fetchTweakHistory(): Promise<TweakHistoryEntry[]> {
   const response = await fetch("/api/history");
@@ -14,7 +15,7 @@ export async function saveTweakHistory({
   name,
   isFavorite,
 }: {
-  tweaks: Tweak[];
+  tweaks: SelectedItem[];
   name?: string;
   isFavorite?: boolean;
 }) {
@@ -32,7 +33,7 @@ export async function saveTweakHistory({
 
 export async function updateTweakHistory(
   id: string, 
-  updates: { name?: string; isFavorite?: boolean; tweaks?: Tweak[] }
+  updates: { name?: string; isFavorite?: boolean; tweaks?: SelectedItem[] }
 ) {
   const response = await fetch(`/api/history/${id}`, {
     method: "PUT",

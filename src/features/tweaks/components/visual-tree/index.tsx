@@ -10,6 +10,7 @@ import { ReportsExplorer } from "@/features/tweaks/components/reports-explorer";
 
 import type { TweakCategory, Tweak, TweakHistoryEntry } from "@/features/tweaks/types/tweak.types";
 import type { TweakReport } from "@/features/tweaks/types/tweak-report.types";
+import type { SelectedItem } from "@/shared/types/selection.types";
 
 // Hooks
 import { useTreeExpansion } from "@/features/tweaks/components/visual-tree/hooks/use-tree-expansion";
@@ -24,7 +25,9 @@ import { FlatTree } from "@/features/tweaks/components/visual-tree/flat-tree";
 interface VisualTreeProps {
   categories: TweakCategory[];
   selectedTweaks: Set<string>;
+  selectedItems: Map<string, SelectedItem>;
   onTweakToggle: (tweak: Tweak) => void;
+  onItemToggle: (item: SelectedItem) => void;
   historyTweakIds?: Set<string>;
   favoriteTweakIds?: Set<string>;
   reportedTweakIds?: Set<string>;
@@ -38,9 +41,9 @@ interface VisualTreeProps {
   onClearSelection: () => void;
   isLoading?: boolean;
   onRenameSelection?: (id: string, currentName: string) => void;
-  onEditSelection?: (id: string, tweaks: Tweak[]) => void;
+  onEditSelection?: (id: string, items: SelectedItem[]) => void;
   onDeleteSelection?: (id: string) => void;
-  onSaveAsFavorite?: (tweaks: Tweak[], defaultName: string) => void;
+  onSaveAsFavorite?: (items: SelectedItem[], defaultName: string) => void;
   onRefresh?: () => void;
   onCreateTweak?: () => void;
   onEditCategory?: (category: TweakCategory) => void;
@@ -51,7 +54,9 @@ interface VisualTreeProps {
 export default function VisualTree({
   categories,
   selectedTweaks,
+  selectedItems,
   onTweakToggle,
+  onItemToggle,
   historyTweakIds,
   favoriteTweakIds,
   reportedTweakIds,
@@ -77,7 +82,7 @@ export default function VisualTree({
 
   // View States
   const [favoritesScope] = useState<"user" | "global">("user");
-  const [favoritesView] = useState<"list" | "tree">("list");
+  const [favoritesView] = useState<"list" | "tree">("tree");
   const [reportedScope, setReportedScope] = useState<"user" | "global">("global");
   const [historyView] = useState<"list" | "tree">("tree");
   const [historyShowCategory] = useState(true);
@@ -95,18 +100,34 @@ export default function VisualTree({
     return map;
   }, [categories]);
 
-  const handleSelectGroup = (tweaksToSelect: Tweak[], e: React.MouseEvent) => {
+  const handleSelectGroup = (
+    itemsToSelect: Array<Tweak | SelectedItem>,
+    e: React.MouseEvent
+  ) => {
     e.stopPropagation();
-    const selectableTweaks = isAdmin ? tweaksToSelect : tweaksToSelect.filter((t) => t.is_visible);
-    if (selectableTweaks.length === 0) return;
+    const allSelected = itemsToSelect.every((item) => {
+      if ("type" in item) {
+        return selectedItems.has(`${item.type}:${item.id}`);
+      }
 
-    const allSelected = selectableTweaks.every((t) => selectedTweaks.has(t.id));
+      return selectedTweaks.has(item.id);
+    });
 
-    selectableTweaks.forEach((tweak) => {
+    itemsToSelect.forEach((item) => {
+      if ("type" in item) {
+        const key = `${item.type}:${item.id}`;
+        if (allSelected) {
+          if (selectedItems.has(key)) onItemToggle(item);
+        } else if (!selectedItems.has(key)) {
+          onItemToggle(item);
+        }
+        return;
+      }
+
       if (allSelected) {
-        if (selectedTweaks.has(tweak.id)) onTweakToggle(tweak);
-      } else {
-        if (!selectedTweaks.has(tweak.id)) onTweakToggle(tweak);
+        if (selectedTweaks.has(item.id)) onTweakToggle(item);
+      } else if (!selectedTweaks.has(item.id)) {
+        onTweakToggle(item);
       }
     });
   };
@@ -172,7 +193,6 @@ export default function VisualTree({
     isHistoryTree,
     userFavoriteSelections,
     userHistorySelections,
-    allTweaksMap,
     searchQuery
   );
 
@@ -255,9 +275,8 @@ export default function VisualTree({
                     groups={groupSelections}
                     expandedCategories={expandedCategories}
                     toggleCategory={toggleCategory}
-                    isAdmin={isAdmin}
-                    selectedTweaks={selectedTweaks}
-                    onTweakToggle={onTweakToggle}
+                    selectedItems={selectedItems}
+                    onItemToggle={onItemToggle}
                     handleSelectGroup={handleSelectGroup}
                     onRenameSelection={onRenameSelection}
                     onEditSelection={onEditSelection}

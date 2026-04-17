@@ -16,7 +16,6 @@ import { QueueListIcon, TrashIcon, ArrowDownTrayIcon, StarIcon } from "@heroicon
 import { useSelection } from "@/features/tweaks/context/selection-context";
 import { useTweakDownload } from "@/features/tweaks/hooks/use-tweak-download";
 import { useFavoriteDialog } from "@/features/tweaks/hooks/use-favorite-dialog";
-import { DownloadWarningDialog } from "@/features/tweaks/components/download-warning-dialog";
 import { SaveFavoriteDialog } from "@/features/tweaks/components/save-favorite-dialog";
 import { useUser } from "@/shared/hooks/use-user";
 import { motion, AnimatePresence } from "framer-motion";
@@ -40,10 +39,8 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
   const {
     isLoading: isDownloading,
     handleDownloadWithSettings,
-    warningDialogOpen,
-    onWarningContinue,
-    onWarningCancel,
   } = useTweakDownload({
+    selectedItems: selectedItemsArray,
     selectedTweaks: new Map(selectedTweaksArray.map(t => [t.id, t])),
     user,
     userLoading,
@@ -58,8 +55,9 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
     setFavoriteDialogOpen,
     setFavoriteName,
     handleConfirmSaveFavorite,
-    tweaksForFavorite
+    itemsForFavorite,
   } = useFavoriteDialog({
+    selectedItems: selectedItemsArray,
     selectedTweaks: new Map(selectedTweaksArray.map(t => [t.id, t])),
     user,
     onCountersUpdated: updateTweakCounters,
@@ -177,7 +175,7 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
           </div>
         </ScrollArea>
 
-        {selectedTweaksArray.length > 0 && (
+        {selectedItemsArray.length > 0 && (
           <SheetFooter className="p-6 border-t border-border/20 bg-muted/10 flex-col sm:flex-col gap-3">
             <div className="flex w-full gap-3">
               <Button
@@ -193,7 +191,7 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
                 variant="default"
                 className="h-9 flex-1 gap-2"
                 onClick={handleDownloadWithSettings}
-                disabled={isDownloading}
+                disabled={isDownloading || selectedItemsArray.length === 0}
               >
                 {isDownloading ? (
                   <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -211,11 +209,6 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
           </SheetFooter>
         )}
       </SheetContent>
-      <DownloadWarningDialog
-        open={warningDialogOpen}
-        onContinue={onWarningContinue}
-        onCancel={onWarningCancel}
-      />
       <SaveFavoriteDialog
         open={favoriteDialogOpen}
         onOpenChange={setFavoriteDialogOpen}
@@ -223,7 +216,7 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
         onFavoriteNameChange={setFavoriteName}
         isSaving={isSavingFavorite}
         onConfirm={handleConfirmSaveFavorite}
-        tweaksCount={tweaksForFavorite.length || selectedTweaksArray.length}
+        tweaksCount={itemsForFavorite.length || selectedItemsArray.length}
       />
     </Sheet>
   );

@@ -1,5 +1,6 @@
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
 import type { WingetPackage } from "@/features/app-installer/types/winget-package";
+import type { ChocoPackage } from "@/features/app-installer/types/choco-package";
 
 /**
  * Maps a Winget package to the internal Tweak structure used by the selection system.
@@ -20,5 +21,21 @@ export function mapPkgToTweak(pkg: WingetPackage): Tweak {
     favorite_count: 0,
     is_visible: true,
     notes: "Requires an active internet connection and Winget (standard on Windows 10/11).",
+  };
+}
+
+export function mapChocoPkgToTweak(pkg: ChocoPackage): Tweak {
+  const name = pkg.title || pkg.id;
+  const publisher = pkg.publisher || "Unknown";
+
+  return {
+    id: `choco-${pkg.id.toLowerCase().replace(/[^a-z0-9]/g, "-")}`,
+    title: name,
+    description: `Install ${name} (${pkg.id}) by ${publisher} via Chocolatey.`,
+    code: `choco install ${pkg.id} -y`,
+    download_count: 0,
+    favorite_count: 0,
+    is_visible: true,
+    notes: "Requires Chocolatey installed on the system.",
   };
 }

@@ -23,29 +23,13 @@ export function useFavorites(enabled: boolean = true) {
   });
 
   const favorites = favoritesQuery.data ?? [];
-  const favoriteTweakIds = new Set(
-    favorites.flatMap((favorite) => {
-      if (favorite.itemType !== "tweak") {
-        return [];
-      }
-
-      return [favorite.tweak.id];
-    })
-  );
-  const favoriteWallpaperIds = new Set(
-    favorites.flatMap((favorite) => {
-      if (favorite.itemType !== "wallpaper") {
-        return [];
-      }
-
-      return [favorite.wallpaper.id];
-    })
-  );
+  const favoriteSelectionIds = new Set(favorites.map((favorite) => favorite.id));
 
   return {
     favorites,
-    favoriteTweakIds,
-    favoriteWallpaperIds,
+    favoriteSelectionIds,
+    favoriteTweakIds: new Set<string>(),
+    favoriteWallpaperIds: new Set<string>(),
     isLoading: favoritesQuery.isLoading || favoritesQuery.isRefetching,
     toggleFavorite: toggleFavoriteMutation.mutateAsync,
     isTogglingFavorite: toggleFavoriteMutation.isPending,

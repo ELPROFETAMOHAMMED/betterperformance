@@ -4,11 +4,13 @@ import { useCallback, useState } from "react";
 import { toast } from "sonner";
 import { useEditorSettings } from "@/features/settings/hooks/use-editor-settings";
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
-import { useDownloadTweaks } from "@/features/tweaks/hooks/use-download-tweaks";
 import { prepareDownload } from "@/features/tweaks/services/prepare-download.service";
 import type { profile } from "@/features/auth/types/user.types";
+import type { SelectedItem } from "@/shared/types/selection.types";
+import { downloadSelectionScript } from "@/features/tweaks/services/download-selection-script";
 
 interface UseTweakDownloadParams {
+  selectedItems?: SelectedItem[];
   selectedTweaks: Map<string, Tweak>;
   user: profile | null;
   userLoading: boolean;
@@ -16,6 +18,7 @@ interface UseTweakDownloadParams {
 }
 
 export function useTweakDownload({
+  selectedItems,
   selectedTweaks,
   user,
   userLoading,
@@ -24,12 +27,6 @@ export function useTweakDownload({
   const [isLoading, setIsLoading] = useState(false);
   const [isCopying, setIsCopying] = useState(false);
   const { settings } = useEditorSettings();
-  const { 
-    handleDownload: handleDownloadWithWarning, 
-    warningDialogOpen, 
-    onWarningContinue, 
-    onWarningCancel 
-  } = useDownloadTweaks();
 
   const handleCopy = useCallback(
     async (activeTweakId: string | null) => {
@@ -64,11 +61,12 @@ export function useTweakDownload({
   );
 
   const handleDownloadWithSettings = useCallback(async () => {
+    const itemsToDownload = selectedItems ?? [];
     const tweaksToDownload = Array.from(selectedTweaks.values());
 
-    if (tweaksToDownload.length === 0) {
+    if (itemsToDownload.length === 0) {
       toast.error("No tweaks selected", {
-        description: "Please select at least one tweak to download.",
+        description: "Please select at least one item to download.",
       });
       return;
     }
@@ -82,53 +80,24 @@ export function useTweakDownload({
 
     try {
       await prepareDownload({
+        selectedItems: itemsToDownload,
         tweaks: tweaksToDownload,
         user,
         userLoading,
       });
 
-      try {
-        handleDownloadWithWarning(
-          tweaksToDownload,
-          {
-            encodingUtf8: settings.encodingUtf8,
-            hideSensitive: settings.hideSensitive,
-            downloadEachTweak: settings.downloadEachTweak,
-            customCode: null,
-            autoCreateRestorePoint: settings.autoCreateRestorePoint,
-          },
-          {
-            onDownloadStart: () => {
-              clearTimeout(safetyTimeout);
-              // Update counters locally after successful download
-              const tweakIds = tweaksToDownload.map((t) => t.id);
-              onCountersUpdated?.(tweakIds, "download");
-              toast.success("Download started", {
-                description: `Downloading ${
-                  tweaksToDownload.length
-                } tweak${tweaksToDownload.length > 1 ? "s" : ""}`,
-              });
-              setTimeout(() => setIsLoading(false), 100);
-            },
-            onDownloadCancel: () => {
-              clearTimeout(safetyTimeout);
-              setIsLoading(false);
-            },
-          }
-        );
+      downloadSelectionScript(itemsToDownload, {
+        encodingUtf8: settings.encodingUtf8,
+        autoCreateRestorePoint: settings.autoCreateRestorePoint,
+      });
 
-        if (!settings.alwaysShowWarning) {
-          clearTimeout(safetyTimeout);
-          setTimeout(() => setIsLoading(false), 100);
-        }
-      } catch (downloadError) {
-        clearTimeout(safetyTimeout);
-        console.error("Error in download handler:", downloadError);
-        toast.error("Error starting download", {
-          description: "Please try again.",
-        });
-        setIsLoading(false);
-      }
+      clearTimeout(safetyTimeout);
+      const tweakIds = tweaksToDownload.map((t) => t.id);
+      onCountersUpdated?.(tweakIds, "download");
+      toast.success("Download started", {
+        description: `Downloading ${itemsToDownload.length} item${itemsToDownload.length > 1 ? "s" : ""}`,
+      });
+      setTimeout(() => setIsLoading(false), 100);
     } catch (error) {
       console.error("Download error:", error);
       toast.error("Error while preparing download", {
@@ -139,16 +108,13 @@ export function useTweakDownload({
       });
       setIsLoading(false);
     }
-  }, [selectedTweaks, user, userLoading, handleDownloadWithWarning, settings, onCountersUpdated]);
+  }, [selectedItems, selectedTweaks, user, userLoading, settings, onCountersUpdated]);
 
   return {
     isLoading,
     isCopying,
     handleCopy,
     handleDownloadWithSettings,
-    warningDialogOpen,
-    onWarningContinue,
-    onWarningCancel,
   };
 }
 

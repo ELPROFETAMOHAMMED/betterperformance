@@ -10,8 +10,6 @@ import {
   PencilIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline";
-import { StarIcon as StarIconSolid } from "@heroicons/react/24/solid";
-
 import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
 import { Badge } from "@/shared/components/ui/badge";
 import { Button } from "@/shared/components/ui/button";
@@ -33,14 +31,12 @@ type TweaksHeaderProps = {
   isAdmin: boolean;
   isCopying: boolean;
   isDownloadLoading: boolean;
-  isSavingFavorite: boolean;
   selectedTweaksCount: number;
   onCopy: () => void;
   onCreateTweak: () => void;
   onDownload: () => void;
   onEditTweak: (tweak: Tweak) => void;
   onNextTweak: () => void;
-  onOpenFavoriteDialog: (tweaks: Tweak[], favoriteName: string) => void;
   onOpenReportDialog: () => void;
   onPrevTweak: () => void;
   onRefresh: () => void;
@@ -56,14 +52,12 @@ export function TweaksHeader({
   visibility,
   isCopying,
   isDownloadLoading,
-  isSavingFavorite,
   selectedTweaksCount,
   onCopy,
   onCreateTweak,
   onDownload,
   onEditTweak,
   onNextTweak,
-  onOpenFavoriteDialog,
   onOpenReportDialog,
   onPrevTweak,
   onRefresh,
@@ -101,26 +95,6 @@ export function TweaksHeader({
               <TooltipProvider>
                 {activeTweak && (
                   <div className="mr-2 flex items-center gap-1 border-r border-border/40 pr-2">
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-yellow-500 hover:bg-yellow-500/10"
-                          onClick={() =>
-                            onOpenFavoriteDialog(
-                              [activeTweak],
-                              `Favorite: ${activeTweak.title}`
-                            )
-                          }
-                          disabled={isSavingFavorite}
-                        >
-                          <StarIconSolid className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>Save to favorites</TooltipContent>
-                    </Tooltip>
-
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button

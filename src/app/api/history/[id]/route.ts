@@ -1,5 +1,6 @@
 import { createClient } from "@/shared/utils/supabase/server";
 import { NextResponse } from "next/server";
+import type { SelectedItem } from "@/shared/types/selection.types";
 
 export async function PUT(
   request: Request,
@@ -44,7 +45,7 @@ export async function PUT(
     if (body.tweaks !== undefined) {
       const { error } = await supabase
         .from("tweak_history")
-        .update({ tweaks: JSON.stringify(body.tweaks) })
+        .update({ tweaks: JSON.stringify(body.tweaks as SelectedItem[]) })
         .eq("id", id)
         .eq("user_id", user.id);
 

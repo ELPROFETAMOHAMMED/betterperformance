@@ -2,6 +2,11 @@ import { createClient } from "@/shared/utils/supabase/server";
 import { NextResponse } from "next/server";
 import { rateLimit } from "@/shared/utils/rate-limit";
 
+type DownloadCountRow = {
+  id: string;
+  download_count: number | null;
+};
+
 export async function POST(request: Request) {
   try {
     const ip = request.headers.get("x-real-ip")
@@ -43,17 +48,33 @@ export async function POST(request: Request) {
       );
     }
 
-    // NOTE: This requires the PostgreSQL function increment_download_count_batch to exist
-    // in Supabase, accepting a uuid[] parameter and updating all rows in a single query.
-    // Create it if it does not exist.
-    const { error: rpcError } = await supabase.rpc("increment_download_count_batch", {
-      tweak_ids: validIds,
-    });
+    const { data: tweaks, error: fetchError } = await supabase
+      .from("tweaks")
+      .select("id, download_count")
+      .in("id", validIds);
 
-    if (rpcError) {
-      console.error("Error batch-incrementing download counts:", rpcError);
+    if (fetchError) {
+      console.error("Error loading tweak download counts:", fetchError);
       return NextResponse.json(
-        { error: "Failed to increment download counts", details: rpcError.message },
+        { error: "Failed to increment download counts", details: fetchError.message },
+        { status: 500 }
+      );
+    }
+
+    const updates = (tweaks ?? []).map((tweak: DownloadCountRow) =>
+      supabase
+        .from("tweaks")
+        .update({ download_count: (tweak.download_count ?? 0) + 1 })
+        .eq("id", tweak.id)
+    );
+
+    const results = await Promise.all(updates);
+    const updateError = results.find(({ error }) => Boolean(error))?.error;
+
+    if (updateError) {
+      console.error("Error batch-incrementing download counts:", updateError);
+      return NextResponse.json(
+        { error: "Failed to increment download counts", details: updateError.message },
         { status: 500 }
       );
     }

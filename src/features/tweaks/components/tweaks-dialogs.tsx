@@ -1,7 +1,6 @@
 "use client";
 
 import { CategoryFormDialog } from "@/features/tweaks/components/category-form-dialog";
-import { DownloadWarningDialog } from "@/features/tweaks/components/download-warning-dialog";
 import { EditSelectionDialog } from "@/features/tweaks/components/edit-selection-dialog";
 import { SaveFavoriteDialog } from "@/features/tweaks/components/save-favorite-dialog";
 import { TweakFormDialog } from "@/features/tweaks/components/tweak-form-dialog";
@@ -9,6 +8,7 @@ import { TweakReportDialog } from "@/features/tweaks/components/tweak-report-dia
 import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
 import { Button } from "@/shared/components/ui/button";
 import { Input } from "@/shared/components/ui/input";
+import type { SelectedItem } from "@/shared/types/selection.types";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +26,7 @@ type TweaksDialogsProps = {
   editingCategory: TweakCategory | null;
   editingTweak: Tweak | null;
   editDialogOpen: boolean;
-  editTweaks: Tweak[];
+  editTweaks: SelectedItem[];
   favoriteDialogOpen: boolean;
   favoriteName: string;
   infoTweak: Tweak | null;
@@ -39,7 +39,6 @@ type TweaksDialogsProps = {
   reportDialogOpen: boolean;
   tweaksForFavoriteCount: number;
   tweakFormDialogOpen: boolean;
-  warningDialogOpen: boolean;
   categoryFormDialogOpen: boolean;
   onReportSubmitted: () => Promise<void>;
   onCategoryFormOpenChange: (open: boolean) => void;
@@ -52,13 +51,11 @@ type TweaksDialogsProps = {
   onRenameValueChange: (value: string) => void;
   onReportDialogOpenChange: (open: boolean) => void;
   onSelectionDeleteDialogOpenChange: (open: boolean) => void;
-  onSelectionEdit: (tweaks: Tweak[]) => void;
+  onSelectionEdit: (items: SelectedItem[]) => void;
   onSelectionRename: () => void;
   onTweakFormOpenChange: (open: boolean) => void;
   onTweakFormSuccess: () => void;
   onCategoryFormSuccess: () => void;
-  onWarningCancel: () => void;
-  onWarningContinue: () => void;
 };
 
 export function TweaksDialogs({
@@ -81,7 +78,6 @@ export function TweaksDialogs({
   reportDialogOpen,
   tweaksForFavoriteCount,
   tweakFormDialogOpen,
-  warningDialogOpen,
   onReportSubmitted,
   onCategoryFormOpenChange,
   onCategoryFormSuccess,
@@ -98,8 +94,6 @@ export function TweaksDialogs({
   onSelectionRename,
   onTweakFormOpenChange,
   onTweakFormSuccess,
-  onWarningCancel,
-  onWarningContinue,
 }: TweaksDialogsProps) {
   return (
     <>
@@ -115,7 +109,7 @@ export function TweaksDialogs({
 
       <EditSelectionDialog
         open={editDialogOpen}
-        tweaks={editTweaks}
+        items={editTweaks}
         isSaving={isEditing}
         onOpenChange={onEditDialogOpenChange}
         onConfirm={onSelectionEdit}
@@ -187,12 +181,6 @@ export function TweaksDialogs({
         onOpenChange={onReportDialogOpenChange}
         tweak={infoTweak}
         onReportSubmitted={onReportSubmitted}
-      />
-
-      <DownloadWarningDialog
-        open={warningDialogOpen}
-        onContinue={onWarningContinue}
-        onCancel={onWarningCancel}
       />
 
       <TweakFormDialog

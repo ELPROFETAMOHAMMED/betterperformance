@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { updateTweakHistory, deleteTweakHistory } from "@/features/history-tweaks/utils/tweak-history-client";
-import type { Tweak } from "@/features/tweaks/types/tweak.types";
+import type { SelectedItem } from "@/shared/types/selection.types";
 
 export function useHistoryDialogs() {
   const queryClient = useQueryClient();
@@ -20,7 +20,7 @@ export function useHistoryDialogs() {
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
-  const [editTweaks, setEditTweaks] = useState<Tweak[]>([]);
+  const [editTweaks, setEditTweaks] = useState<SelectedItem[]>([]);
   const [isEditing, setIsEditing] = useState(false);
 
   const openRenameDialog = useCallback((id: string, currentName: string) => {
@@ -77,7 +77,7 @@ export function useHistoryDialogs() {
     }
   }, [deleteId, queryClient, closeDeleteDialog]);
 
-  const openEditDialog = useCallback((id: string, tweaks: Tweak[]) => {
+  const openEditDialog = useCallback((id: string, tweaks: SelectedItem[]) => {
     setEditId(id);
     setEditTweaks(tweaks);
     setEditDialogOpen(true);
@@ -90,7 +90,7 @@ export function useHistoryDialogs() {
   }, []);
 
   const confirmEdit = useCallback(
-    async (tweaks: Tweak[]) => {
+    async (tweaks: SelectedItem[]) => {
       if (!editId) {
         return;
       }
