@@ -2,6 +2,7 @@
 
 import { CategoryFormDialog } from "@/features/tweaks/components/category-form-dialog";
 import { DownloadWarningDialog } from "@/features/tweaks/components/download-warning-dialog";
+import { EditSelectionDialog } from "@/features/tweaks/components/edit-selection-dialog";
 import { SaveFavoriteDialog } from "@/features/tweaks/components/save-favorite-dialog";
 import { TweakFormDialog } from "@/features/tweaks/components/tweak-form-dialog";
 import { TweakReportDialog } from "@/features/tweaks/components/tweak-report-dialog";
@@ -24,10 +25,13 @@ type TweaksDialogsProps = {
   deleteDialogOpen: boolean;
   editingCategory: TweakCategory | null;
   editingTweak: Tweak | null;
+  editDialogOpen: boolean;
+  editTweaks: Tweak[];
   favoriteDialogOpen: boolean;
   favoriteName: string;
   infoTweak: Tweak | null;
   isDeletingSelection: boolean;
+  isEditing: boolean;
   isRenaming: boolean;
   isSavingFavorite: boolean;
   renameDialogOpen: boolean;
@@ -43,10 +47,12 @@ type TweaksDialogsProps = {
   onConfirmSaveFavorite: () => void;
   onFavoriteDialogOpenChange: (open: boolean) => void;
   onFavoriteNameChange: (value: string) => void;
+  onEditDialogOpenChange: (open: boolean) => void;
   onRenameDialogOpenChange: (open: boolean) => void;
   onRenameValueChange: (value: string) => void;
   onReportDialogOpenChange: (open: boolean) => void;
   onSelectionDeleteDialogOpenChange: (open: boolean) => void;
+  onSelectionEdit: (tweaks: Tweak[]) => void;
   onSelectionRename: () => void;
   onTweakFormOpenChange: (open: boolean) => void;
   onTweakFormSuccess: () => void;
@@ -61,10 +67,13 @@ export function TweaksDialogs({
   deleteDialogOpen,
   editingCategory,
   editingTweak,
+  editDialogOpen,
+  editTweaks,
   favoriteDialogOpen,
   favoriteName,
   infoTweak,
   isDeletingSelection,
+  isEditing,
   isRenaming,
   isSavingFavorite,
   renameDialogOpen,
@@ -80,10 +89,12 @@ export function TweaksDialogs({
   onConfirmSaveFavorite,
   onFavoriteDialogOpenChange,
   onFavoriteNameChange,
+  onEditDialogOpenChange,
   onRenameDialogOpenChange,
   onRenameValueChange,
   onReportDialogOpenChange,
   onSelectionDeleteDialogOpenChange,
+  onSelectionEdit,
   onSelectionRename,
   onTweakFormOpenChange,
   onTweakFormSuccess,
@@ -100,6 +111,14 @@ export function TweaksDialogs({
         isSaving={isSavingFavorite}
         onConfirm={onConfirmSaveFavorite}
         tweaksCount={tweaksForFavoriteCount}
+      />
+
+      <EditSelectionDialog
+        open={editDialogOpen}
+        tweaks={editTweaks}
+        isSaving={isEditing}
+        onOpenChange={onEditDialogOpenChange}
+        onConfirm={onSelectionEdit}
       />
 
       <AlertDialog

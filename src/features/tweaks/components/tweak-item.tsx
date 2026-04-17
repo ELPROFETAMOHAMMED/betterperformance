@@ -68,7 +68,7 @@ export function TweakItem({
       onClick={handleClick}
     >
       <div className={cn(
-        "mt-0.5 h-4 w-4 shrink-0 rounded-[3px] border flex items-center justify-center transition-colors bg-background",
+        "mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border bg-background transition-colors",
         isDisabled
           ? "border-muted-foreground/20 bg-muted/20"
           : selected
@@ -91,20 +91,20 @@ export function TweakItem({
               {tweak.title}
             </p>
             {isDisabled && (
-              <span className="text-[10px] text-muted-foreground/70 font-normal">
+              <span className="text-xs font-normal text-muted-foreground/70">
                 (Disabled)
               </span>
             )}
           </div>
           {showCategory && categoryName && !showCategoryAsDescription && (
-            <Badge variant="outline" className="text-[10px] h-4 px-1 font-normal text-muted-foreground">
+            <Badge variant="outline" className="h-4 px-1 text-xs font-normal text-muted-foreground">
               {categoryName}
             </Badge>
           )}
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
+            className="h-8 w-8"
             onClick={handleToggleFavorite}
             disabled={isDisabled}
           >
@@ -112,15 +112,15 @@ export function TweakItem({
           </Button>
         </div>
         {showCategoryAsDescription && categoryName ? (
-           <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed flex items-center gap-1">
+           <p className="line-clamp-2 flex items-center gap-1 text-xs leading-relaxed text-muted-foreground">
              <span className="opacity-70">Category:</span> {categoryName}
            </p>
         ) : showReportDescription && tweak.report_description ? (
-          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+          <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
             {tweak.report_description}
           </p>
         ) : tweak.description ? (
-          <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">
+          <p className="line-clamp-2 text-xs leading-relaxed text-muted-foreground">
             {tweak.description}
           </p>
         ) : null}

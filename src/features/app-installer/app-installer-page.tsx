@@ -1,68 +1,136 @@
 "use client";
 
-import { useState } from "react";
-import { SearchPackagesInput } from "./search-packages/search-packages-input";
-import { SearchPackagesResults } from "./search-packages/search-packages-results";
-import { SelectedPackagesList } from "./selected-packages/selected-packages-list";
-import { useSearchPackages } from "./search-packages/use-search-packages";
-import { generateInstallerScript } from "./generate-installer-script/generate-installer-script";
+import Image from "next/image";
+import { useMemo, useState } from "react";
+import { Check, Copy, Download, Trash2 } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/shared/components/ui/dialog";
-import { Copy, Check, Sparkles, Terminal, ShoppingCart, Download } from "lucide-react";
-import { Button } from "@/shared/components/ui/button";
-import type { WingetPackage } from "./types/winget-package";
-import { motion } from "framer-motion";
-import { cn } from "@/shared/lib/utils";
-import { useSelection } from "@/features/tweaks/context/selection-context";
-import type { Tweak } from "@/features/tweaks/types/tweak.types";
 
-/**
- * Main feature orchestrator for the App Installer generator.
- * Manages search state, selection state, and script generation UI.
- */
+import { generateChocoScript } from "@/features/app-installer/generate-installer-script/generate-choco-script";
+import { generateInstallerScript } from "@/features/app-installer/generate-installer-script/generate-installer-script";
+import { SearchPackagesInput } from "@/features/app-installer/search-packages/search-packages-input";
+import { SearchPackagesResults } from "@/features/app-installer/search-packages/search-packages-results";
+import { useSearchChocoPackages } from "@/features/app-installer/search-packages/use-search-choco-packages";
+import { useSearchPackages } from "@/features/app-installer/search-packages/use-search-packages";
+import type { ChocoPackage } from "@/features/app-installer/types/choco-package";
+import type { WingetPackage } from "@/features/app-installer/types/winget-package";
+import { Button } from "@/shared/components/ui/button";
+import { Card } from "@/shared/components/ui/card";
+import { Empty, EmptyDescription, EmptyTitle } from "@/shared/components/ui/empty";
+import { ScrollArea } from "@/shared/components/ui/scroll-area";
+import { Tabs, TabsList, TabsTrigger } from "@/shared/components/ui/tabs";
+
+type SourceTab = "winget" | "choco";
+
+type SelectedPackageDetails = {
+  id: string;
+  name: string;
+  publisher: string;
+  description: string;
+  iconUrl: string | null;
+};
+
 export default function AppInstallerPage() {
+  const [sourceTab, setSourceTab] = useState<SourceTab>("winget");
   const [query, setQuery] = useState("");
-  const [selectedPackages, setSelectedPackages] = useState<WingetPackage[]>([]);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [generatedScript, setGeneratedScript] = useState("");
+  const [selectedWingetPackages, setSelectedWingetPackages] = useState<WingetPackage[]>([]);
+  const [selectedChocoPackages, setSelectedChocoPackages] = useState<ChocoPackage[]>([]);
   const [hasCopied, setHasCopied] = useState(false);
 
-  const { packages, isLoading, error } = useSearchPackages(query);
-  const { toggleTweak } = useSelection();
+  const { packages: wingetPackages, isLoading: isWingetLoading, error: wingetError } = useSearchPackages(
+    sourceTab === "winget" ? query : ""
+  );
+  const { packages: chocoPackages, isLoading: isChocoLoading, error: chocoError } = useSearchChocoPackages(
+    sourceTab === "choco" ? query : ""
+  );
 
-  const handleTogglePackage = (id: string) => {
-    setSelectedPackages((prev) => {
-      const isSelected = prev.some((p) => p.Id === id);
-      if (isSelected) {
-        return prev.filter((p) => p.Id !== id);
-      } else {
-        const pkg = packages.find((p) => p.Id === id);
-        return pkg ? [...prev, pkg] : prev;
+  const selectedWingetIds = useMemo(
+    () => selectedWingetPackages.map((pkg) => pkg.Id),
+    [selectedWingetPackages]
+  );
+
+  const selectedChocoIds = useMemo(
+    () => selectedChocoPackages.map((pkg) => pkg.id),
+    [selectedChocoPackages]
+  );
+
+  const selectedCount = sourceTab === "winget" ? selectedWingetPackages.length : selectedChocoPackages.length;
+
+  const details = useMemo<SelectedPackageDetails | null>(() => {
+    if (sourceTab === "winget") {
+      const lastSelected = selectedWingetPackages[selectedWingetPackages.length - 1];
+      if (!lastSelected) {
+        return null;
       }
+
+      return {
+        id: lastSelected.Id,
+        name: lastSelected.Latest.Name,
+        publisher: lastSelected.Latest.Publisher,
+        description: lastSelected.Latest.Description || "No description available.",
+        iconUrl: lastSelected.IconUrl,
+      };
+    }
+
+    const lastSelected = selectedChocoPackages[selectedChocoPackages.length - 1];
+    if (!lastSelected) {
+      return null;
+    }
+
+    return {
+      id: lastSelected.id,
+      name: lastSelected.title,
+      publisher: lastSelected.publisher,
+      description: lastSelected.description || "No description available.",
+      iconUrl: null,
+    };
+  }, [sourceTab, selectedWingetPackages, selectedChocoPackages]);
+
+  const generatedScript = useMemo(() => {
+    if (sourceTab === "winget") {
+      return generateInstallerScript(selectedWingetPackages.map((pkg) => pkg.Id));
+    }
+
+    return generateChocoScript(selectedChocoPackages.map((pkg) => pkg.id));
+  }, [sourceTab, selectedWingetPackages, selectedChocoPackages]);
+
+  const toggleWingetPackage = (id: string) => {
+    setSelectedWingetPackages((previous) => {
+      const isSelected = previous.some((pkg) => pkg.Id === id);
+      if (isSelected) {
+        return previous.filter((pkg) => pkg.Id !== id);
+      }
+      const pkg = wingetPackages.find((item) => item.Id === id);
+      return pkg ? [...previous, pkg] : previous;
     });
   };
 
-  const handleRemovePackage = (id: string) => {
-    setSelectedPackages((prev) => prev.filter((p) => p.Id !== id));
+  const toggleChocoPackage = (id: string) => {
+    setSelectedChocoPackages((previous) => {
+      const isSelected = previous.some((pkg) => pkg.id === id);
+      if (isSelected) {
+        return previous.filter((pkg) => pkg.id !== id);
+      }
+      const pkg = chocoPackages.find((item) => item.id === id);
+      return pkg ? [...previous, pkg] : previous;
+    });
   };
 
-  const handleClear = () => {
-    setSelectedPackages([]);
-    toast.success("All selections cleared");
+  const clearCurrentSelection = () => {
+    if (sourceTab === "winget") {
+      setSelectedWingetPackages([]);
+    } else {
+      setSelectedChocoPackages([]);
+    }
+    toast.success("Selection cleared");
   };
 
-  const handleGenerate = () => {
-    if (selectedPackages.length === 0) {
-      toast.error("Please select at least one application");
+  const copyScript = () => {
+    if (!generatedScript) {
+      toast.error("Select at least one package first");
       return;
     }
-    const ids = selectedPackages.map((p) => p.Id);
-    const script = generateInstallerScript(ids);
-    setGeneratedScript(script);
-    setIsDialogOpen(true);
-  };
 
-  const copyToClipboard = () => {
     navigator.clipboard.writeText(generatedScript);
     setHasCopied(true);
     toast.success("Script copied to clipboard");
@@ -70,18 +138,21 @@ export default function AppInstallerPage() {
   };
 
   const downloadScript = () => {
+    if (!generatedScript) {
+      toast.error("Select at least one package first");
+      return;
+    }
+
     const scriptContent = `function Invoke-BatchAppInstaller {
     [CmdletBinding()]
     param ()
 
     try {
-        Write-Host "Starting batch application installation..." -ForegroundColor Cyan
-        
-${generatedScript.split('\\n').map(line => '        ' + line).join('\\n')}
-
-        Write-Host "Application installation completed successfully." -ForegroundColor Green
+${generatedScript
+  .split("\n")
+  .map((line) => `        ${line}`)
+  .join("\n")}
     } catch {
-        Write-Host "An error occurred during installation: $($_.Exception.Message)" -ForegroundColor Red
         throw
     }
 }
@@ -91,174 +162,209 @@ Invoke-BatchAppInstaller
 
     const blob = new Blob([scriptContent], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "install-apps.ps1";
-    a.click();
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = sourceTab === "winget" ? "install-winget-apps.ps1" : "install-choco-apps.ps1";
+    anchor.click();
     URL.revokeObjectURL(url);
-    toast.success("Batch file downloaded successfully");
-  };
-
-  const addToGlobalState = () => {
-    if (selectedPackages.length === 0) return;
-    
-    const customTweak: Tweak = {
-      id: `winget-batch-${Date.now()}`,
-      title: `App Installer Batch (${selectedPackages.length})`,
-      description: `Silent install for: ${selectedPackages.map(p => p.Latest.Name).join(", ")}`,
-      code: `\n# App Installer Batch\n${generatedScript}\n`,
-      download_count: 0,
-      favorite_count: 0,
-      is_visible: true,
-    };
-    
-    toggleTweak(customTweak);
-    toast.success("Added to global queue successfully!");
-    setIsDialogOpen(false);
+    toast.success("Script downloaded");
   };
 
   return (
-    <div className="w-full max-w-[1400px] mx-auto px-6 py-12 md:py-16">
-      <div className="flex flex-col gap-12">
-        {/* Header Section */}
-        <motion.header 
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="space-y-6"
-        >
-          <div className="flex items-center gap-2 text-primary font-bold uppercase tracking-[0.2em] text-xs">
-            <Sparkles className="h-4 w-4" />
-            <span>Windows Optimization</span>
-          </div>
-          <div className="space-y-3">
-            <h1 className="text-5xl md:text-6xl font-black tracking-tighter leading-none mb-4">
-              Batch <span className="text-primary italic">App</span> Installer
-            </h1>
-            <p className="text-xl text-muted-foreground/80 max-w-2xl leading-relaxed font-medium">
-              Find and select official Windows applications to generate a silent installation script.
-              Say goodbye to manual downloads — use the power of <span className="text-foreground animate-pulse underline decoration-primary/40 underline-offset-4">winget</span>.
+    <div className="mx-auto flex h-full w-full max-w-7xl flex-col px-4 py-6 md:px-6">
+      <Tabs
+        value={sourceTab}
+        onValueChange={(value) => {
+          setSourceTab(value as SourceTab);
+          setQuery("");
+          setHasCopied(false);
+        }}
+        className="flex h-full flex-col gap-4"
+      >
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">App Installer</h1>
+            <p className="text-sm text-muted-foreground">
+              Search packages, select what you need, and export an installation script.
             </p>
           </div>
-        </motion.header>
-
-        {/* Main Interface Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
-          {/* Left: Search & Results (8 columns) */}
-          <div className="lg:col-span-8 space-y-10">
-            <div className="relative">
-              <SearchPackagesInput value={query} onChange={setQuery} />
-              
-              {/* API Status Badge */}
-              <div className="absolute -bottom-6 right-2 flex items-center gap-2">
-                <div className={cn("h-1.5 w-1.5 rounded-full", isLoading ? "bg-amber-500 animate-pulse" : error ? "bg-red-500" : "bg-emerald-500")} />
-                <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/60">
-                  {isLoading ? "Searching API..." : error ? "API Error" : "Winget API Connected"}
-                </span>
-              </div>
-            </div>
-
-            <div className="min-h-[400px]">
-              <SearchPackagesResults
-                packages={packages}
-                isLoading={isLoading}
-                selectedIds={selectedPackages.map((p) => p.Id)}
-                onToggle={handleTogglePackage}
-                query={query}
-              />
-            </div>
-          </div>
-
-          {/* Right: Selected List (4 columns) */}
-          <motion.div 
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="lg:col-span-4"
-          >
-            <SelectedPackagesList
-              selectedPackages={selectedPackages}
-              onRemove={handleRemovePackage}
-              onClear={handleClear}
-              onGenerate={handleGenerate}
-            />
-          </motion.div>
+          <TabsList className="grid h-9 w-52 grid-cols-2 rounded-[var(--radius-md)]">
+            <TabsTrigger value="winget" className="h-8 rounded-[var(--radius-md)]">
+              Winget
+            </TabsTrigger>
+            <TabsTrigger value="choco" className="h-8 rounded-[var(--radius-md)]">
+              Chocolatey
+            </TabsTrigger>
+          </TabsList>
         </div>
-      </div>
 
-      {/* Script Preview Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-5xl overflow-hidden border-border/40 bg-card/95 backdrop-blur-2xl p-0 rounded-3xl shadow-2xl">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary/20 via-primary to-primary/20" />
-          
-          <DialogHeader className="p-8 pb-4">
-             <div className="flex items-center gap-4 mb-2">
-                <div className="h-12 w-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
-                  <Terminal className="h-6 w-6" />
-                </div>
-                <div>
-                  <DialogTitle className="text-3xl font-black tracking-tight">Script Preview</DialogTitle>
-                  <p className="text-sm text-muted-foreground">The following PowerShell script will be generated.</p>
-                </div>
-             </div>
-          </DialogHeader>
-
-          <div className="px-8 pb-6">
-            <div className="relative group rounded-2xl overflow-hidden border border-border/20 shadow-inner">
-              <div className="absolute top-0 left-0 w-full h-8 bg-muted/40 border-b border-border/10 flex items-center px-4 gap-1.5">
-                <div className="h-2.5 w-2.5 rounded-full bg-red-500/40" />
-                <div className="h-2.5 w-2.5 rounded-full bg-amber-500/40" />
-                <div className="h-2.5 w-2.5 rounded-full bg-emerald-500/40" />
-                <span className="ml-2 text-[10px] font-mono text-muted-foreground/60">install-apps.ps1 — PowerShell</span>
-              </div>
-              <pre className="bg-secondary/40 pt-12 pb-8 px-8 font-mono text-sm overflow-x-auto whitespace-pre-wrap break-all text-foreground/80 leading-relaxed custom-scrollbar max-h-[400px]">
-                {generatedScript}
-              </pre>
-              <div className="absolute bottom-4 right-4">
-                 <Button 
-                   size="sm" 
-                   variant="secondary" 
-                   className={cn(
-                     "h-10 px-4 rounded-xl shadow-lg border border-border/20 transition-all duration-300",
-                     hasCopied ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "hover:bg-primary/10 hover:text-primary"
-                   )} 
-                   onClick={copyToClipboard}
-                 >
-                  {hasCopied ? <Check className="h-4 w-4 mr-2" strokeWidth={3} /> : <Copy className="h-4 w-4 mr-2" />}
-                  <span className="font-bold">{hasCopied ? "Copied!" : "Copy Code"}</span>
-                </Button>
+        <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 lg:grid-cols-12">
+          <div className="flex min-h-0 h-full flex-col rounded-[var(--radius-md)] border border-border/20 bg-background/50 backdrop-blur-xl lg:col-span-8">
+            <div className="border-b border-border/20 p-3">
+              <SearchPackagesInput value={query} onChange={setQuery} />
+              <div className="mt-2 flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {sourceTab === "winget"
+                    ? isWingetLoading
+                      ? "Searching Winget index..."
+                      : wingetError || "Winget index ready"
+                    : isChocoLoading
+                      ? "Searching Chocolatey index..."
+                      : chocoError || "Chocolatey index ready"}
+                </p>
+                {selectedCount > 0 ? (
+                  <Button variant="ghost" size="sm" className="h-8" onClick={clearCurrentSelection}>
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Clear
+                  </Button>
+                ) : null}
               </div>
             </div>
+
+            <ScrollArea className="min-h-0 flex-1">
+              <div className="p-3">
+                {sourceTab === "winget" ? (
+                  <SearchPackagesResults
+                    packages={wingetPackages}
+                    isLoading={isWingetLoading}
+                    selectedIds={selectedWingetIds}
+                    onToggle={toggleWingetPackage}
+                    query={query}
+                  />
+                ) : query.trim().length < 2 ? (
+                  <div className="py-16 text-center text-sm text-muted-foreground">
+                    Type at least 2 characters to search Chocolatey packages.
+                  </div>
+                ) : isChocoLoading ? (
+                  <div className="py-16 text-center text-sm text-muted-foreground">Searching Chocolatey packages...</div>
+                ) : chocoPackages.length === 0 ? (
+                  <Empty className="border-none bg-transparent shadow-none">
+                    <EmptyTitle>No packages found</EmptyTitle>
+                    <EmptyDescription>
+                      No Chocolatey package matches &quot;{query}&quot;.
+                    </EmptyDescription>
+                  </Empty>
+                ) : (
+                  <div className="space-y-2">
+                    {chocoPackages.map((pkg) => {
+                      const isSelected = selectedChocoIds.includes(pkg.id);
+
+                      return (
+                        <Card
+                          key={pkg.id}
+                          onClick={() => toggleChocoPackage(pkg.id)}
+                          className={`cursor-pointer rounded-[var(--radius-md)] border border-border/20 bg-card/80 p-3 transition-colors hover:bg-secondary/40 ${
+                            isSelected ? "border-primary/40 bg-primary/10 ring-1 ring-primary/20" : ""
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-[var(--radius-md)] border border-border/30 bg-background/50 text-sm font-semibold text-primary">
+                              {pkg.title.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-sm font-semibold text-foreground">{pkg.title}</p>
+                              <p className="truncate text-xs text-muted-foreground">{pkg.publisher}</p>
+                              <div className="mt-1 inline-flex max-w-full rounded-[var(--radius-md)] border border-border/30 bg-background/60 px-2 py-0.5">
+                                <span className="truncate font-mono text-xs text-muted-foreground">{pkg.id}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </Card>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
           </div>
 
-          <div className="p-8 pt-0 flex gap-4">
-            <Button 
-              className="flex-1 h-14 text-base font-bold rounded-2xl shadow-xl shadow-primary/20 hover:shadow-primary/30 transition-all duration-300" 
-              onClick={addToGlobalState}
-            >
-              <ShoppingCart className="h-5 w-5 mr-2" />
-              Add to Global Tweak Queue
-            </Button>
-            <Button 
-              variant="secondary"
-              className="flex-1 h-14 text-base font-bold rounded-2xl transition-all duration-300 border border-border/20 shadow-sm" 
-              onClick={downloadScript}
-            >
-              <Download className="h-5 w-5 mr-2" />
-              Download as .ps1
-            </Button>
-            <Button 
-              variant="ghost" 
-              className="h-14 px-6 text-base font-bold rounded-2xl bg-transparent border-border/40 hover:bg-muted" 
-              onClick={() => setIsDialogOpen(false)}
-            >
-              Close
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          <div className="min-h-0 rounded-[var(--radius-md)] border border-border/20 bg-background/50 backdrop-blur-xl lg:col-span-4">
+            <div className="h-full p-4">
+              <AnimatePresence mode="wait">
+                {details ? (
+                  <motion.div
+                    key={details.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -8 }}
+                    transition={{ duration: 0.18 }}
+                    className="flex h-full flex-col gap-4"
+                  >
+                    <div className="rounded-[var(--radius-md)] border border-border/20 bg-card/80 p-3">
+                      <div className="flex items-start gap-3">
+                        <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[var(--radius-md)] border border-border/30 bg-background/50">
+                          {details.iconUrl ? (
+                            <Image
+                              src={details.iconUrl}
+                              alt={details.name}
+                              width={40}
+                              height={40}
+                              className="h-10 w-10 object-contain"
+                              unoptimized
+                            />
+                          ) : (
+                            <span className="text-lg font-semibold text-primary">
+                              {details.name.charAt(0).toUpperCase()}
+                            </span>
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <h2 className="truncate text-base font-semibold text-foreground">{details.name}</h2>
+                          <p className="truncate text-xs text-muted-foreground">{details.publisher}</p>
+                          <div className="mt-2 inline-flex max-w-full rounded-[var(--radius-md)] border border-border/30 bg-background/60 px-2 py-0.5">
+                            <span className="truncate font-mono text-xs text-muted-foreground">{details.id}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="mt-3 line-clamp-3 text-sm text-muted-foreground">{details.description}</p>
+                    </div>
 
-      {/* Decorative Floor Gradient */}
-      <div className="fixed bottom-0 left-0 right-0 h-[50vh] bg-gradient-to-t from-primary/5 to-transparent pointer-events-none -z-10" />
+                    <div className="min-h-0 rounded-[var(--radius-md)] border border-border/20 bg-card/80 p-3">
+                      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        Script preview
+                      </p>
+                      <pre className="max-h-60 overflow-auto rounded-[var(--radius-md)] border border-border/20 bg-background p-3 font-mono text-xs leading-relaxed text-foreground">
+                        {generatedScript || "# Select one or more packages to build the script"}
+                      </pre>
+                    </div>
+
+                    <div className="mt-auto grid grid-cols-1 gap-2 sm:grid-cols-2">
+                      <Button className="h-9" onClick={downloadScript} disabled={!generatedScript}>
+                        <Download className="mr-2 h-4 w-4" />
+                        Download .ps1
+                      </Button>
+                      <Button variant="outline" className="h-9" onClick={copyScript} disabled={!generatedScript}>
+                        {hasCopied ? <Check className="mr-2 h-4 w-4" /> : <Copy className="mr-2 h-4 w-4" />}
+                        {hasCopied ? "Copied" : "Copy script"}
+                      </Button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="flex h-full flex-col items-center justify-center gap-3 rounded-[var(--radius-md)] border border-dashed border-border/40 bg-card/60 p-6 text-center"
+                  >
+                    <Image
+                      src="/assets/Aplication-logo.png"
+                      alt="BetterPerformance logo"
+                      width={56}
+                      height={56}
+                      className="rounded-[var(--radius-md)]"
+                    />
+                    <h3 className="text-sm font-medium text-foreground">No package selected</h3>
+                    <p className="text-sm text-muted-foreground">
+                      Select a package from the left to preview details and script output.
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </div>
+        </div>
+      </Tabs>
     </div>
   );
 }

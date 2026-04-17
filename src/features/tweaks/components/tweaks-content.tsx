@@ -94,8 +94,8 @@ export default function TweaksContent({
     setFavoriteName,
     openSaveAsFavoriteDialog,
     handleConfirmSaveFavorite,
-  } = useFavoriteDialog({ 
-    selectedTweaks, 
+  } = useFavoriteDialog({
+    selectedTweaks,
     user,
     favoriteTweakIds,
     onCountersUpdated: updateTweakCounters,
@@ -128,6 +128,12 @@ export default function TweaksContent({
     setDeleteDialogOpen,
     openDeleteDialog,
     confirmDelete,
+    editDialogOpen,
+    editTweaks,
+    isEditing,
+    setEditDialogOpen,
+    openEditDialog,
+    confirmEdit,
   } = useHistoryDialogs();
 
   const {
@@ -156,6 +162,7 @@ export default function TweaksContent({
     >
       <TweaksHeader
         activeCategory={activeCategory}
+        visibility={activeTab === "library"}
         activeIndex={activeIndex}
         activeTab={activeTab}
         activeTweak={activeTweak}
@@ -179,11 +186,9 @@ export default function TweaksContent({
       <div className="flex w-full flex-1 flex-col lg:flex-row min-h-0 overflow-hidden bg-background/20 backdrop-blur-xl">
         {isWallpapersTab && wallpapersPageData ? (
           <div className="flex h-full w-full flex-1 flex-col bg-background/50 backdrop-blur-xl overflow-hidden">
-            <div className="h-full overflow-y-auto p-4 md:p-5 lg:p-6">
-              <div className="space-y-6">
-                <WallpapersHeader total={wallpapersPageData.total} />
-                <WallpapersGrid pageData={wallpapersPageData} />
-              </div>
+            <div className="h-full overflow-y-auto">
+              <WallpapersHeader   total={wallpapersPageData.total} />
+              <WallpapersGrid pageData={wallpapersPageData} />
             </div>
           </div>
         ) : (
@@ -208,6 +213,7 @@ export default function TweaksContent({
                 onClearSelection={handleClearAll}
                 isLoading={isHistoryLoading || isReportsLoading}
                 onRenameSelection={openRenameDialog}
+                onEditSelection={openEditDialog}
                 onDeleteSelection={openDeleteDialog}
                 onSaveAsFavorite={openSaveAsFavoriteDialog}
                 onRefresh={() => handleRefresh(!!user)}
@@ -240,10 +246,13 @@ export default function TweaksContent({
         deleteDialogOpen={deleteDialogOpen}
         editingCategory={editingCategory}
         editingTweak={editingTweak}
+        editDialogOpen={editDialogOpen}
+        editTweaks={editTweaks}
         favoriteDialogOpen={favoriteDialogOpen}
         favoriteName={favoriteName}
         infoTweak={infoTweak}
         isDeletingSelection={isDeleting}
+        isEditing={isEditing}
         isRenaming={isRenaming}
         isSavingFavorite={isSavingFavorite}
         renameDialogOpen={renameDialogOpen}
@@ -259,6 +268,8 @@ export default function TweaksContent({
         onConfirmSaveFavorite={handleConfirmSaveFavorite}
         onFavoriteDialogOpenChange={setFavoriteDialogOpen}
         onFavoriteNameChange={setFavoriteName}
+        onEditDialogOpenChange={setEditDialogOpen}
+        onSelectionEdit={confirmEdit}
         onRenameDialogOpenChange={setRenameDialogOpen}
         onRenameValueChange={setRenameValue}
         onReportDialogOpenChange={setReportDialogOpen}

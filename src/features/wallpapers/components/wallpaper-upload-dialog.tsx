@@ -65,7 +65,7 @@ export function WallpaperUploadDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="border-border/40 bg-card/95 shadow-sm backdrop-blur-md sm:max-w-2xl">
+      <DialogContent className="border-border/20 bg-background/50 backdrop-blur-xl sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Upload wallpaper</DialogTitle>
           <DialogDescription>
@@ -98,7 +98,7 @@ export function WallpaperUploadDialog({
             <div className="space-y-2">
               <Label>Wallpaper file</Label>
               <Card
-                className="flex min-h-52 cursor-pointer flex-col items-center justify-center gap-3 border-dashed border-border/50 bg-muted/20 p-6 text-center transition-all duration-200 hover:border-primary/50 hover:bg-muted/40"
+                className="flex min-h-52 cursor-pointer flex-col items-center justify-center gap-3 rounded-[var(--radius-md)] border-dashed border-border/40 bg-card/60 p-6 text-center transition-colors hover:border-primary/40 hover:bg-card/80"
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => {
                   event.preventDefault();
@@ -115,7 +115,7 @@ export function WallpaperUploadDialog({
                     Or use the file picker to upload a PNG, JPG, or WEBP image.
                   </p>
                 </div>
-                <Button variant="secondary" type="button">
+                <Button variant="secondary" className="h-8" type="button">
                   Choose file
                 </Button>
               </Card>
@@ -132,7 +132,7 @@ export function WallpaperUploadDialog({
           </div>
 
           <div className="space-y-4">
-            <Card className="overflow-hidden border-border/40 bg-muted/20 p-0">
+            <Card className="overflow-hidden rounded-[var(--radius-md)] border-border/20 bg-card/60 p-0">
               <div className="relative aspect-[4/3] w-full">
                 {previewUrl ? (
                   <Image
@@ -151,20 +151,24 @@ export function WallpaperUploadDialog({
             </Card>
 
             <div className="flex flex-wrap gap-2">
-              <Badge variant="outline">{width && height ? `${width} × ${height}` : "Resolution pending"}</Badge>
-              <Badge variant="outline">
+              <Badge variant="outline" className="rounded-[var(--radius-md)]">
+                {width && height ? `${width} × ${height}` : "Resolution pending"}
+              </Badge>
+              <Badge variant="outline" className="rounded-[var(--radius-md)]">
                 {fileSizeBytes ? `${(fileSizeBytes / (1024 * 1024)).toFixed(1)} MB` : "File size pending"}
               </Badge>
-              <Badge variant="outline">{file ? file.type : "Image type pending"}</Badge>
+              <Badge variant="outline" className="rounded-[var(--radius-md)]">
+                {file ? file.type : "Image type pending"}
+              </Badge>
             </div>
           </div>
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
+          <Button variant="outline" className="h-9" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
-          <Button onClick={() => void handleSubmit()} disabled={isSubmitting || !file || !title.trim() || !width || !height}>
+          <Button className="h-9" onClick={() => void handleSubmit()} disabled={isSubmitting || !file || !title.trim() || !width || !height}>
             {isSubmitting ? "Uploading..." : "Upload wallpaper"}
           </Button>
         </DialogFooter>

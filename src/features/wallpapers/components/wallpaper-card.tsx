@@ -4,16 +4,15 @@ import Image from "next/image";
 import { useState, useTransition } from "react";
 import {
   ArrowDownTrayIcon,
-  PhotoIcon,
   StarIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { StarIcon as StarSolidIcon } from "@heroicons/react/24/solid";
+import { toast } from "sonner";
 
 import { deleteWallpaperAction } from "@/features/wallpapers/actions/delete-wallpaper";
 import { useFavorites } from "@/features/favorites/hooks/use-favorites";
 import type { Wallpaper } from "@/features/wallpapers/types/wallpaper.types";
-import { AspectRatio } from "@/shared/components/ui/aspect-ratio";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -29,24 +28,6 @@ import { Button } from "@/shared/components/ui/button";
 import { Card } from "@/shared/components/ui/card";
 import { Checkbox } from "@/shared/components/ui/checkbox";
 import { cn } from "@/shared/lib/cn";
-import { toast } from "sonner";
-
-function formatFileSize(fileSizeBytes: number | null) {
-  if (!fileSizeBytes) {
-    return "Unknown size";
-  }
-
-  const units = ["B", "KB", "MB", "GB"];
-  let value = fileSizeBytes;
-  let unitIndex = 0;
-
-  while (value >= 1024 && unitIndex < units.length - 1) {
-    value /= 1024;
-    unitIndex += 1;
-  }
-
-  return `${value.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
-}
 
 type WallpaperCardProps = {
   isAdmin: boolean;
@@ -105,24 +86,24 @@ export function WallpaperCard({
     <>
       <Card
         className={cn(
-          "group overflow-hidden border-border/30 bg-card/80 shadow-sm backdrop-blur-sm transition-all duration-200 hover:border-primary/50 hover:bg-muted/30",
-          isSelected && "border-primary/60 ring-1 ring-primary/20"
+          "group overflow-hidden rounded-[var(--radius-md)] border border-border/20 bg-card/60 transition-colors hover:bg-card/80",
+          isSelected && "border-primary/40 ring-2 ring-primary/60"
         )}
         onClick={() => onToggleSelected(wallpaper)}
       >
-        <div className="relative">
-          <AspectRatio ratio={16 / 10}>
-            <Image
-              src={wallpaper.public_url}
-              alt={wallpaper.title}
-              fill
-              className="object-cover"
-              unoptimized
-            />
-          </AspectRatio>
+        <div className="relative aspect-[16/10] w-full overflow-hidden">
+          <Image
+            src={wallpaper.public_url}
+            alt={wallpaper.title}
+            fill
+            className="object-cover"
+            unoptimized
+          />
 
-          <div className="absolute left-3 top-3 flex items-center gap-2">
-            <div className="rounded-full border border-border/40 bg-background/80 p-1.5 backdrop-blur-sm">
+          <div className="absolute inset-0 bg-black/30 opacity-0 transition-opacity group-hover:opacity-100" />
+
+          <div className="absolute left-2 top-2 z-10">
+            <div className="rounded-[var(--radius-md)] border border-border/30 bg-background/80 p-1">
               <Checkbox
                 checked={isSelected}
                 onCheckedChange={() => onToggleSelected(wallpaper)}
@@ -132,11 +113,11 @@ export function WallpaperCard({
             </div>
           </div>
 
-          <div className="absolute right-3 top-3 flex items-center gap-2 opacity-100 transition-opacity md:opacity-0 md:group-hover:opacity-100">
+          <div className="absolute right-2 top-2 z-10 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
             <Button
               variant="secondary"
               size="icon"
-              className="backdrop-blur-sm"
+              className="h-8 w-8 rounded-[var(--radius-md)]"
               disabled={isTogglingFavorite}
               onClick={(event) => {
                 event.stopPropagation();
@@ -148,7 +129,7 @@ export function WallpaperCard({
             <Button
               variant="secondary"
               size="icon"
-              className="backdrop-blur-sm"
+              className="h-8 w-8 rounded-[var(--radius-md)]"
               onClick={(event) => {
                 event.stopPropagation();
                 onDownload(wallpaper);
@@ -156,11 +137,11 @@ export function WallpaperCard({
             >
               <ArrowDownTrayIcon className="h-4 w-4" />
             </Button>
-            {isAdmin && (
+            {isAdmin ? (
               <Button
                 variant="secondary"
                 size="icon"
-                className="text-destructive backdrop-blur-sm"
+                className="h-8 w-8 rounded-[var(--radius-md)] text-destructive"
                 onClick={(event) => {
                   event.stopPropagation();
                   setDeleteDialogOpen(true);
@@ -168,36 +149,15 @@ export function WallpaperCard({
               >
                 <TrashIcon className="h-4 w-4" />
               </Button>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <div className="space-y-3 p-4">
-          <div className="space-y-1">
-            <h3 className="line-clamp-1 text-sm font-semibold text-foreground">
-              {wallpaper.title}
-            </h3>
-            <p className="text-xs text-muted-foreground">
-              {wallpaper.resolution} · {formatFileSize(wallpaper.file_size_bytes)}
-            </p>
-          </div>
-
-          <div className="flex items-center justify-between">
-            <Badge variant="outline">
-              <PhotoIcon className="mr-1 h-3.5 w-3.5" />
-              Wallpaper
-            </Badge>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(event) => {
-                event.stopPropagation();
-                onToggleSelected(wallpaper);
-              }}
-            >
-              {isSelected ? "Selected" : "Select"}
-            </Button>
-          </div>
+        <div className="flex items-center justify-between gap-2 border-t border-border/20 bg-background/60 px-2.5 py-2">
+          <p className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">{wallpaper.title}</p>
+          <Badge variant="secondary" className="h-6 rounded-[var(--radius-md)] px-2 text-xs font-medium">
+            {wallpaper.resolution}
+          </Badge>
         </div>
       </Card>
 

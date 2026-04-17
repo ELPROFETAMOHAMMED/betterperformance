@@ -46,7 +46,6 @@ export default function UserCard() {
     }
   };
 
-  // Compact skeleton that preserves layout
   if (loading) {
     return (
       <div className={cn(
@@ -64,7 +63,6 @@ export default function UserCard() {
     );
   }
 
-  // Fallback for guests or when user data fails to load
   if (!user) {
     return (
       <div className={cn(
@@ -77,12 +75,12 @@ export default function UserCard() {
             <span className="text-xs font-medium text-muted-foreground">
               Error trying to load user data
             </span>
-            <Link
-              href="/"
-              className="text-[11px] font-medium text-primary hover:underline"
-            >
-              Try again
-            </Link>
+              <Link
+                href="/"
+                className="text-xs font-medium text-primary hover:underline"
+              >
+                Try again
+              </Link>
           </div>
         )}
       </div>
@@ -90,7 +88,7 @@ export default function UserCard() {
   }
 
   return (
-    <div className={cn("relative rounded-sm w-full", isAdmin && (state === "expanded" ? "p-[2px]" : "p-0"))}>
+    <div className={cn("relative w-full rounded-sm", isAdmin && (state === "expanded" ? "p-0.5" : "p-0"))}>
       {isAdmin && (
         <motion.div
           className="absolute inset-0 rounded-sm"
@@ -132,7 +130,7 @@ export default function UserCard() {
           state === "collapsed" && "px-0 justify-center h-12 py-0 border-0 bg-transparent hover:bg-transparent"
         )}
       >
-        <div className={cn("relative shrink-0", settings.hideSensitive && "blur-[1.5px] select-none transition-all duration-500")}>
+        <div className={cn("relative shrink-0", settings.hideSensitive && "select-none blur-sm transition-all duration-500")}>
           <Avatar className={cn("transition-all duration-200", state === "collapsed" ? "h-8 w-8" : "h-9 w-9")}>
             <AvatarImage src={avatarUrl} alt={userName} />
             <AvatarFallback>
@@ -148,10 +146,10 @@ export default function UserCard() {
           <>
             <div className={cn(
               "flex min-w-0 flex-col text-left transition-all duration-500",
-              settings.hideSensitive && "blur-[3px] select-none transition-all duration-300"
+              settings.hideSensitive && "select-none blur-sm transition-all duration-300"
             )}>
               <span className="truncate text-xs font-semibold">{userName}</span>
-              <span className="truncate text-[11px] text-muted-foreground">
+              <span className="truncate text-xs text-muted-foreground">
                 {user?.email || ""}
               </span>
             </div>

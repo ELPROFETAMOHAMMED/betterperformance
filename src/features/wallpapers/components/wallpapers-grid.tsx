@@ -35,9 +35,9 @@ export function WallpapersGrid({ pageData }: WallpapersGridProps) {
 
   if (pageData.items.length === 0) {
     return (
-      <Card className="border-border/30 bg-muted/20 p-12 text-center shadow-sm backdrop-blur-sm">
-        <PhotoIcon className="mx-auto mb-4 h-10 w-10 text-muted-foreground" />
-        <h2 className="text-lg font-semibold text-foreground">No wallpapers yet</h2>
+      <Card className="rounded-[var(--radius-md)] border border-border/20 bg-card/60 p-10 text-center">
+        <PhotoIcon className="mx-auto mb-3 h-8 w-8 text-muted-foreground" />
+        <h2 className="text-base font-semibold text-foreground">No wallpapers yet</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           Upload the first wallpaper to start building the gallery.
         </p>
@@ -46,20 +46,18 @@ export function WallpapersGrid({ pageData }: WallpapersGridProps) {
   }
 
   return (
-    <>
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-        {pageData.items.map((wallpaper) => (
-          <WallpaperCard
-            key={wallpaper.id}
-            wallpaper={wallpaper}
-            isAdmin={isAdmin}
-            isSelected={selectedWallpapersSet.has(wallpaper.id)}
-            onDeleted={() => router.refresh()}
-            onDownload={handleDownloadSingle}
-            onToggleSelected={toggleWallpaper}
-          />
-        ))}
-      </div>
-    </>
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 m-12">
+      {pageData.items.map((wallpaper) => (
+        <WallpaperCard
+          key={wallpaper.id}
+          wallpaper={wallpaper}
+          isAdmin={isAdmin}
+          isSelected={selectedWallpapersSet.has(wallpaper.id)}
+          onDeleted={() => router.refresh()}
+          onDownload={handleDownloadSingle}
+          onToggleSelected={toggleWallpaper}
+        />
+      ))}
+    </div>
   );
 }

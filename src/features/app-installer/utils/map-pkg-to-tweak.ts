@@ -1,5 +1,5 @@
 import type { Tweak } from "@/features/tweaks/types/tweak.types";
-import type { WingetPackage } from "../types/winget-package";
+import type { WingetPackage } from "@/features/app-installer/types/winget-package";
 
 /**
  * Maps a Winget package to the internal Tweak structure used by the selection system.

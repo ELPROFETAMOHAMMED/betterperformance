@@ -12,7 +12,6 @@ import {
 } from "@/shared/components/ui/sheet";
 import { Button } from "@/shared/components/ui/button";
 import { ScrollArea } from "@/shared/components/ui/scroll-area";
-// Badge removed
 import { QueueListIcon, TrashIcon, ArrowDownTrayIcon, StarIcon } from "@heroicons/react/24/outline";
 import { useSelection } from "@/features/tweaks/context/selection-context";
 import { useTweakDownload } from "@/features/tweaks/hooks/use-tweak-download";
@@ -80,16 +79,16 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
       <SheetTrigger asChild>
         {children}
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg bg-background/80 backdrop-blur-3xl border-l border-border/40 p-0 flex flex-col shadow-2xl">
+      <SheetContent className="flex w-full flex-col border-l border-border/40 bg-background/50 p-0 backdrop-blur-xl sm:max-w-lg">
         <SheetHeader className="p-6 border-b border-border/20 bg-muted/20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10 text-primary">
+              <div className="rounded-[var(--radius-md)] bg-primary/10 p-2 text-primary">
                 <QueueListIcon className="h-5 w-5" />
               </div>
               <div>
                 <SheetTitle className="text-xl font-bold tracking-tight">Current Selection</SheetTitle>
-                <SheetDescription className="text-[11px] mt-0.5">
+                <SheetDescription className="mt-0.5 text-xs">
                   Manage your tweaks and wallpapers before exporting
                 </SheetDescription>
               </div>
@@ -99,7 +98,7 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
                 variant="ghost"
                 size="sm"
                 onClick={clearSelection}
-                className="h-8 gap-2 text-[10px] uppercase font-bold tracking-wider text-muted-foreground hover:text-destructive"
+                className="h-8 gap-2 text-xs font-bold uppercase tracking-wide text-muted-foreground hover:text-destructive"
               >
                 <TrashIcon className="h-3.5 w-3.5" />
                 Clear All
@@ -115,11 +114,11 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  className="flex flex-col items-center justify-center py-20 text-center space-y-4 opacity-50"
+                  className="flex flex-col items-center justify-center space-y-4 py-20 text-center opacity-50"
                 >
-              <div className="p-4 rounded-full bg-muted/50">
-                <QueueListIcon className="h-10 w-10 text-muted-foreground/40" />
-              </div>
+                  <div className="rounded-[var(--radius-md)] bg-muted/50 p-4">
+                    <QueueListIcon className="h-10 w-10 text-muted-foreground/40" />
+                  </div>
                   <div className="space-y-1">
                     <p className="text-sm font-medium">Your selection is empty</p>
                     <p className="text-xs">Browse the library to add tweaks or wallpapers</p>
@@ -140,11 +139,12 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
                       initial={{ opacity: 0, x: 20 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -20 }}
-                      className="group flex flex-row items-start gap-3 p-3.5 rounded-xl border border-border/40 bg-muted/5 hover:bg-muted/10 hover:border-border/80 transition-all duration-200"
+                      className="group flex flex-row items-start gap-3 rounded-[var(--radius-md)] border border-border/40 bg-muted/5 p-3.5 transition-all duration-200 hover:border-border/80 hover:bg-muted/10"
                     >
                       <Button
                         variant="ghost"
                         size="icon"
+                        className="h-8 w-8"
                         onClick={() => handleRemoveSelectedItem(selectedItem)}
                         title={`Remove ${selectedItem.type}`}
                       >
@@ -156,7 +156,7 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
                           <h4 className="text-sm font-semibold truncate leading-tight group-hover:text-primary transition-colors" title={selectedItem.item.title}>
                             {selectedItem.item.title}
                           </h4>
-                          <div className="flex items-center gap-3 text-[10px] text-muted-foreground uppercase tracking-widest font-medium opacity-70">
+                          <div className="flex items-center gap-3 text-xs font-medium uppercase tracking-wide text-muted-foreground opacity-70">
                             <span>{selectedItem.type}</span>
                             {isTweak && (
                               <>
@@ -182,7 +182,7 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
             <div className="flex w-full gap-3">
               <Button
                 variant="outline"
-                className="flex-1 h-11 gap-2"
+                className="h-9 flex-1 gap-2"
                 onClick={openQuickSaveDialog}
                 disabled={isSavingFavorite}
               >
@@ -191,7 +191,7 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
               </Button>
               <Button
                 variant="default"
-                className="flex-1 h-11 gap-2"
+                className="h-9 flex-1 gap-2"
                 onClick={handleDownloadWithSettings}
                 disabled={isDownloading}
               >
@@ -205,7 +205,7 @@ export function SelectionSheet({ children }: SelectionSheetProps) {
                 )}
               </Button>
             </div>
-            <p className="text-[10px] text-center text-muted-foreground px-4 italic leading-tight">
+            <p className="px-4 text-center text-xs italic leading-tight text-muted-foreground">
               Exported scripts are production-ready and optimized for Windows 10/11.
             </p>
           </SheetFooter>

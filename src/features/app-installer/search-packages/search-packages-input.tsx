@@ -1,6 +1,7 @@
 "use client";
 
 import { Input } from "@/shared/components/ui/input";
+import { Button } from "@/shared/components/ui/button";
 import { Search } from "lucide-react";
 
 interface SearchPackagesInputProps {
@@ -21,12 +22,14 @@ export function SearchPackagesInput({ value, onChange }: SearchPackagesInputProp
         placeholder="Search for Windows applications (e.g., Discord, VS Code, Steam)..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="pl-12 h-14 text-base bg-secondary/30 backdrop-blur-md border-border/40 focus-visible:ring-primary/20 focus-visible:border-primary/50 transition-all duration-300 rounded-2xl shadow-sm"
+        className="h-11 rounded-md border-border/60 bg-background pl-12 text-sm"
       />
       {value && (
-        <button
+        <Button
           onClick={() => onChange("")}
-          className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+          className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2 rounded-md"
+          variant="ghost"
+          size="icon"
           type="button"
         >
           <span className="sr-only">Clear search</span>
@@ -44,7 +47,7 @@ export function SearchPackagesInput({ value, onChange }: SearchPackagesInputProp
             <path d="M18 6 6 18" />
             <path d="m6 6 12 12" />
           </svg>
-        </button>
+        </Button>
       )}
     </div>
   );

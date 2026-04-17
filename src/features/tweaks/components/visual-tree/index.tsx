@@ -38,6 +38,7 @@ interface VisualTreeProps {
   onClearSelection: () => void;
   isLoading?: boolean;
   onRenameSelection?: (id: string, currentName: string) => void;
+  onEditSelection?: (id: string, tweaks: Tweak[]) => void;
   onDeleteSelection?: (id: string) => void;
   onSaveAsFavorite?: (tweaks: Tweak[], defaultName: string) => void;
   onRefresh?: () => void;
@@ -61,6 +62,7 @@ export default function VisualTree({
   onSelectAll,
   isLoading = false,
   onRenameSelection,
+  onEditSelection,
   onDeleteSelection,
   onSaveAsFavorite,
   onRefresh,
@@ -258,6 +260,7 @@ export default function VisualTree({
                     onTweakToggle={onTweakToggle}
                     handleSelectGroup={handleSelectGroup}
                     onRenameSelection={onRenameSelection}
+                    onEditSelection={onEditSelection}
                     onSaveAsFavorite={onSaveAsFavorite}
                     onDeleteSelection={onDeleteSelection}
                   />

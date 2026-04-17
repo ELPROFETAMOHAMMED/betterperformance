@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { WingetPackage, WingetSearchResponse } from "../types/winget-package";
+import type {
+  WingetPackage,
+  WingetSearchResponse,
+} from "@/features/app-installer/types/winget-package";
 
 /**
  * Custom hook to search for winget packages with debounce.
@@ -27,7 +30,6 @@ export const useSearchPackages = (query: string) => {
       setError(null);
       
       try {
-        // Using the API endpoint verified during research
         const response = await fetch(
           `https://api.winget.run/v2/packages?query=${encodeURIComponent(query)}`
         );
@@ -45,7 +47,7 @@ export const useSearchPackages = (query: string) => {
       } finally {
         setIsLoading(false);
       }
-    }, 300); // 300ms debounce
+    }, 300);
 
     return () => clearTimeout(handler);
   }, [query]);

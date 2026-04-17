@@ -1,9 +1,10 @@
- "use client";
+"use client";
 
 import { useCallback, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { updateTweakHistory, deleteTweakHistory } from "@/features/history-tweaks/utils/tweak-history-client";
+import type { Tweak } from "@/features/tweaks/types/tweak.types";
 
 export function useHistoryDialogs() {
   const queryClient = useQueryClient();
@@ -16,6 +17,11 @@ export function useHistoryDialogs() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editId, setEditId] = useState<string | null>(null);
+  const [editTweaks, setEditTweaks] = useState<Tweak[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
 
   const openRenameDialog = useCallback((id: string, currentName: string) => {
     setRenameId(id);
@@ -71,8 +77,43 @@ export function useHistoryDialogs() {
     }
   }, [deleteId, queryClient, closeDeleteDialog]);
 
+  const openEditDialog = useCallback((id: string, tweaks: Tweak[]) => {
+    setEditId(id);
+    setEditTweaks(tweaks);
+    setEditDialogOpen(true);
+  }, []);
+
+  const closeEditDialog = useCallback(() => {
+    setEditDialogOpen(false);
+    setEditId(null);
+    setEditTweaks([]);
+  }, []);
+
+  const confirmEdit = useCallback(
+    async (tweaks: Tweak[]) => {
+      if (!editId) {
+        return;
+      }
+
+      try {
+        setIsEditing(true);
+        await updateTweakHistory(editId, {
+          tweaks: tweaks,
+        });
+        await queryClient.invalidateQueries({ queryKey: ["history-tweaks"] });
+        toast.success("Selection updated");
+        closeEditDialog();
+      } catch (error) {
+        console.error(error);
+        toast.error("Failed to update tweaks");
+      } finally {
+        setIsEditing(false);
+      }
+    },
+    [editId, queryClient, closeEditDialog]
+  );
+
   return {
-    // rename state
     renameDialogOpen,
     renameValue,
     isRenaming,
@@ -80,13 +121,16 @@ export function useHistoryDialogs() {
     setRenameValue,
     openRenameDialog,
     confirmRename,
-    // delete state
     deleteDialogOpen,
     isDeleting,
     setDeleteDialogOpen,
     openDeleteDialog,
     confirmDelete,
+    editDialogOpen,
+    editTweaks,
+    isEditing,
+    setEditDialogOpen,
+    openEditDialog,
+    confirmEdit,
   };
 }
-
-

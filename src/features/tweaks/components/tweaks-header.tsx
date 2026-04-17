@@ -25,6 +25,7 @@ import { cn } from "@/shared/lib/cn";
 
 type TweaksHeaderProps = {
   activeCategory: TweakCategory | null;
+  visibility: boolean
   activeIndex: number;
   activeTab: string;
   activeTweak: Tweak | null;
@@ -52,6 +53,7 @@ export function TweaksHeader({
   activeTweak,
   globalIsLoading,
   isAdmin,
+  visibility,
   isCopying,
   isDownloadLoading,
   isSavingFavorite,
@@ -67,9 +69,9 @@ export function TweaksHeader({
   onRefresh,
 }: TweaksHeaderProps) {
   return (
-    <div className="w-full shrink-0 border-b border-border/20 bg-background/50 py-2 backdrop-blur-xl">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center border-r border-border/20 px-4 lg:w-[32%]">
+    <div className={cn("w-full shrink-0 border-b border-border/20 bg-background/50 px-2  py-4 ", visibility ? "block" : "hidden")}>
+      <div className={cn("items-center justify-between")}>
+        <div className="flex items-center border-r border-border/20 px-4 lg:w-1/3">
           <span className="text-sm font-bold uppercase tracking-tight opacity-50">
             Explorer
           </span>
@@ -207,7 +209,7 @@ export function TweaksHeader({
                 {activeTweak && (
                   <Button
                     size="sm"
-                    className="ml-1 h-8 gap-2 rounded-lg px-4 shadow-sm transition-all hover:scale-105 active:scale-95"
+                    className="ml-1 h-9 gap-2 rounded-[var(--radius-md)] px-4"
                     onClick={onDownload}
                     disabled={isDownloadLoading}
                   >

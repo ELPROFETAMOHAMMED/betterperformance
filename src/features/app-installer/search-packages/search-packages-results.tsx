@@ -1,10 +1,10 @@
 "use client";
 
 import { motion, AnimatePresence, type Variants } from "framer-motion";
-import { SearchPackagesResultItem } from "./search-packages-result-item";
+import { SearchPackagesResultItem } from "@/features/app-installer/search-packages/search-packages-result-item";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { Empty, EmptyTitle, EmptyDescription } from "@/shared/components/ui/empty";
-import type { WingetPackage } from "../types/winget-package";
+import type { WingetPackage } from "@/features/app-installer/types/winget-package";
 
 interface SearchPackagesResultsProps {
   packages: WingetPackage[];
@@ -25,11 +25,10 @@ const container: Variants = {
 };
 
 const item: Variants = {
-  hidden: { opacity: 0, y: 20, filter: "blur(4px)" },
+  hidden: { opacity: 0, y: 10 },
   show: { 
     opacity: 1, 
     y: 0, 
-    filter: "blur(0px)",
     transition: {
       type: "spring",
       stiffness: 100,
@@ -51,16 +50,11 @@ export function SearchPackagesResults({
 }: SearchPackagesResultsProps) {
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center py-24 gap-6">
-        <div className="relative">
-          <Spinner className="h-12 w-12 text-primary" />
-          <div className="absolute inset-0 bg-primary/20 blur-xl animate-pulse rounded-full" />
-        </div>
+      <div className="flex flex-col items-center justify-center gap-3 py-16">
+        <Spinner className="h-8 w-8 text-primary" />
         <div className="space-y-1 text-center">
-          <p className="text-xl font-semibold tracking-tight text-foreground">Searching winget database...</p>
-          <p className="text-sm text-muted-foreground animate-pulse font-mono uppercase tracking-widest bg-muted/30 px-3 py-1 rounded-full">
-            Query: {query}
-          </p>
+          <p className="text-base font-medium text-foreground">Searching winget database...</p>
+          <p className="text-xs text-muted-foreground">Query: {query}</p>
         </div>
       </div>
     );
@@ -79,25 +73,25 @@ export function SearchPackagesResults({
 
   if (query.trim().length < 2) {
     return (
-      <div className="py-24 text-center opacity-40">
-        <div className="inline-flex h-16 w-16 items-center justify-center rounded-3xl bg-secondary/50 mb-6 group">
+      <div className="py-16 text-center opacity-60">
+        <div className="mb-4 inline-flex h-12 w-12 items-center justify-center rounded-md border border-border/50 bg-secondary/40">
           <svg
             xmlns="http://www.w3.org/2000/svg"
-            width="32"
-            height="32"
+            width="20"
+            height="20"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
             strokeLinecap="round"
             strokeLinejoin="round"
-            className="group-hover:scale-110 transition-transform duration-500"
+            className="text-muted-foreground"
           >
             <circle cx="11" cy="11" r="8" />
             <path d="m21 21-4.3-4.3" />
           </svg>
         </div>
-        <p className="text-xl font-medium tracking-tight text-muted-foreground">Type a package name above to start searching</p>
+        <p className="text-sm text-muted-foreground">Type a package name above to start searching</p>
       </div>
     );
   }
@@ -107,7 +101,7 @@ export function SearchPackagesResults({
       variants={container}
       initial="hidden"
       animate="show"
-      className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-5"
+      className="grid grid-cols-1 gap-2"
     >
       <AnimatePresence>
         {packages.map((pkg) => (
@@ -115,7 +109,7 @@ export function SearchPackagesResults({
             key={pkg.Id}
             variants={item}
             layout
-            exit={{ opacity: 0, scale: 0.9, filter: "blur(8px)", transition: { duration: 0.2 } }}
+            exit={{ opacity: 0, scale: 0.98, transition: { duration: 0.15 } }}
           >
             <SearchPackagesResultItem
               pkg={pkg}

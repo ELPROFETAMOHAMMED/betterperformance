@@ -10,7 +10,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/shared/components/ui/dropdown-menu";
-import { EllipsisHorizontalIcon, PencilIcon, StarIcon, TrashIcon } from "@heroicons/react/24/outline";
+import {
+  EllipsisHorizontalIcon,
+  PencilIcon,
+  PencilSquareIcon,
+  StarIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
 import { GroupSelectionItem } from "@/features/tweaks/components/visual-tree/hooks/use-group-selections";
 import { TweaksEmptyState } from "@/features/tweaks/components/tweaks-empty-state";
 
@@ -23,6 +29,7 @@ interface GroupTreeProps {
   onTweakToggle: (tweak: Tweak) => void;
   handleSelectGroup: (tweaks: Tweak[], e: React.MouseEvent) => void;
   onRenameSelection?: (id: string, currentName: string) => void;
+  onEditSelection?: (id: string, tweaks: Tweak[]) => void;
   onSaveAsFavorite?: (tweaks: Tweak[], defaultName: string) => void;
   onDeleteSelection?: (id: string) => void;
 }
@@ -36,6 +43,7 @@ export function GroupTree({
   onTweakToggle,
   handleSelectGroup,
   onRenameSelection,
+  onEditSelection,
   onSaveAsFavorite,
   onDeleteSelection,
 }: GroupTreeProps) {
@@ -83,6 +91,15 @@ export function GroupTree({
                       >
                         <PencilIcon className="h-4 w-4 mr-2" />
                         Rename
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={(event: React.MouseEvent) => {
+                          event.stopPropagation();
+                          onEditSelection?.(group.id, group.tweaks);
+                        }}
+                      >
+                        <PencilSquareIcon className="h-4 w-4 mr-2" />
+                        Edit tweaks
                       </DropdownMenuItem>
                       {group.isHistoryItem && (
                         <DropdownMenuItem
