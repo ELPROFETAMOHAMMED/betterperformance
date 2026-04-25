@@ -15,6 +15,15 @@ interface DynamicIconProps {
 // Cache for individual icons - only load what we need
 const iconCache = new Map<string, HeroIcon>();
 const iconLoadPromises = new Map<string, Promise<HeroIcon>>();
+let heroiconsModulePromise: Promise<typeof import("@heroicons/react/24/outline")> | null = null;
+
+function getHeroiconsModule() {
+  if (!heroiconsModulePromise) {
+    heroiconsModulePromise = import("@heroicons/react/24/outline");
+  }
+
+  return heroiconsModulePromise;
+}
 
 // Convert icon name to PascalCase
 const toPascalCase = (value?: string | null) => {
@@ -46,9 +55,10 @@ const loadIcon = async (iconName: string): Promise<HeroIcon> => {
   const properName = pascalName.endsWith("Icon") ? pascalName : `${pascalName}Icon`;
 
   // Create promise to load icon
-  const loadPromise = import("@heroicons/react/24/outline")
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .then((module: any) => {
+  const loadPromise = getHeroiconsModule()
+    .then((module) => {
+      const icons = module as typeof module & Record<string, HeroIcon | undefined>;
+
       // Try different name variations
       const candidates = [
         properName,
@@ -57,8 +67,8 @@ const loadIcon = async (iconName: string): Promise<HeroIcon> => {
       ].filter(Boolean);
 
       for (const candidate of candidates) {
-        if (candidate && module[candidate]) {
-          const Icon = module[candidate] as HeroIcon;
+        if (candidate && icons[candidate]) {
+          const Icon = icons[candidate];
           if (Icon) {
             iconCache.set(iconName, Icon);
             return Icon;
@@ -67,7 +77,7 @@ const loadIcon = async (iconName: string): Promise<HeroIcon> => {
       }
 
       // Fallback to Square equivalent (StopIcon)
-      const Fallback = module.StopIcon as HeroIcon;
+      const Fallback = icons.StopIcon;
       if (Fallback) {
         iconCache.set(iconName, Fallback);
         return Fallback;
@@ -78,7 +88,7 @@ const loadIcon = async (iconName: string): Promise<HeroIcon> => {
     .catch((error) => {
       console.error(`Failed to load icon ${iconName}:`, error);
       // Return a default icon from a new import to ensure we get something
-      return import("@heroicons/react/24/outline").then((m) => m.StopIcon as HeroIcon);
+      return getHeroiconsModule().then((m) => m.StopIcon as HeroIcon);
     });
 
   iconLoadPromises.set(iconName, loadPromise);

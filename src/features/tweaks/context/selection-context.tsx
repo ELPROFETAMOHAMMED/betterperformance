@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
 import type { Wallpaper } from "@/features/wallpapers/types/wallpaper.types";
@@ -47,11 +47,14 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
   const [activeTweakId, setActiveTweakId] = useState<string | null>(null);
   const [lastSelectedWallpaperId, setLastSelectedWallpaperId] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const lastSavedRef = useRef<string>("");
 
   useEffect(() => {
     const savedItems = localStorage.getItem(SELECTED_ITEMS_STORAGE_KEY);
 
     if (savedItems) {
+      lastSavedRef.current = savedItems;
+
       try {
         const parsed = JSON.parse(savedItems) as SelectedItem[];
         const map = new Map<string, SelectedItem>(
@@ -95,10 +98,11 @@ export function SelectionProvider({ children }: { children: React.ReactNode }) {
     }
 
     const timeoutId = setTimeout(() => {
-      localStorage.setItem(
-        SELECTED_ITEMS_STORAGE_KEY,
-        JSON.stringify(Array.from(selectedItems.values()))
-      );
+      const serialized = JSON.stringify(Array.from(selectedItems.values()));
+      if (serialized === lastSavedRef.current) return;
+
+      lastSavedRef.current = serialized;
+      localStorage.setItem(SELECTED_ITEMS_STORAGE_KEY, serialized);
     }, 500);
 
     return () => clearTimeout(timeoutId);

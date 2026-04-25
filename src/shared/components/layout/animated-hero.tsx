@@ -55,6 +55,7 @@ export default function AnimatedHero({
       {shouldAnimate && (
         <motion.div
           className="relative h-full w-full"
+          style={{ willChange: "transform, opacity" }}
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ 
             opacity: [0.3, 0.6, 0.3],
@@ -70,6 +71,7 @@ export default function AnimatedHero({
           <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 via-primary/10 to-transparent blur-2xl" />
           <motion.div
             className="absolute inset-0 rounded-full bg-gradient-to-tr from-primary/15 to-transparent"
+            style={{ willChange: "transform, opacity" }}
             animate={{
               rotate: [0, 360],
             }}

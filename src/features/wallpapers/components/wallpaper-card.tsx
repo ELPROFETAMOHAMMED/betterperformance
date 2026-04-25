@@ -75,7 +75,9 @@ export function WallpaperCard({
             src={wallpaper.public_url}
             alt={wallpaper.title}
             fill
+            sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 20vw"
             className="object-cover"
+            loading="lazy"
             unoptimized
           />
 

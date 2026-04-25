@@ -1,3 +1,4 @@
+import React from "react";
 import { Badge } from "@/shared/components/ui/badge";
 import { CheckCircleIcon } from "@heroicons/react/24/solid";
 import { cn } from "@/shared/lib/utils";
@@ -14,7 +15,7 @@ interface TweakItemProps {
   isAdmin?: boolean;
 }
 
-export function TweakItem({
+function TweakItemBase({
   tweak,
   selected,
   onToggle,
@@ -97,4 +98,21 @@ export function TweakItem({
     </div>
   );
 }
+
+export const TweakItem = React.memo(TweakItemBase, (prev, next) => {
+  return (
+    prev.selected === next.selected &&
+    prev.isAdmin === next.isAdmin &&
+    prev.showCategory === next.showCategory &&
+    prev.categoryName === next.categoryName &&
+    prev.showCategoryAsDescription === next.showCategoryAsDescription &&
+    prev.showReportDescription === next.showReportDescription &&
+    prev.tweak.id === next.tweak.id &&
+    prev.tweak.title === next.tweak.title &&
+    prev.tweak.description === next.tweak.description &&
+    prev.tweak.report_description === next.tweak.report_description &&
+    prev.tweak.is_visible === next.tweak.is_visible &&
+    prev.onToggle === next.onToggle
+  );
+});
 

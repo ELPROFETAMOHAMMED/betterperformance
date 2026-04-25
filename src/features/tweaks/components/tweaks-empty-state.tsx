@@ -20,10 +20,7 @@ export function TweaksEmptyState({
           animate={{ opacity: [0.4, 0.8, 0.4], scale: [0.9, 1.05, 0.9] }}
           transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         />
-        <motion.div
-          animate={{ rotate: [-4, 4, -4] }}
-          transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
-        >
+        <div className="bp-logo-wiggle" style={{ willChange: "transform" }}>
           <Image
             src="/assets/Aplication-logo.png"
             alt="BetterPerformance logo"
@@ -31,12 +28,28 @@ export function TweaksEmptyState({
             height={56}
             className="relative rounded-[var(--radius-md)] shadow-md"
           />
-        </motion.div>
+        </div>
       </div>
       <p className="text-sm">{title}</p>
       {description ? (
         <p className="mt-1 text-xs opacity-60">{description}</p>
       ) : null}
+      <style jsx>{`
+        .bp-logo-wiggle {
+          animation: bp-logo-wiggle 3.5s ease-in-out infinite;
+        }
+
+        @keyframes bp-logo-wiggle {
+          0%,
+          100% {
+            transform: rotate(-4deg);
+          }
+
+          50% {
+            transform: rotate(4deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }

@@ -1,14 +1,12 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { Suspense, lazy, useState, useMemo } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import type { Tweak, TweakCategory } from "@/features/tweaks/types/tweak.types";
 import { AnimatedCounter } from "@/features/tweaks/components/animated-counter";
 import { TweakReportsPanel } from "@/features/tweaks/components/tweak-reports-panel";
 import { useTheme } from "next-themes";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus, vs } from "react-syntax-highlighter/dist/esm/styles/prism";
 import type { TweakReport } from "@/features/tweaks/types/tweak-report.types";
 
 // UI Components
@@ -26,6 +24,31 @@ import {
   CommandLineIcon,
   FlagIcon,
 } from "@heroicons/react/24/outline";
+
+type SyntaxHighlighterProps = {
+  language: string;
+  customStyle?: React.CSSProperties;
+  wrapLongLines?: boolean;
+  children: string;
+  theme: "dark" | "light";
+};
+
+const SyntaxHighlighter = lazy(async () => {
+  const [{ Prism }, prismStyles] = await Promise.all([
+    import("react-syntax-highlighter"),
+    import("react-syntax-highlighter/dist/esm/styles/prism"),
+  ]);
+
+  function LazySyntaxHighlighter({ theme, children, ...props }: SyntaxHighlighterProps) {
+    return (
+      <Prism {...props} style={theme === "dark" ? prismStyles.vscDarkPlus : prismStyles.vs}>
+        {children}
+      </Prism>
+    );
+  }
+
+  return { default: LazySyntaxHighlighter };
+});
 
 interface TweakDetailsPanelProps {
   selectedTweaks: Tweak[];
@@ -159,20 +182,22 @@ export function TweakDetailsPanel({
                     </h4>
                     <div className="rounded-md overflow-hidden bg-black/5 dark:bg-black/40 border border-border/20 text-xs">
                       {activeTweak.code ? (
-                        <SyntaxHighlighter
-                          language="powershell"
-                          style={resolvedTheme === "dark" ? vscDarkPlus : vs}
-                          customStyle={{
-                            margin: 0,
-                            padding: "1.5rem",
-                            background: "transparent",
-                            fontSize: "0.85rem",
-                            lineHeight: "1.6",
-                          }}
-                          wrapLongLines={true}
-                        >
-                          {activeTweak.code}
-                        </SyntaxHighlighter>
+                        <Suspense fallback={<pre className="p-4 text-xs">{activeTweak.code}</pre>}>
+                          <SyntaxHighlighter
+                            language="powershell"
+                            theme={resolvedTheme === "dark" ? "dark" : "light"}
+                            customStyle={{
+                              margin: 0,
+                              padding: "1.5rem",
+                              background: "transparent",
+                              fontSize: "0.85rem",
+                              lineHeight: "1.6",
+                            }}
+                            wrapLongLines={true}
+                          >
+                            {activeTweak.code}
+                          </SyntaxHighlighter>
+                        </Suspense>
                       ) : (
                         <p className="text-muted-foreground italic p-4"># No code provided for this tweak.</p>
                       )}

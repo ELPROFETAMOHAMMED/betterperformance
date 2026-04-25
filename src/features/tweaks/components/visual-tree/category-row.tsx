@@ -31,7 +31,7 @@ interface CategoryRowProps {
   hideSelectGroupButton?: boolean;
 }
 
-export function CategoryRow({
+function CategoryRowBase({
   name,
   description,
   icon,
@@ -125,3 +125,22 @@ export function CategoryRow({
     </div>
   );
 }
+
+export const CategoryRow = React.memo(CategoryRowBase, (prev, next) => {
+  return (
+    prev.name === next.name &&
+    prev.description === next.description &&
+    prev.icon === next.icon &&
+    prev.isExpanded === next.isExpanded &&
+    prev.isAdmin === next.isAdmin &&
+    prev.tweaks === next.tweaks &&
+    prev.selectedTweaks === next.selectedTweaks &&
+    prev.actions === next.actions &&
+    prev.className === next.className &&
+    prev.onToggle === next.onToggle &&
+    prev.onSelectGroup === next.onSelectGroup &&
+    prev.hideSelectGroupButton === next.hideSelectGroupButton &&
+    prev.selectionCount?.selected === next.selectionCount?.selected &&
+    prev.selectionCount?.total === next.selectionCount?.total
+  );
+});

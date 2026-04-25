@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PhotoIcon } from "@heroicons/react/24/outline";
 import { toast } from "sonner";
@@ -20,6 +21,23 @@ export function WallpapersGrid({ pageData }: WallpapersGridProps) {
   const { user } = useUser();
   const isAdmin = user?.user_metadata.role === "admin";
   const { selectedWallpapersSet, toggleWallpaper } = useSelection();
+  const [displayLimit, setDisplayLimit] = useState(30);
+
+  useEffect(() => {
+    setDisplayLimit(Math.min(30, pageData.items.length));
+  }, [pageData.items.length]);
+
+  useEffect(() => {
+    if (pageData.items.length <= displayLimit) return;
+
+    const handleScroll = () => {
+      if (window.innerHeight + window.scrollY < document.documentElement.scrollHeight - 200) return;
+      setDisplayLimit((prev) => Math.min(prev + 20, pageData.items.length));
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [displayLimit, pageData.items.length]);
 
   const handleDownloadSingle = async (wallpaper: Wallpaper) => {
     try {
@@ -47,7 +65,7 @@ export function WallpapersGrid({ pageData }: WallpapersGridProps) {
 
   return (
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 m-12">
-      {pageData.items.map((wallpaper) => (
+      {pageData.items.slice(0, displayLimit).map((wallpaper) => (
         <WallpaperCard
           key={wallpaper.id}
           wallpaper={wallpaper}
@@ -58,6 +76,11 @@ export function WallpapersGrid({ pageData }: WallpapersGridProps) {
           onToggleSelected={toggleWallpaper}
         />
       ))}
+      {pageData.items.length > displayLimit ? (
+        <div className="col-span-full py-4 text-center">
+          <div className="mx-auto h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        </div>
+      ) : null}
     </div>
   );
 }

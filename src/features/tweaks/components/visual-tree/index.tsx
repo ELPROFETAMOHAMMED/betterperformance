@@ -91,6 +91,7 @@ export default function VisualTree({
 
   const [displayLimit, setDisplayLimit] = useState(20);
   const scrollViewportRef = useRef<HTMLDivElement>(null);
+  const scrollThrottleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const allTweaksMap = useMemo(() => {
     const map = new Map<string, Tweak>();
@@ -99,6 +100,35 @@ export default function VisualTree({
     });
     return map;
   }, [categories]);
+
+  const historyIdsKey = useMemo(
+    () => (historyTweakIds ? Array.from(historyTweakIds).sort().join(",") : ""),
+    [historyTweakIds]
+  );
+  const favoriteIdsKey = useMemo(
+    () => (favoriteTweakIds ? Array.from(favoriteTweakIds).sort().join(",") : ""),
+    [favoriteTweakIds]
+  );
+  const reportedIdsKey = useMemo(
+    () => (reportedTweakIds ? Array.from(reportedTweakIds).sort().join(",") : ""),
+    [reportedTweakIds]
+  );
+  const hasHistoryTweakIds = historyTweakIds !== undefined;
+  const hasFavoriteTweakIds = favoriteTweakIds !== undefined;
+  const hasReportedTweakIds = reportedTweakIds !== undefined;
+
+  const stableHistoryTweakIds = useMemo(
+    () => (hasHistoryTweakIds ? new Set(historyIdsKey ? historyIdsKey.split(",") : []) : undefined),
+    [hasHistoryTweakIds, historyIdsKey]
+  );
+  const stableFavoriteTweakIds = useMemo(
+    () => (hasFavoriteTweakIds ? new Set(favoriteIdsKey ? favoriteIdsKey.split(",") : []) : undefined),
+    [hasFavoriteTweakIds, favoriteIdsKey]
+  );
+  const stableReportedTweakIds = useMemo(
+    () => (hasReportedTweakIds ? new Set(reportedIdsKey ? reportedIdsKey.split(",") : []) : undefined),
+    [hasReportedTweakIds, reportedIdsKey]
+  );
 
   const handleSelectGroup = (
     itemsToSelect: Array<Tweak | SelectedItem>,
@@ -167,18 +197,18 @@ export default function VisualTree({
       userFavoritesOnly,
       userReportedOnly,
       minDownloads,
-      historyTweakIds,
-      favoriteTweakIds,
-      reportedTweakIds,
+      historyTweakIds: stableHistoryTweakIds,
+      favoriteTweakIds: stableFavoriteTweakIds,
+      reportedTweakIds: stableReportedTweakIds,
       sort: activeTab === "library" ? undefined : currentSort,
     });
   }, [
     categories,
     activeTab,
     searchQuery,
-    historyTweakIds,
-    favoriteTweakIds,
-    reportedTweakIds,
+    stableHistoryTweakIds,
+    stableFavoriteTweakIds,
+    stableReportedTweakIds,
     sortOption,
     favoritesScope,
   ]);
@@ -197,10 +227,16 @@ export default function VisualTree({
   );
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-    const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
-    if (scrollHeight - scrollTop - clientHeight < 200) {
-      setDisplayLimit((prev) => Math.min(prev + 20, flatTweaks.length));
-    }
+    if (scrollThrottleRef.current) return;
+
+    const target = e.currentTarget;
+    scrollThrottleRef.current = setTimeout(() => {
+      scrollThrottleRef.current = null;
+      const { scrollTop, scrollHeight, clientHeight } = target;
+      if (scrollHeight - scrollTop - clientHeight < 200) {
+        setDisplayLimit((prev) => Math.min(prev + 20, flatTweaks.length));
+      }
+    }, 100);
   };
 
   useEffect(() => {
@@ -209,6 +245,14 @@ export default function VisualTree({
       scrollViewportRef.current.scrollTop = 0;
     }
   }, [activeTab, searchQuery, favoritesView, historyView, popularView, favoritesScope, reportedScope]);
+
+  useEffect(() => {
+    return () => {
+      if (scrollThrottleRef.current) {
+        clearTimeout(scrollThrottleRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-transparent">
